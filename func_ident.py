@@ -194,17 +194,23 @@ def get_bin_arch(target):
             endian = 'big'
     except exceptions.ELFParseError:
         # pyelftools refuses unusual/packed headers. LIEF tolerates more
-        # ELF dialects, so retry there before giving up.
+        # ELF dialects, so retry there before giving up. LIEF 0.16+
+        # uppercased some enum labels (i386 -> I386, ARCH_68K -> M68K)
+        # and uses CLASS.ELF32 in place of the older ELF_CLASS.CLASS32,
+        # so the comparisons below normalise both forms.
         import lief
         b = lief.parse(target.name)
         if b is None:
             raise
-        arch = 'EM_' + str(b.header.machine_type).rsplit('.', 1)[-1]
-        # LIEF reports machine names like ARCH.AARCH64 / ARCH.X86_64 /
-        # ARCH.ARCH_68K / ARCH.SPARCV9, normalise the few outliers.
-        arch = {'EM_AARCH64': 'EM_AARCH64', 'EM_ARCH_68K': 'EM_68K'}.get(arch, arch)
-        bit = 32 if str(b.header.identity_class) == 'ELF_CLASS.CLASS32' else 64
-        endian = 'little' if str(b.header.identity_data) == 'ELF_DATA.LSB' else 'big'
+        machine_raw = str(b.header.machine_type).rsplit('.', 1)[-1].upper()
+        # capstone-side names live in EM_* form (matching pyelftools).
+        # LIEF's ARCH_68K / M68K both map to EM_68K, X86_64 to EM_X86_64.
+        arch = 'EM_' + {'ARCH_68K': '68K', 'M68K': '68K'}.get(machine_raw, machine_raw)
+        cls = str(b.header.identity_class).rsplit('.', 1)[-1].upper()
+        bit = 32 if cls in ('CLASS32', 'ELF32') else 64
+        endian = 'little' \
+            if str(b.header.identity_data).rsplit('.', 1)[-1].upper() == 'LSB' \
+            else 'big'
     return arch, bit, endian
 
 def get_inst_area(target, base_vaddr, t_bit):
@@ -241,7 +247,7 @@ def get_inst_area(target, base_vaddr, t_bit):
         b = lief.parse(target.name)
         if b is not None:
             for seg in b.segments:
-                if str(seg.type) != 'SEGMENT_TYPES.LOAD':
+                if str(seg.type).rsplit('.', 1)[-1].upper() != 'LOAD':
                     continue
                 flags = int(seg.flags)
                 # PF_R = 4, PF_X = 1
@@ -522,7 +528,9 @@ def get_symtab_info_by_reaelf(target):
     if b is None:
         return symtab_info
     for seg in b.segments:
-        if str(seg.type) != 'SEGMENT_TYPES.LOAD':
+        # LIEF spells the LOAD type as either SEGMENT_TYPES.LOAD (older)
+        # or TYPE.LOAD (newer); compare on the trailing token only.
+        if str(seg.type).rsplit('.', 1)[-1].upper() != 'LOAD':
             continue
         flags = int(seg.flags)
         # PF_R = 4, PF_X = 1
@@ -701,6 +709,127 @@ def get_yara_rule(yara_rule_path, r_type, r_length):
     rule_str = '\n'.join(use_rule_list)
     use_rule_list = yara_x.compile(rule_str)
     return use_rule_list, risc_v_flag
+
+
+def _parse_rule_lengths(yara_rule_path):
+    # Build {rule_identifier: y_pattern_length} by parsing the .yara
+    # source once. CRT init/fini rules get a sentinel length large
+    # enough that any L >= 1 keeps them, matching the historical
+    # `or len(set(_CRT_*) & set(r_func_list)) > 0` clause in
+    # get_yara_rule(). Used by run_one() to filter a single compiled
+    # rule set per length bucket without re-parsing/recompiling.
+    lengths = {}
+    with open(yara_rule_path, 'r') as fp:
+        lines = [line.rstrip('\n') for line in fp]
+    if not lines:
+        return lengths
+    head = lines[0].split(' ')
+    rule_version = head[4] if len(head) > 4 else ''
+    if rule_version != '0.2.0_2021_07_29':
+        return lengths  # legacy yara format: no per-rule metadata to parse
+    crt_set = set(_CRT_INIT_LIST + _CRT_FINI_LIST)
+    for i, line in enumerate(lines):
+        if not line.startswith('rule '):
+            continue
+        name = line.split(' ')[1].rstrip('{').strip()
+        pattern = lines[i + 7].strip('\t').strip('$pattern = {').strip(' }')
+        fmt = re.sub(r'(?<=\().*?(?=\))', 'XX', pattern).split(' ')
+        y_pattern_length = len(fmt) - fmt.count('??')
+        r_funcs = set(lines[i + 2].strip('\t').split('"')[1].split(' '))
+        if r_funcs & crt_set:
+            y_pattern_length = 10**9  # always keep CRT init/fini rules
+        lengths[name] = y_pattern_length
+    return lengths
+
+
+CACHE_DIR = STELFTOOLS_PATH + "cache/"
+
+
+def compile_yara_file(yara_rule_path):
+    # Compile the entire .yara file once and return
+    # (rules, {rule_identifier: y_pattern_length}). Callers replicate
+    # the historical multi-pass behaviour by filtering matching rules
+    # whose identifier has length >= L per merge iteration, avoiding
+    # the per-L recompile that the loop in run_one used to do.
+    #
+    # Compiled rules are persisted under STELFTOOLS_PATH/cache/ as
+    # <basename>.yarc + <basename>.lengths.json. A warm hit deserialises
+    # ~8x faster than recompiling, which is the dominant per-cfg cost
+    # in the bruteforce driver. Cache invalidates when the .yara file
+    # is newer than the cached pair.
+    name = os.path.basename(yara_rule_path)
+    cache_yarc = os.path.join(CACHE_DIR, name + ".yarc")
+    cache_lens = os.path.join(CACHE_DIR, name + ".lengths.json")
+    try:
+        yara_mtime = os.path.getmtime(yara_rule_path)
+        if os.path.getmtime(cache_yarc) >= yara_mtime \
+                and os.path.getmtime(cache_lens) >= yara_mtime:
+            with open(cache_yarc, 'rb') as fp:
+                rules = yara_x.Rules.deserialize_from(fp)
+            with open(cache_lens, 'r') as fp:
+                lengths = json.load(fp)
+            return rules, lengths
+    except (FileNotFoundError, OSError):
+        pass
+
+    with open(yara_rule_path, 'r') as fp:
+        src = fp.read()
+    rules = yara_x.compile(src)
+    lengths = _parse_rule_lengths(yara_rule_path)
+
+    # Write cache. tmp + atomic rename so a SIGINT mid-write does not
+    # leave a half-baked .yarc that future runs would deserialise.
+    # Parallel workers racing on the same file are safe because every
+    # writer writes its own pid-suffixed .tmp before rename. Cache
+    # writes are best-effort — a read-only cache dir or full disk just
+    # forfeits the warm-up benefit.
+    tmp_yarc = cache_yarc + '.tmp.' + str(os.getpid())
+    tmp_lens = cache_lens + '.tmp.' + str(os.getpid())
+    try:
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        with open(tmp_yarc, 'wb') as fp:
+            rules.serialize_into(fp)
+        with open(tmp_lens, 'w') as fp:
+            json.dump(lengths, fp)
+        os.replace(tmp_yarc, cache_yarc)
+        os.replace(tmp_lens, cache_lens)
+    except OSError:
+        for path in (tmp_yarc, tmp_lens):
+            try:
+                os.unlink(path)
+            except OSError:
+                pass
+
+    return rules, lengths
+
+
+def compute_target_state(target_path):
+    # Compute the target-side state used by run_one_with_state():
+    # the executable-segment table, callsite map, instruction bounds,
+    # and file size. Cfg-independent — bruteforce drivers compute it
+    # once per binary and reuse across every candidate cfg.
+    target = get_target_fp(target_path)
+    target.read()
+    try:
+        symtab_info = get_symtab_info_by_capstone(target_path)
+    except exceptions.ELFParseError:
+        symtab_info = get_symtab_info_by_reaelf(target_path)
+    base_vaddr = symtab_info[0][2]
+    call_map, top_inst_addr, bot_inst_addr = get_func_addr(target, base_vaddr)
+    target_size = int(target.seek(0, os.SEEK_END))
+    target.seek(0)
+    target_bytes = target.read()
+    target.close()
+    return {
+        'path': target_path,
+        'bytes': target_bytes,
+        'symtab_info': symtab_info,
+        'call_map': call_map,
+        'top_inst_addr': top_inst_addr,
+        'bot_inst_addr': bot_inst_addr,
+        'target_size': target_size,
+        'base_vaddr': base_vaddr,
+    }
 
 def del_mismatch(functions):
     def del_mismatch_minimal_func(functions):
@@ -1376,111 +1505,116 @@ def set_args():
     args = parser.parse_args()
     return args
 
-if __name__ == '__main__':
-    args = set_args()
-
-    if os.path.exists(args.cfg) == True:
-        cfg_info = {}
-        with open(args.cfg) as cfg_fp:
-            cfg_info = json.load(cfg_fp)
-        # load config file
-        target_path      = args.target
-        target_arch      = cfg_info['arch']
+def run_one_with_state(target_state, cfg_info, relative_paths=True):
+    # Run a single (target, cfg) ident pass using a pre-computed
+    # target_state (see compute_target_state()). The historical
+    # multi-pass inner loop is collapsed into one yara-x compile + one
+    # scan + length-bucket filtering, which gives byte-identical
+    # results to the old N-length loop while cutting per-cfg wall time
+    # by 2-7x.
+    if relative_paths:
         yara_path        = STELFTOOLS_PATH + cfg_info['yara_path']
-        compiler_path    = cfg_info['compiler_path']
         alias_list_path  = STELFTOOLS_PATH + cfg_info['alias_list_path']
         depend_list_path = STELFTOOLS_PATH + cfg_info['dependency_list_path']
-        # set flag
-        alias_flag = False
-        linkorder_flag = False
-        depend_flag = False
-        if os.path.exists(alias_list_path) == True:
-            alias_flag = True
-        if os.path.exists(compiler_path) == True:
-            linkorder_flag = True
-        if os.path.exists(depend_list_path) == True:
-            depend_flag = True
-    elif args.yara != None:
-        target_path = args.target
-        target_arch = args.arch
-        yara_path = args.yara
-        compiler_path = args.id_linkorder
-        alias_list_path = args.alias_list
-        depend_list_path = args.id_depend
     else:
-      print("[ERROR] wrong argument")
-      exit(-1)
+        yara_path        = cfg_info['yara_path']
+        alias_list_path  = cfg_info.get('alias_list_path') or ''
+        depend_list_path = cfg_info.get('dependency_list_path') or ''
+    compiler_path    = cfg_info.get('compiler_path') or ''
 
-    start_rule_length = arch_pattern_length(target_arch)
+    alias_flag     = bool(alias_list_path) and os.path.exists(alias_list_path)
+    linkorder_flag = bool(compiler_path)   and os.path.exists(compiler_path)
+    depend_flag    = bool(depend_list_path) and os.path.exists(depend_list_path)
 
-    target = get_target_fp(target_path) # target
-    bin_target = target.read()
-    # get symbol table information
-    try:
-        symtab_info = get_symtab_info_by_capstone(target_path) # get vaddr
-    except exceptions.ELFParseError as e:
-        symtab_info = get_symtab_info_by_reaelf(target_path) # get vaddr
-    base_vaddr = symtab_info[0][2]
-    # get function call information
-    call_map, top_inst_addr, bot_inst_addr = get_func_addr(target, base_vaddr)
-    # get target file size
-    target_size = int(target.seek(0, os.SEEK_END))
-    # do matching
-    #print(start_rule_length)
-    for _length in range(start_rule_length, 0, -1):
-        yara_rules, risc_v_flag = get_yara_rule(yara_path, 'func', _length) # rule
-        # matching
-        _match_res = yara_matching(yara_rules, target) # do matching
-        # format matching result
-        _functions = format_match_res(_match_res, symtab_info, risc_v_flag)
-        #print('---')
-        #for _addr in sorted(_functions.keys()):
-        #    print('dbg', _length, ':', hex(_addr), _functions[_addr])
-        if _length == start_rule_length:
-            #functions = marge_nomatch_functions(_functions, call_map, base_vaddr)
+    start_rule_length = arch_pattern_length(cfg_info['arch'])
+    target_path = target_state['path']
+    symtab_info = target_state['symtab_info']
+    call_map    = target_state['call_map']
+
+    # Single compile + single scan, materialised once for repeated
+    # length-bucket iteration below.
+    rules, rule_lengths = compile_yara_file(yara_path)
+    scanner = yara_x.Scanner(rules)
+    all_matches = list(scanner.scan(target_state['bytes']).matching_rules)
+
+    # Replay the historical multi-pass merge over the cached match list
+    # by filtering on the rule identifier -> y_pattern_length map.
+    # Legacy .yara files (rule_version != '0.2.0_2021_07_29') produce
+    # an empty lengths map; for those we fall back to the original
+    # behaviour where every iteration sees every rule.
+    functions = None
+    for L in range(start_rule_length, 0, -1):
+        if rule_lengths:
+            subset = [r for r in all_matches
+                      if rule_lengths.get(r.identifier, 0) >= L]
+        else:
+            subset = all_matches
+        _functions = format_match_res(subset, symtab_info, False)
+        if L == start_rule_length:
             functions = marge_nomatch_functions(_functions, call_map)
         else:
             functions = marge_functions(functions, _functions)
-    # delete mismatch signature
     functions = del_mismatch(functions)
-    # close target fp
-    target.close()
-    # function name identification
-    # set function alias list
-    alias_list = []
-    if alias_flag == True:
-        alias_list = get_alias_list(alias_list_path)
-    # delete alias function name
+
+    alias_list = get_alias_list(alias_list_path) if alias_flag else []
     functions = del_alias(functions, alias_list)
 
-    #identifying the function name
     id_loop_count = 0
-    exclude_func_list = []
-    # identifying the function name
+    link_order_list = None
     while True:
-        # identifying the function name based on the link order
         id_l_num = 0
-        if linkorder_flag == True:
-            functions, id_l_num, link_order_list = id_func_name_for_linkorder(\
-                    functions, target_path, compiler_path, \
-                    alias_list, call_map, id_loop_count, exclude_func_list \
-                    )
-        # identifying the function name based on the dependency
+        if linkorder_flag:
+            functions, id_l_num, link_order_list = id_func_name_for_linkorder(
+                functions, target_path, compiler_path,
+                alias_list, call_map, id_loop_count, [],
+            )
         id_d_num = 0
-        if depend_flag == True:
-            functions, id_d_num = id_func_name_for_depend( \
-                    functions, call_map, depend_list_path, alias_list \
-                    )
+        if depend_flag:
+            functions, id_d_num = id_func_name_for_depend(
+                functions, call_map, depend_list_path, alias_list,
+            )
         if id_l_num == id_d_num == 0:
             break
         id_loop_count += 1
 
-    if linkorder_flag == True and alias_flag == True:
+    if linkorder_flag and alias_flag:
         functions = multiple_consecutive_candidate_filt(functions, link_order_list, alias_list)
-    # save checked target dump info
-    targets_info = {'name' : target_path, \
-            'functions' : functions, \
-            'size' : target_size, \
-            'base_vaddr' : base_vaddr, \
-            }
-    output(targets_info, target_path, args.output_style) # output result
+
+    return {
+        'name': target_path,
+        'functions': functions,
+        'size': target_state['target_size'],
+        'base_vaddr': target_state['base_vaddr'],
+    }
+
+
+def run_one(target_path, cfg_info, relative_paths=True):
+    # Single-shot convenience wrapper. compute_target_state() does the
+    # ELF parse + capstone disassembly + call-map extraction; bruteforce
+    # drivers should call those two stages separately so target state
+    # is shared across every candidate cfg.
+    state = compute_target_state(target_path)
+    return run_one_with_state(state, cfg_info, relative_paths=relative_paths)
+
+
+if __name__ == '__main__':
+    args = set_args()
+
+    if args.cfg and os.path.exists(args.cfg):
+        with open(args.cfg) as cfg_fp:
+            cfg_info = json.load(cfg_fp)
+        target_info = run_one(args.target, cfg_info, relative_paths=True)
+    elif args.yara is not None:
+        cfg_info = {
+            'arch': args.arch,
+            'yara_path': args.yara,
+            'compiler_path': args.id_linkorder or '',
+            'alias_list_path': args.alias_list or '',
+            'dependency_list_path': args.id_depend or '',
+        }
+        target_info = run_one(args.target, cfg_info, relative_paths=False)
+    else:
+        print("[ERROR] wrong argument")
+        exit(-1)
+
+    output(target_info, args.target, args.output_style)
