@@ -60,7 +60,7 @@ The below table shows the results of the comparison. As you can see, `stelftools
 |  Package    | Version |
 |:------------|:--------|
 | [arpy](https://pypi.org/project/arpy/)                 | 2.2.0  |
-| [yara-python](https://pypi.org/project/yara-python/)   | 4.2.0  |
+| [yara-x](https://pypi.org/project/yara-x/)             | 1.16.0 |
 | [capstone](https://pypi.org/project/capstone/)         | 4.0.2  |
 | [pyelftools](https://pypi.org/project/pyelftools/)     | 0.28   |
 | [python-magic](https://pypi.org/project/python-magic/) | 0.4.25 |

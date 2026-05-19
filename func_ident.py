@@ -5,7 +5,7 @@ import re
 import sys
 import os
 import struct
-import yara
+import yara_x
 import argparse
 import json
 import hashlib
@@ -571,55 +571,54 @@ def _mips_got_map(target_path):
     return got_map
 
 def format_match_res(match_res, symtab_info, risc_v_flag):
+    # match_res: iterable of yara_x.Rule (ScanResults.matching_rules).
+    # The yara-x API replaces yara-python's m.strings[*].instances[*]
+    # with rule.patterns[*].matches[*], and m.meta (dict) with
+    # rule.metadata (tuple of (name, value) pairs).
     functions = {}
-    #print(match_res)
     for m in match_res:
-        ##if yara-python <= 4.2.3
-        #for addr, _, match_ptn in m.strings:
-        # else yara-python > 4.2.3
-        # document: https://yara.readthedocs.io/en/v4.3.0/yarapython.html
-        for strs_m in m.strings:
-            for strs_m_inst in strs_m.instances:
-                addr = strs_m_inst.offset
-                match_len = strs_m_inst.matched_length
-                if int(m.meta['size']) > MAX_PATTERN_LENGTH or risc_v_flag == False:
-                    matched_len = int(m.meta['size'])
+        meta = dict(m.metadata)
+        for pattern in m.patterns:
+            for match in pattern.matches:
+                addr = match.offset
+                # match.length is the real matched span; the historical
+                # yara-python code overrode it with meta['size'] whenever
+                # max_match_data capped the reported length. Keep the
+                # semantic so signature-length-based heuristics downstream
+                # (del_mismatch, marge_functions) see the rule's declared
+                # function size, not the raw scan return.
+                if int(meta['size']) > MAX_PATTERN_LENGTH or risc_v_flag == False:
+                    matched_len = int(meta['size'])
                 for begin, end, vaddr in symtab_info:
                     if begin <= addr < end or begin == end == 0:
                         addr += vaddr
                         # fix risc-v relaxation size
-                        if 'hex_only_num' in m.meta.keys() and (matched_len % 4) != 0:
+                        if 'hex_only_num' in meta and (matched_len % 4) != 0:
                             matched_len = (matched_len // 4) * 4
-                            #matched_len = (matched_len // 4) * 4 + 4
                         if addr in functions:
                             # exclude risc-v mismatch many relaxation function
-                            if 'hex_only_num' in m.meta.keys():
-                                if matched_len > int(m.meta['hex_only_num']):
+                            if 'hex_only_num' in meta:
+                                if matched_len > int(meta['hex_only_num']):
                                     continue
                             if functions[addr]['size'] < matched_len: # overwrite big func info
-                                functions[addr]['names'] = [x for x in m.meta['aliases'].split(', ')]
+                                functions[addr]['names'] = [x for x in meta['aliases'].split(', ')]
                                 functions[addr]['size'] = matched_len
                                 functions[addr]['detected'] = True
                             elif functions[addr]['size'] == matched_len:
-                                functions[addr]['names'].extend([x for x in m.meta['aliases'].split(', ')])
+                                functions[addr]['names'].extend([x for x in meta['aliases'].split(', ')])
                         else:
-                            #if 'hex_only_num' in m.meta.keys():
-                            #    if int(m.meta['hex_only_num']) % 4 != 0:
-                            #        matched_len = (int(m.meta['hex_only_num']) // 4) * 4 + 4
                             functions[addr] = { \
-                                    'names': [x for x in m.meta['aliases'].split(', ')], \
+                                    'names': [x for x in meta['aliases'].split(', ')], \
                                     'size' : matched_len, \
                                     'detected' : True, \
                                     'category' : 'library function'
                                     }
-            #print(hex(addr), matched_len, ':', m.meta, functions[addr])
     return functions
 
 def yara_matching(rules, target):
     data = _get_target_data(target)
-    yara.set_config(max_match_data=MAX_PATTERN_LENGTH)
-    match_res = rules.match(data=data)
-    return match_res
+    scanner = yara_x.Scanner(rules)
+    return scanner.scan(data).matching_rules
 
 def _get_target_data(f):
     f.seek(0)
@@ -700,7 +699,7 @@ def get_yara_rule(yara_rule_path, r_type, r_length):
     else: # default yara format
         use_rule_list = all_rule_line
     rule_str = '\n'.join(use_rule_list)
-    use_rule_list = yara.compile(source=rule_str)
+    use_rule_list = yara_x.compile(rule_str)
     return use_rule_list, risc_v_flag
 
 def del_mismatch(functions):

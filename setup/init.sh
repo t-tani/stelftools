@@ -3,7 +3,7 @@
 # patching needed.
 
 # install the python3 package
-pip3 install yara-python
+pip3 install yara-x
 pip3 install capstone
 pip3 install pyelftools
 pip3 install python-magic
