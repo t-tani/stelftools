@@ -4,19 +4,20 @@
 # or
 # python3 qi_stelftools.py -flist /path/to/result_of_libfunc_identification -target /path/to/bin
 
-STELFTOOLS_PATH="/path/to/stelftools/"
 QILING_PATH="/path/to/qiling/"
 
 import os
 import re
 import sys
 import subprocess
+import argparse
+from pathlib import Path
 
 import lief
-import argparse
-
 from qiling import Qiling
 from qiling.const import QL_VERBOSE
+
+STELFTOOLS_PATH = str(Path(__file__).resolve().parent) + "/"
 
 lfunc_dict = {}
 

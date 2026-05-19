@@ -1,15 +1,9 @@
 #!/bin/bash
-#CURRENT_PATH=$(pwd)
-CURRENT_PATH=$(pwd | sed -e 's/\//\\\//g')
+# STELFTOOLS_PATH is derived from __file__ at import time, no in-place
+# patching needed.
 
-# fix STELFTOOLS_PATH
-sed -i "s/STELFTOOLS_PATH=\"\/path\/to\/stelftools\/\"/STELFTOOLS_PATH=\"$CURRENT_PATH\/\"/g" func_ident.py
-sed -i "s/STELFTOOLS_PATH=\"\/path\/to\/stelftools\/\"/STELFTOOLS_PATH=\"$CURRENT_PATH\/\"/g" DubMaker.py
-sed -i "s/STELFTOOLS_PATH=\"\/path\/to\/stelftools\/\"/STELFTOOLS_PATH=\"$CURRENT_PATH\/\"/g" libfunc_info_create.py
-sed -i "s/STELFTOOLS_PATH=\"\/path\/to\/stelftools\/\"/STELFTOOLS_PATH=\"$CURRENT_PATH\/\"/g" ida_stelftools.py
-sed -i "s/STELFTOOLS_PATH=\"\/path\/to\/stelftools\/\"/STELFTOOLS_PATH=\"$CURRENT_PATH\/\"/g" r2_stelftools.py
 # install the python3 package
-pip3 install yara-python
+pip3 install yara-x
 pip3 install capstone
 pip3 install pyelftools
 pip3 install python-magic

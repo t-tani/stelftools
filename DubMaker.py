@@ -6,8 +6,9 @@ import re
 import sys
 import subprocess
 import argparse
+from pathlib import Path
 
-STELFTOOLS_PATH="/path/to/stelftools/"
+STELFTOOLS_PATH = str(Path(__file__).resolve().parent) + "/"
 
 def get_funclist(funclist_path):
     with open(funclist_path, 'r') as f:

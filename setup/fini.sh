@@ -1,6 +1,5 @@
 #!/bin/bash
-# fix STELFTOOLS_PATH
-sed -i 's/STELFTOOLS_PATH="\/[a-z/]*"$/STELFTOOLS_PATH="\/path\/to\/stelftools\/"/g' *.py
+# STELFTOOLS_PATH is derived from __file__, nothing to reset.
 # del directories to be used by scripts
 rm -rf ./_tmpdir/man_datasets
 rm -rf ./_tmpdir/link_order_list

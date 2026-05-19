@@ -21,8 +21,9 @@ from elftools.elf.sections import SymbolTableSection
 
 import libfunc_mkrule # make lib func rule script
 import libfunc_deparse # parse lib func dependency script
+from pathlib import Path
 
-STELFTOOLS_PATH="/path/to/stelftools/"
+STELFTOOLS_PATH = str(Path(__file__).resolve().parent) + "/"
 
 MINIMUM_PATTERN_LENGTH = 0
 MAXIMUM_PATTERN_LENGTH=15000
