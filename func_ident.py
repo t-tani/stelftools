@@ -192,49 +192,19 @@ def get_bin_arch(target):
             endian = 'little'
         elif e['e_ident']['EI_DATA'] == 'ELFDATA2MSB':
             endian = 'big'
-    except exceptions.ELFParseError as e: # ToDo
-        # get arch for "readelf -h"
-        arch = os.popen( \
-                'LANG=CC llvm-readelf-13 -h ' + target.name + ' 2> /dev/null | grep Machine | tr -s " " | cut -f2     -d:' \
-                ).read().strip() # TODO: do not use readelf
-        # convert the architecture name obtained by readelf to capstone format
-        if arch in ['AArch64']:
-            arch = 'EM_AARCH64'
-        elif arch in ['ARM']:
-            arch = 'EM_ARM'
-        elif arch in ['Intel 80386']:
-            arch = 'EM_386'
-        elif arch in ['MIPS R3000']:
-            arch = 'EM_MIPS'
-        elif arch in ['MC68000']:
-            arch = 'EM_68K'
-        elif arch in ['PowerPC']:
-            arch = 'EM_PPC'
-        elif arch in ['PowerPC64']:
-            arch = 'EM_PPC64'
-        elif arch in ['RISC-V']:
-            arch = 'EM_RISCV'
-        elif arch in ['Hitachi SH']:
-            arch = 'EM_SH'
-        elif arch in ['Sparc']:
-            arch = 'EM_SPARC'
-        elif arch in ['Sparc v9']:
-            arch = 'EM_SPARCV9'
-        elif arch in ['Advanced Micro Devices X86-64']:
-            arch = 'EM_X86_64'
-        # get magic bytes for "readelf -h"
-        magic = os.popen( \
-                'LANG=CC llvm-readelf-13 -h ' + target.name + ' 2> /dev/null | grep Magic | tr -s " " | cut -d":" -f2- | cut -c2- ').read().strip().split(' ') # TODO: do not use readelf
-        # get bit
-        if magic[4] == '01':
-            bit = 32
-        elif magic[4] == '02':
-            bit = 64
-        # get endian
-        if magic[5] == '01':
-            endian = 'little'
-        if magic[5] == '02':
-            endian = 'big'
+    except exceptions.ELFParseError:
+        # pyelftools refuses unusual/packed headers. LIEF tolerates more
+        # ELF dialects, so retry there before giving up.
+        import lief
+        b = lief.parse(target.name)
+        if b is None:
+            raise
+        arch = 'EM_' + str(b.header.machine_type).rsplit('.', 1)[-1]
+        # LIEF reports machine names like ARCH.AARCH64 / ARCH.X86_64 /
+        # ARCH.ARCH_68K / ARCH.SPARCV9, normalise the few outliers.
+        arch = {'EM_AARCH64': 'EM_AARCH64', 'EM_ARCH_68K': 'EM_68K'}.get(arch, arch)
+        bit = 32 if str(b.header.identity_class) == 'ELF_CLASS.CLASS32' else 64
+        endian = 'little' if str(b.header.identity_data) == 'ELF_DATA.LSB' else 'big'
     return arch, bit, endian
 
 def get_inst_area(target, base_vaddr, t_bit):
@@ -262,36 +232,24 @@ def get_inst_area(target, base_vaddr, t_bit):
                 bot_inst_addr = bot_inst_addr - base_vaddr - 1
             #print(hex(top_inst_addr), '~', hex(bot_inst_addr))
         #exit(-1)
-    except exceptions.ELFParseError as e:
-        None
+    except exceptions.ELFParseError:
+        pass
     if top_inst_addr == bot_inst_addr == 0:
-        if t_bit == 32:
-             _load_addr = os.popen('LANG=CC llvm-readelf-13 -l ' + target.name + \
-                     ' 2> /dev/null | grep "LOAD " | grep "R" | grep "E" | tr -s " " | cut -c2-' \
-                     ).read().split('\n')[:-1]
-             if _load_addr == []:
-                 _load_addr = os.popen('LANG=CC readelf -l ' + target.name + \
-                         ' 2> /dev/null | grep "LOAD " | grep "R" | grep "E" | tr -s " " | cut -c2-' \
-                         ).read().split('\n')[:-1]
-             load_addr = _load_addr[0]
-             top_inst_addr = int(load_addr.split(' ')[3], 16) - base_vaddr
-             bot_inst_addr = top_inst_addr + int(load_addr.split(' ')[4], 16)
-        elif t_bit == 64:
-             _load_addr = os.popen('LANG=CC llvm-readelf-13 -l ' + target.name + \
-                     ' 2> /dev/null | grep -A 1 "LOAD " | grep "R E" | tr -s " " | tr -d "\n" | cut -c2-' \
-                     ).read().split('\n')[:-1]
-             if _load_addr != []:
-                 load_addr =  _load_addr[0]
-             else:
-                 load_addr = os.popen('LANG=CC readelf -l ' + target.name + \
-                         ' 2> /dev/null | grep -A 1 "LOAD " | cut -d":" -f2- | cut -d"-" -f2- | grep -B 1 -e "R E" -e "RWE" | grep -v "\-\-" | tr -s " " | cut -c2- | tr -s "\n" " "' + " | sed -e 's/LOAD/_/g'" \
-                         ).read().split('_')[1]
-
-             top_inst_addr = int(load_addr.split(' ')[3], 16) - base_vaddr
-             bot_inst_addr = top_inst_addr + int(load_addr.split(' ')[4], 16)
-
-    #print(hex(top_inst_addr), hex(bot_inst_addr))
-    #exit(-1)
+        # Fallback for ELFs whose section table is stripped or malformed:
+        # derive the executable region from the first PT_LOAD with R+X.
+        import lief
+        b = lief.parse(target.name)
+        if b is not None:
+            for seg in b.segments:
+                if str(seg.type) != 'SEGMENT_TYPES.LOAD':
+                    continue
+                flags = int(seg.flags)
+                # PF_R = 4, PF_X = 1
+                if (flags & 0x4) == 0 or (flags & 0x1) == 0:
+                    continue
+                top_inst_addr = seg.virtual_address - base_vaddr
+                bot_inst_addr = top_inst_addr + seg.physical_size
+                break
     return top_inst_addr, bot_inst_addr
 
 def capstone_disasm_bin(target, t_arch, t_bit, t_endian, top_inst_addr, bot_inst_addr):
@@ -390,12 +348,7 @@ def parse_inst(target, target_inst, base_vaddr, t_arch, t_bit, t_endian, top_ins
     readelf_got_map = []
     if t_arch in ['EM_MIPS']:
         got_addr_map = []
-        readelf_got_list = os.popen( \
-                "llvm-readelf-13 -A " + target.name + \
-                " 2> /dev/null | sed -n '/ Local entries:/,$p' | sed '1,2d' | sed '$d' | sed -e 's/(gp)//g' | tr -d '-' | cut -c3- " \
-                ).read().split('\n')[:-1]
-        for readelf_got in readelf_got_list:
-            readelf_got_map.append(readelf_got.split())
+        readelf_got_map = _mips_got_map(target.name)
 
     #inst_addrs = sorted([k for k, v in target_inst.items()])
     inst_addrs = sorted(target_inst.keys())
@@ -560,28 +513,62 @@ def get_symtab_info_by_capstone(target):
     return symtab_info
 
 def get_symtab_info_by_reaelf(target):
+    # LIEF fallback for ELFs that pyelftools cannot parse (corrupted /
+    # packed section headers). Iterates PT_LOAD with R+X just like
+    # get_symtab_info_by_capstone().
+    import lief
     symtab_info = []
-    arch = os.popen('LANG=CC readelf -h ' + target + ' 2> /dev/null | grep Machine | tr -s " " | cut -f2 -d:').read().strip() # TODO: do not use readelf
-    bit = os.popen('LANG=CC readelf -h ' + target + ' 2> /dev/null | grep Class | tr -s " " | cut -f2 -d:').read().strip() # TODO: do not use readelf
-    entryaddr = int(os.popen('LANG=CC readelf -h ' + target + ' 2> /dev/null | grep Entry | tr -s " " | cut -f2 -d:').read(), 16) # TODO: do not use readelf
-    if bit == 'ELF32':
-        seginfo = os.popen('LANG=CC readelf -l ' + target + ' 2> /dev/null | grep LOAD | tr -s " "').read().split('\n')[:-1] # TODO: do not use readelf
-        for s in seginfo:
-            info = s.split(' ')
-            offset = int(info[2], 16)
-            size = int(info[5], 16)
-            vaddr = int(info[3], 16)
-            symtab_info.append((offset, offset + size, vaddr))
-    elif bit == 'ELF64':
-        seginfo_lines = os.popen('LANG=CC readelf -l ' + target + ' 2> /dev/null | grep -A 1 -n LOAD | cut -d":" -f2- | cut -d"-" -f2- | tr -s " " | cut -c2-  | tr -s "\n" " " ').read().split('LOAD')[1:]
-        for seginfo in seginfo_lines:
-            if 'R' in seginfo and 'E' in seginfo or 'RE' in seginfo:
-                info = seginfo.split(' ')
-                offset = int(info[1], 16)
-                size = int(info[4], 16)
-                vaddr = int(info[2], 16)
-                symtab_info.append((offset, offset + size, vaddr - offset))
+    b = lief.parse(target)
+    if b is None:
+        return symtab_info
+    for seg in b.segments:
+        if str(seg.type) != 'SEGMENT_TYPES.LOAD':
+            continue
+        flags = int(seg.flags)
+        # PF_R = 4, PF_X = 1
+        if (flags & 0x4) == 0 or (flags & 0x1) == 0:
+            continue
+        offset = seg.file_offset
+        size = seg.physical_size
+        vaddr = seg.virtual_address
+        symtab_info.append((offset, offset + size, vaddr - offset))
     return symtab_info
+
+def _mips_got_map(target_path):
+    # Reproduce `llvm-readelf -A` Local-entries table directly from .got
+    # and .reginfo, so MIPS GOT resolution does not need an external
+    # toolchain. Returns the same shape func_ident expects:
+    # [(got_addr_hex, abs_gp_offset_decimal_str, callee_addr_hex), ...].
+    got_map = []
+    with open(target_path, 'rb') as fp:
+        e = ELFFile(fp)
+        got = e.get_section_by_name('.got')
+        reginfo = e.get_section_by_name('.reginfo')
+        if got is None or reginfo is None:
+            return got_map
+        endian = '<' if e['e_ident']['EI_DATA'] == 'ELFDATA2LSB' else '>'
+        word = 4 if e['e_ident']['EI_CLASS'] == 'ELFCLASS32' else 8
+        word_fmt = endian + ('I' if word == 4 else 'Q')
+        # MIPS_REGINFO: ri_gprmask(4) + ri_cprmask[4]*4 + ri_gp_value(4|8)
+        gp_data = reginfo.data()
+        if len(gp_data) >= 24 and word == 4:
+            gp_value = struct.unpack(endian + 'I 4I I', gp_data[:24])[5]
+        elif len(gp_data) >= 40 and word == 8:
+            gp_value = struct.unpack(endian + 'I 4I Q', gp_data[:32])[5]
+        else:
+            return got_map
+        got_data = got.data()
+        got_base = got['sh_addr']
+        for i in range(got['sh_size'] // word):
+            got_entry_addr = got_base + i * word
+            callee = struct.unpack_from(word_fmt, got_data, i * word)[0]
+            gp_offset_abs = abs(gp_value - got_entry_addr)
+            got_map.append([
+                '%08x' % got_entry_addr,
+                str(gp_offset_abs),
+                '%08x' % callee,
+            ])
+    return got_map
 
 def format_match_res(match_res, symtab_info, risc_v_flag):
     functions = {}
