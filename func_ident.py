@@ -1236,58 +1236,97 @@ def get_func_name_list_alias_list(multi_func_name_list, alias_list):
         func_name_alias_list = multi_func_name_list
     return sorted(set(func_name_alias_list))
 
-def id_func_name_for_depend(functions, call_map, depend_path, alias_list):
-    def get_depend_list(d_list_path):
-        depend_data = []
-        try:
-            with open(d_list_path, 'r') as d_list:
-                for d in d_list:
-                    d = d.strip()
-                    d = d.replace('\n', '')
-                    d = d.split(' ')
-                    alias = d[0].split(',')
-                    d[0] = alias
-                    depend_data.append(d)
-        except FileNotFoundError:
-            print('Dependency file not found : %s' % d_list_path, file=sys.stderr)
-            exit(1)
-        return depend_data
+_DEPEND_CACHE = {}  # depend_path -> (depend_data, caller_alias_index)
 
-    def caller_base_name_filter(functions, call_map, depend_data, alias_list):
+
+def _load_depend(d_list_path):
+    # Parse the .dlist file once per path and cache the rows plus a
+    # caller-alias -> rows index. The original loop scanned 174K rows
+    # per (function, call_site) pair on a glibc cfg, dominating wall
+    # time on busybox-class targets. The index turns the inner scan
+    # into an O(1) dictionary hit keyed on the caller's resolved
+    # symbol name. Cached at module scope so repeated
+    # id_func_name_for_depend() invocations within run_one_with_state's
+    # convergence loop reuse the same parsed structure.
+    cached = _DEPEND_CACHE.get(d_list_path)
+    if cached is not None:
+        return cached
+    depend_data = []
+    caller_alias_index = {}
+    try:
+        with open(d_list_path, 'r') as d_list:
+            for d in d_list:
+                d = d.strip().split(' ')
+                if len(d) < 3:
+                    continue
+                alias = d[0].split(',')
+                d[0] = alias
+                try:
+                    offset_int = int(d[2])
+                except ValueError:
+                    continue
+                # (caller_alias_list, callee_name, offset_int)
+                row = (alias, d[1], offset_int)
+                depend_data.append(row)
+                for name in alias:
+                    caller_alias_index.setdefault(name, []).append(row)
+    except FileNotFoundError:
+        print('Dependency file not found : %s' % d_list_path, file=sys.stderr)
+        exit(1)
+    cached = (depend_data, caller_alias_index)
+    _DEPEND_CACHE[d_list_path] = cached
+    return cached
+
+
+def id_func_name_for_depend(functions, call_map, depend_path, alias_list):
+    depend_data, caller_alias_index = _load_depend(depend_path)
+
+    def caller_base_name_filter(functions, call_map):
+        # For each function with a unique resolved name, look up the
+        # short list of dependency rows whose caller alias contains
+        # that name (O(1) index hit), then verify the call site offset
+        # falls within the call instruction. Replaces the historical
+        # O(functions x call_map x depend_data) scan with
+        # O(functions x call_map x avg_rows_per_name).
         matched_func_num = 0
         for key, value in functions.items():
-            if value['detected'] == True and len(value['names']) == 1:
-                for opecode_addr, inst_size, operand_callee_addr in call_map:
-                    if int(key) <= int(opecode_addr) <= int(key)+int(functions[key]['size']):
-                        for caller_alias, callee, offset in depend_data:
-                            #print(caller_alias, callee, offset)
-                            _caller_func_len = len(value['names'])
-                            if len(set(value['names']) & set(caller_alias)) == _caller_func_len \
-                                    or _caller_func_len == 1 and value['names'][0] == caller_alias[0]:
-                                try:
-                                    functions_callee = functions[operand_callee_addr]['names']
-                                    #print('dbg :', functions[operand_callee_addr['names'])
-                                except: # case of init function
-                                    continue
-                                call_offset_start = opecode_addr - key
-                                call_offset_end = call_offset_start + inst_size
-                                if call_offset_start <= int(offset) < call_offset_end:
-                                    # get all callee alias
-                                    functions_callee_aliases = get_func_name_list_alias_list(functions_callee, alias_list)
-                                    #print(functions_callee, callee, functions_callee_aliases)
-                                    #if callee in functions_callee and len(functions_callee) > 1:
-                                    if callee in functions_callee_aliases and len(functions_callee) > 1:
-                                        # print('[matched! : caller base] (%s) : %s => %s' % \
-                                        #         ( \
-                                        #         hex(operand_callee_addr), \
-                                        #         functions[operand_callee_addr]['names'], \
-                                        #         [callee] \
-                                        #         )) # dbg
-                                        functions[operand_callee_addr]['names'] = [callee]
-                                        matched_func_num = matched_func_num + 1
+            if not (value['detected'] and len(value['names']) == 1):
+                continue
+            single_name = value['names'][0]
+            candidates = caller_alias_index.get(single_name)
+            if not candidates:
+                continue
+            func_end = key + functions[key]['size']
+            for opecode_addr, inst_size, operand_callee_addr in call_map:
+                if not (key <= opecode_addr <= func_end):
+                    continue
+                callee_entry = functions.get(operand_callee_addr)
+                if callee_entry is None:
+                    continue
+                functions_callee = callee_entry['names']
+                if len(functions_callee) <= 1:
+                    continue
+                call_offset_start = opecode_addr - key
+                call_offset_end = call_offset_start + inst_size
+                # Mirror the original behaviour: if multiple depend rows
+                # match this call site, every match applies (last-wins
+                # rename), and matched_func_num counts every match. The
+                # iteration is bounded by candidates (=index hit list),
+                # so the cost is small even without an early break.
+                functions_callee_aliases = None
+                for caller_alias, callee, offset_int in candidates:
+                    if not (call_offset_start <= offset_int < call_offset_end):
+                        continue
+                    if functions_callee_aliases is None:
+                        functions_callee_aliases = \
+                            get_func_name_list_alias_list(
+                                functions_callee, alias_list)
+                    if callee in functions_callee_aliases:
+                        functions[operand_callee_addr]['names'] = [callee]
+                        matched_func_num += 1
         return functions, matched_func_num
 
-    def callee_base_name_filter(functions, call_map, depend_data, alias_list):
+    def callee_base_name_filter(functions, call_map):
         matched_func_num = 0
         # get multi funcname address
         multi_funcname_addr_list = []
@@ -1304,8 +1343,10 @@ def id_func_name_for_depend(functions, call_map, depend_path, alias_list):
             # search depend function info
             candidate_func_depend_dict = {}
             for candidate_func in functions[multi_addr]['names']:
-                #print(candidate_func)
-                for d_caller_funcs, d_callee_func, d_offset in depend_data:
+                # Index-based lookup replaces the historical scan over
+                # the full 174K-row depend_data per candidate function.
+                for d_caller_funcs, d_callee_func, d_offset in \
+                        caller_alias_index.get(candidate_func, []):
                     if candidate_func in d_caller_funcs:
                         #print('-')
                         #print(','.join(d_caller_funcs), d_callee_func, d_offset)
@@ -1373,10 +1414,9 @@ def id_func_name_for_depend(functions, call_map, depend_path, alias_list):
         return functions, matched_func_num
 
     id_d_num = 0
-    depend_list = get_depend_list(depend_path)
     while True:
-        functions, r_matched_func_num = caller_base_name_filter(functions, call_map, depend_list, alias_list)
-        functions, e_matched_func_num = callee_base_name_filter(functions, call_map, depend_list, alias_list)
+        functions, r_matched_func_num = caller_base_name_filter(functions, call_map)
+        functions, e_matched_func_num = callee_base_name_filter(functions, call_map)
         if e_matched_func_num == r_matched_func_num == 0:
             break
         else:
