@@ -1,8 +1,9 @@
 import r2pipe, sys, subprocess, os
+from pathlib import Path
 from termcolor import colored
 from pyfzf.pyfzf import FzfPrompt
 
-STELFTOOLS_PATH="/path/to/stelftools/"
+STELFTOOLS_PATH = str(Path(__file__).resolve().parent) + "/"
 STELFTOOLS_TOOLCHAIN_PATH = STELFTOOLS_PATH + 'toolchain_config/'
 
 def createR2Pipe():

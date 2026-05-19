@@ -10,6 +10,7 @@ import argparse
 import json
 import hashlib
 import subprocess
+from pathlib import Path
 
 from capstone import *
 from elftools.elf.elffile import ELFFile
@@ -17,7 +18,10 @@ from elftools.common import exceptions
 
 import DubMaker
 
-STELFTOOLS_PATH="/path/to/stelftools/"
+# Resolve through any symlinks (IDA/Ghidra plugin setup symlinks
+# this file into the host tool's plugin directory) so the trailing
+# slash form keeps every `STELFTOOLS_PATH + 'subdir/file'` concat working.
+STELFTOOLS_PATH = str(Path(__file__).resolve().parent) + "/"
 
 INIT_CRT_FUNC_LIST = ['__init', '_init', '.init', \
         '_start', '_start_c', '__start', 'hlt', '__gmon_start__', 'set_fast_math', \

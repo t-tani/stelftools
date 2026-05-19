@@ -10,7 +10,11 @@ import json
 import time
 import subprocess
 
-STELFTOOLS_PATH="/path/to/stelftools/"
+# Ghidra's bundled Python may be Jython 2.7 in older installs, where
+# pathlib is not available; use os.path to stay portable. Both Jython
+# and CPython resolve symlinks (this file is symlinked into Ghidra's
+# script directory by setup/ghidra_setup.sh).
+STELFTOOLS_PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
 
 currentProgram = state.getCurrentProgram()
 location = str(currentProgram.getExecutablePath())
