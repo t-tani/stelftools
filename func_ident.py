@@ -10,6 +10,7 @@ import argparse
 import json
 import hashlib
 import subprocess
+import shutil
 from pathlib import Path
 
 from capstone import *
@@ -306,6 +307,13 @@ def capstone_disasm_bin(target, t_arch, t_bit, t_endian, top_inst_addr, bot_inst
         md = Cs(CS_ARCH_SPARC, CS_MODE_BIG_ENDIAN)
     elif t_arch in ['EM_SPARCV9']:
         md = Cs(CS_ARCH_SPARC, CS_MODE_BIG_ENDIAN + CS_MODE_V9)
+    elif t_arch in ['EM_SH']:
+        # Capstone 5.0 added CS_ARCH_SH. SH4 mode decodes the SH2/SH3
+        # instruction subset that firmware libraries use.
+        if t_endian == 'big':
+            md = Cs(CS_ARCH_SH, CS_MODE_SH4 | CS_MODE_BIG_ENDIAN)
+        elif t_endian == 'little':
+            md = Cs(CS_ARCH_SH, CS_MODE_SH4 | CS_MODE_LITTLE_ENDIAN)
     else:
         print("[disasm/capstone] Not support arch : %s " % t_arch, file = sys.stderr)
         exit(-1)
@@ -320,18 +328,44 @@ def capstone_disasm_bin(target, t_arch, t_bit, t_endian, top_inst_addr, bot_inst
             break
     return target_inst
 
+def _find_objdump(t_arch):
+    """Locate an objdump that disassembles EM_ARC_COMPACT. Returns its path.
+
+    Capstone has no ARC backend, so ARC is the one architecture still routed
+    through an external objdump. The STELFTOOLS_ARC_OBJDUMP environment
+    variable overrides the search. Otherwise probe PATH for an ARC
+    cross-objdump, then fall back to a multiarch objdump whose `--info`
+    reports an ARC BFD target (the binutils-multiarch package builds one).
+    Raises RuntimeError with an actionable message when none is found.
+    """
+    if t_arch != 'EM_ARC_COMPACT':
+        raise ValueError("objdump disassembly is only used for EM_ARC_COMPACT, got %s" % t_arch)
+    override = os.environ.get('STELFTOOLS_ARC_OBJDUMP')
+    if override:
+        if shutil.which(override) is None and not os.path.isfile(override):
+            raise RuntimeError(
+                "STELFTOOLS_ARC_OBJDUMP is set to '%s' but no such executable exists" % override)
+        return override
+    for name in ['arc-linux-objdump', 'arc-linux-gnu-objdump',
+                 'arc-elf32-objdump', 'arceb-linux-objdump',
+                 'arc-snps-linux-uclibc-objdump']:
+        path = shutil.which(name)
+        if path:
+            return path
+    generic = shutil.which('objdump')
+    if generic:
+        info = subprocess.run([generic, '--info'], text=True,
+                              stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+        if re.search('arc', info.stdout, re.IGNORECASE):
+            return generic
+    raise RuntimeError(
+        "no ARC-capable objdump found. Install binutils-multiarch, or an ARC "
+        "cross-binutils, or point STELFTOOLS_ARC_OBJDUMP at one.")
+
 def objdump_disasm_bin(target, t_arch, t_bit, t_endian, top_inst_addr, bot_inst_addr):
     target_inst = {}
     target_path = target.name
-    # objdump path
-    if t_arch in ['EM_ARC_COMPACT']:
-        #Set the path of objdump that supports the arc architecture.
-        OBJDUMP_PATH = \
-                "/path/to/arc objdump"
-    elif t_arch in ['EM_SH']:
-        #Set the path of objdump that supports the sh4 architecture.
-        OBJDUMP_PATH = \
-                "/path/to/sh4 objdump"
+    OBJDUMP_PATH = _find_objdump(t_arch)
     objdump_res = subprocess.run([OBJDUMP_PATH, '-d', target_path], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     for d_line in objdump_res.stdout.split('\n'):
         # del blank line
@@ -443,14 +477,21 @@ def parse_inst(target, target_inst, base_vaddr, t_arch, t_bit, t_endian, top_ins
                 call_map.append([addr, size, call_addr])
                 #print(hex(addr), size, i['inst'], hex(call_addr))
         elif t_arch in ['EM_SH']:
-            #print(hex(addr), i)
-            i_mnemonic = i['inst'].split(' ')[0]
-            if i_mnemonic in ['mov.l'] and '!' in i['inst']:
-                size = int(len("".join(i['bytecode']))/2)
-                call_addr = int(i['inst'].split('!')[1].split(' ')[1], 16)
-                func_addr.append(call_addr)
-                call_map.append([addr, size, call_addr])
-                #print(hex(addr), size, i['inst'], hex(call_addr))
+            # SH has no call-with-immediate; function pointers reach the
+            # code through `mov.l @(disp,pc),Rn` literal-pool loads. GNU
+            # objdump annotated those with the dereferenced pointer value.
+            # Capstone resolves the operand to the literal-pool slot
+            # address instead, so read the 4-byte pointer from that slot.
+            if i.mnemonic == 'mov.l':
+                slot = re.match(r'^(0x[0-9a-fA-F]+),', i.op_str)
+                if slot:
+                    target.seek(int(slot.group(1), 16))
+                    raw = target.read(4)
+                    if len(raw) == 4:
+                        call_addr = int.from_bytes(raw, t_endian)
+                        func_addr.append(call_addr)
+                        call_map.append([i.address, i.size, call_addr])
+                        #print(hex(i.address), i.size, i.mnemonic, hex(call_addr))
         else:
             print("[disasm/capstone] Not support arch : %s " % t_arch, file = sys.stderr)
             exit(-1)
@@ -483,7 +524,7 @@ def get_func_addr(target, base_vaddr):
     top_inst_addr, bot_inst_addr = get_inst_area(target, base_vaddr, t_bit)
     #print('->', hex(top_inst_addr), hex(bot_inst_addr))
     # # get instruction
-    if not t_arch in ['EM_ARC_COMPACT', 'EM_SH']:
+    if t_arch not in ['EM_ARC_COMPACT']:
         target_inst = capstone_disasm_bin (target, t_arch, t_bit, t_endian, top_inst_addr, bot_inst_addr)
     else:
         target_inst = objdump_disasm_bin(target, t_arch, t_bit, t_endian, top_inst_addr, bot_inst_addr)

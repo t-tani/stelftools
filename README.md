@@ -61,7 +61,7 @@ The below table shows the results of the comparison. As you can see, `stelftools
 |:------------|:--------|
 | [arpy](https://pypi.org/project/arpy/)                 | 2.2.0  |
 | [yara-x](https://pypi.org/project/yara-x/)             | 1.16.0 |
-| [capstone](https://pypi.org/project/capstone/)         | 4.0.2  |
+| [capstone](https://pypi.org/project/capstone/)         | 5.0    |
 | [pyelftools](https://pypi.org/project/pyelftools/)     | 0.28   |
 | [python-magic](https://pypi.org/project/python-magic/) | 0.4.25 |
 | [cxxfilt](https://pypi.org/project/cxxfilt/)           | 0.3.0  |
