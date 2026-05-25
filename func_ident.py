@@ -216,7 +216,7 @@ def get_bin_arch(target):
 
 def get_inst_area(target, base_vaddr, t_bit):
     top_inst_addr = 0
-    top_inst_addr = 0
+    bot_inst_addr = 0
     # pyelftools
     try: # pyelftools
         e = ELFFile(target)
