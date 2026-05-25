@@ -1,0 +1,187 @@
+name: refresh-bootlin-signatures
+
+on:
+  workflow_dispatch:
+    inputs:
+      since:
+        description: 'Earliest Bootlin release (YYYY.MM[-N]); empty means "every release in the index"'
+        required: false
+        default: ''
+      until:
+        description: 'Latest Bootlin release (YYYY.MM[-N]); empty means "newest in the index"'
+        required: false
+        default: ''
+      arch:
+        description: 'Comma-separated arch allowlist; empty means "every arch"'
+        required: false
+        default: ''
+      libc:
+        description: 'Comma-separated libc allowlist'
+        required: false
+        default: 'glibc,musl,uclibc'
+      max_jobs:
+        description: 'Cap on matrix size to keep CI minutes bounded'
+        required: false
+        default: '12'
+  schedule:
+    # Monthly: 04:17 UTC on the first day of the month.
+    - cron: '17 4 1 * *'
+
+permissions:
+  contents: write
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.diff.outputs.matrix }}
+      count: ${{ steps.diff.outputs.count }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Discover Bootlin releases
+        id: discover
+        run: |
+          set -eux
+          python tools/ci/bootlin_index.py \
+            --out index.json \
+            --stability stable \
+            ${{ github.event.inputs.since && format('--since {0}', github.event.inputs.since) || '' }} \
+            ${{ github.event.inputs.until && format('--until {0}', github.event.inputs.until) || '' }} \
+            ${{ github.event.inputs.arch  && format('--arch {0}',  github.event.inputs.arch)  || '' }} \
+            --libc "${LIBC}"
+        env:
+          LIBC: ${{ github.event.inputs.libc || 'glibc,musl,uclibc' }}
+
+      - name: Diff against on-disk signatures
+        id: diff
+        run: |
+          set -eux
+          python tools/ci/bootlin_diff.py index.json \
+            --yara-dir yara-patterns \
+            --out missing.json
+          # Truncate to max_jobs to keep wall time bounded; the remainder
+          # is picked up on the next dispatch / monthly cron.
+          python - <<'PY' "${MAX_JOBS}"
+          import json, sys
+          cap = int(sys.argv[1])
+          rows = json.load(open('missing.json'))
+          rows = rows[:cap]
+          with open('matrix.json', 'w') as f:
+              json.dump(rows, f)
+          print(f"matrix size: {len(rows)}")
+          PY
+          echo "matrix=$(cat matrix.json)" >> "$GITHUB_OUTPUT"
+          echo "count=$(python -c 'import json; print(len(json.load(open("matrix.json"))))')" >> "$GITHUB_OUTPUT"
+        env:
+          MAX_JOBS: ${{ github.event.inputs.max_jobs || '12' }}
+
+  build:
+    needs: discover
+    if: needs.discover.outputs.count != '0'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        include: ${{ fromJSON(needs.discover.outputs.matrix) }}
+    # libfunc_info_create.py takes ~50 minutes on a fast local box for the
+    # glibc/aarch64 toolchain; GitHub-hosted runners are slower. 90 minutes
+    # leaves headroom without burning the 6-hour job ceiling.
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install stelftools deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install arpy yara-x capstone pyelftools python-magic cxxfilt lief
+
+      - name: Build signature
+        run: |
+          bash tools/ci/build_bootlin_signature.sh \
+            --release "${{ matrix.release }}" \
+            --libc    "${{ matrix.libc }}" \
+            --arch    "${{ matrix.arch }}" \
+            --ext     "${{ matrix.ext }}" \
+            --stability "${{ matrix.stability }}" \
+            --python python
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sig-${{ matrix.signature_name }}
+          if-no-files-found: error
+          retention-days: 7
+          path: |
+            yara-patterns/${{ matrix.signature_name }}.yara
+            toolchain_config/${{ matrix.signature_name }}.json
+            _tmpdir/dlists/${{ matrix.signature_name }}.dlist
+            _tmpdir/alias_list/${{ matrix.signature_name }}.alist
+
+  commit:
+    needs: [discover, build]
+    if: needs.discover.outputs.count != '0' && success()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all signature artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: sig-*
+          merge-multiple: true
+          path: .
+
+      - name: Inspect new files
+        run: |
+          ls -la yara-patterns/ | tail -20
+          ls -la toolchain_config/ | tail -20
+
+      - name: Commit and push to ci-refresh branch
+        run: |
+          set -eux
+          branch="ci/bootlin-refresh-$(date -u +%Y%m%d-%H%M)"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$branch"
+          git add yara-patterns/bl-*.yara \
+                  toolchain_config/bl-*.json \
+                  _tmpdir/dlists/bl-*.dlist \
+                  _tmpdir/alias_list/bl-*.alist
+          if git diff --cached --quiet; then
+            echo "no new signatures staged"
+            exit 0
+          fi
+          # Subject lists added signature names so reviewers see scope without
+          # opening the diff. Body keeps the per-line breakdown.
+          names=$(git diff --cached --name-only -- yara-patterns/ \
+                    | sed -E 's#^yara-patterns/##; s#\.yara$##' \
+                    | sort)
+          subject="[feat/ci] add Bootlin signatures: $(echo "$names" | head -1)$([ $(echo "$names" | wc -l) -gt 1 ] && echo " (+$(($(echo "$names" | wc -l) - 1)) more)")"
+          {
+            echo "$subject"
+            echo
+            echo "Generated by .github/workflows/refresh-bootlin.yml run $GITHUB_RUN_ID."
+            echo
+            echo "$names"
+          } > .commit-msg
+          git commit -F .commit-msg
+          rm .commit-msg
+          git push origin "$branch"
+          echo "Pushed $branch."
