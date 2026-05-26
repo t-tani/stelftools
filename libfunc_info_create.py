@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import io
 import os
 import re
 import shutil
@@ -103,52 +104,134 @@ def get_static_lib_file_list(tc_path):
         final.extend(by_hash.values())
     return sorted(final)
 
-## mkrule
-def mkrule(tc_path, tc_name):
-    archive_list = []
-    object_list = []
-    rule_output_path = STELFTOOLS_PATH + "yara-patterns/" + tc_name + ".yara"
+# Toolchain object files that the rule generator skips. crtbegin / Scrt1
+# / rcrt1 are dynamic-link helpers whose code is not part of any user
+# library; they used to be filtered from the rule pass only and still
+# need to feed the dependency analyser to record their callers.
+_EXCLUDE_OPECODE_TOPLEVEL = {'Scrt1.o', 'rcrt1.o', 'crtbegin.o', 'crtbeginS.o', 'crtendS.o'}
+
+# Top-level archive that the rule generator does not handle (C++ symbol
+# names blow past the YARA identifier-length limits the rule writer
+# enforces). Excluded from both passes; libfunc_deparse never had a
+# C++ branch either.
+_EXCLUDE_BOTH_TOPLEVEL = {'libstdc++.a'}
+
+# Per-archive members the rule generator avoids; the dependency walk
+# still descends into them to preserve depend_list parity.
+_EXCLUDE_OPECODE_IN_ARCHIVE = {'aeabi_sighandlers.os', 'aeabi_sighandlers.o'}
+
+_EXECUTABLE_MIMES = {
+    'application/x-executable',
+    'application/x-sharedlib',
+    'application/x-pie-executable',
+}
+
+
+def _named_bytesio(data, name):
+    """BytesIO wrapper whose ``.name`` attribute satisfies libfunc_mkrule.
+
+    libfunc_mkrule.fetch_opecodes picks up the file name from ``f.header.name``
+    (for arpy archive members) or ``f.name`` (for plain files). A bare
+    BytesIO has neither, so the rule writer would error out; setting
+    ``.name`` matches the plain-file path.
+    """
+    buf = io.BytesIO(data)
+    buf.name = name
+    return buf
+
+
+def mkrule_and_other(tc_path, tc_name):
+    """Build the yara, dlist, and alist outputs in a single file walk.
+
+    The earlier pipeline ran mkrule() to discover opcodes and write the
+    yara file, then mkother() walked the same static-library set a
+    second time so libfunc_deparse could record dependency edges. Each
+    pass opened the same archives and reparsed the same ELFs; on
+    bl-stable-2024.05-1/glibc/aarch64 that double work accounted for
+    roughly forty percent of the total runtime.
+
+    The combined walk reads each object file (standalone or pulled from
+    an archive) into a BytesIO once, then feeds the same buffer through
+    libfunc_mkrule.fetch_opecodes and libfunc_deparse.func_depend_analy
+    back-to-back with a seek(0) in between. Exclusion rules from the
+    original two functions are preserved verbatim — the rule pass still
+    skips Scrt1.o / crtbegin*.o / aeabi_sighandlers.o while the depend
+    pass descends into them, and both passes skip libstdc++.a.
+    """
+    yara_output_path = STELFTOOLS_PATH + "yara-patterns/" + tc_name + ".yara"
+    dlist_output_path = STELFTOOLS_PATH + "_tmpdir/dlists/" + tc_name + ".dlist"
+    alist_output_path = STELFTOOLS_PATH + "_tmpdir/alias_list/" + tc_name + ".alist"
 
     static_lib_file_list = get_static_lib_file_list(tc_path)
 
     logging.info('Analyzing archive files...')
     tab = {}
     crt_tab = {}
-
-    EXCLUDE_OBJ_FILES = ['Scrt1.o', 'rcrt1.o', 'crtbegin.o', 'crtbeginS.o', 'crtendS.o']
+    depend_list = {}
 
     for filename in static_lib_file_list:
-        # skip dynamic link object
-        if filename.split('/')[-1] in EXCLUDE_OBJ_FILES:
-            #print(filename.split('/')[-1])
+        leaf = filename.split('/')[-1]
+        if leaf in _EXCLUDE_BOTH_TOPLEVEL:
             continue
-        # c-lang only fast mode
-        #skip c++ objfile (libstdc++)
-        cpp_obj_list = ['libstdc++.a']
-        if filename.split('/')[-1] in cpp_obj_list:
-            continue
-        #print('%s' % filename, flush=True)
         try:
-            ftype = magic.from_file(filename, mime = True)
-            if ftype == 'application/x-archive': #filename[-2:] == '.a':
-                newtab, new_crt_tab = libfunc_mkrule.fetch_opecodes_from_arfile(filename)
-            elif ftype == 'application/x-object': #filename[-2:] == '.o':
-                with open(filename, 'rb') as f:
-                    newtab, new_crt_tab = libfunc_mkrule.fetch_opecodes(f)
-            elif ftype in ['application/x-executable', 'application/x-sharedlib', 'application/x-pie-executable']: # TODO: support other executables
-                exapis = []
-                with open(filename, 'rb') as f:
-                    newtab, new_crt_tab = libfunc_mkrule.fetch_opecodes(f, exapis)
-            elif ftype in ['text/plain', 'inode/symlink']:
-                continue
-            else:
-                logging.error('Not supported file type of %s: %s' % (filename, ftype))
-                #continue
-                exit(-1)
+            ftype = magic.from_file(filename, mime=True)
         except magic.MagicException:
             continue
-        tab = libfunc_mkrule.merge_dicts(tab, newtab)
-        crt_tab = libfunc_mkrule.merge_dicts(crt_tab, new_crt_tab)
+
+        skip_opecode_outer = leaf in _EXCLUDE_OPECODE_TOPLEVEL
+
+        if ftype == 'application/x-archive':
+            rel_arfile = leaf
+            try:
+                ar = arpy.Archive(os.path.abspath(filename))
+            except Exception:
+                continue
+            for of in ar:
+                inner_fname = of.header.name.decode('utf-8')
+                data = of.read()
+                # Some archive members (.SYMDEF, padding) read back as
+                # empty; both passes used to silently no-op on them
+                # because pyelftools rejected the input.
+                if not data:
+                    continue
+                buf = _named_bytesio(data, inner_fname)
+
+                if inner_fname not in _EXCLUDE_OPECODE_IN_ARCHIVE:
+                    newtab, new_crt_tab = libfunc_mkrule.fetch_opecodes(buf, arfile=rel_arfile)
+                    tab = libfunc_mkrule.merge_dicts(tab, newtab)
+                    crt_tab = libfunc_mkrule.merge_dicts(crt_tab, new_crt_tab)
+
+                buf.seek(0)
+                depend_list.update(libfunc_deparse.func_depend_analy(buf, inner_fname))
+
+        elif ftype == 'application/x-object':
+            with open(filename, 'rb') as f:
+                data = f.read()
+            buf = _named_bytesio(data, filename)
+
+            if not skip_opecode_outer:
+                newtab, new_crt_tab = libfunc_mkrule.fetch_opecodes(buf)
+                tab = libfunc_mkrule.merge_dicts(tab, newtab)
+                crt_tab = libfunc_mkrule.merge_dicts(crt_tab, new_crt_tab)
+
+            buf.seek(0)
+            depend_list.update(libfunc_deparse.func_depend_analy(buf, leaf))
+
+        elif ftype in _EXECUTABLE_MIMES:
+            # Executables only fed the opcode pass in the original
+            # pipeline; libfunc_deparse never received them.
+            if skip_opecode_outer:
+                continue
+            with open(filename, 'rb') as f:
+                newtab, new_crt_tab = libfunc_mkrule.fetch_opecodes(f, exapis=[])
+            tab = libfunc_mkrule.merge_dicts(tab, newtab)
+            crt_tab = libfunc_mkrule.merge_dicts(crt_tab, new_crt_tab)
+
+        elif ftype in ('text/plain', 'inode/symlink'):
+            continue
+        else:
+            logging.error('Not supported file type of %s: %s' % (filename, ftype))
+            exit(-1)
 
     # marge crt opecode
     _tmp_crt_info = {}
@@ -158,14 +241,14 @@ def mkrule(tc_path, tc_name):
         # get connect crt function name list
         for info_in_obj in crt_tab['crti.o']:
             crt_func_name_list.append(info_in_obj['name'])
-        for crt_obj,  crt_info_list in crt_tab.items():
+        for crt_obj, crt_info_list in crt_tab.items():
             if crt_obj == 'crti.o':
                 for crt_info in crt_info_list:
                     for crt_func_name in crt_func_name_list:
                         if crt_info['name'] == crt_func_name:
                             opecodes_str = crt_info['opecodes']
-                            _tmp_crt_info[crt_func_name] = {'i-opecode' : opecodes_str}
-        for crt_obj,  crt_info_list in crt_tab.items():
+                            _tmp_crt_info[crt_func_name] = {'i-opecode': opecodes_str}
+        for crt_obj, crt_info_list in crt_tab.items():
             if crt_obj == 'crtn.o':
                 for crt_info in crt_info_list:
                     for crt_func_name in crt_func_name_list:
@@ -179,19 +262,21 @@ def mkrule(tc_path, tc_name):
                 if not func_name in marged_crt_func_opecs.keys():
                     marged_crt_func_opecs[func_name] = t_opecodes_str
                 else:
-                    marged_crt_func_opecs[func_name] = marged_crt_func_opecs[func_name] + ' [0-12] ' +  t_opecodes_str
+                    marged_crt_func_opecs[func_name] = marged_crt_func_opecs[func_name] + ' [0-12] ' + t_opecodes_str
         for _crt_func_name, _crt_func_opecodes in marged_crt_func_opecs.items():
             if _crt_func_opecodes in tab.keys():
-                tab[_crt_func_opecodes] = [ \
-                        tab[_crt_func_opecodes][0], \
-                        { 'name': _crt_func_name, 'type': 'func', \
-                        'size': len(_crt_func_opecodes.split(' ')), 'exports': [], 'imports': [], \
-                        'objname': 'crti.o'} \
-                        ]
+                tab[_crt_func_opecodes] = [
+                    tab[_crt_func_opecodes][0],
+                    {'name': _crt_func_name, 'type': 'func',
+                     'size': len(_crt_func_opecodes.split(' ')), 'exports': [], 'imports': [],
+                     'objname': 'crti.o'},
+                ]
             else:
-                tab[_crt_func_opecodes] = [{'name': _crt_func_name, 'type': 'func', \
-                        'size': len(_crt_func_opecodes.split(' ')), 'exports': [], 'imports': [], \
-                        'objname': 'crti.o'}]
+                tab[_crt_func_opecodes] = [
+                    {'name': _crt_func_name, 'type': 'func',
+                     'size': len(_crt_func_opecodes.split(' ')), 'exports': [], 'imports': [],
+                     'objname': 'crti.o'},
+                ]
 
     # show shinked functions
     for v in tab.values():
@@ -200,44 +285,13 @@ def mkrule(tc_path, tc_name):
             continue
     logging.info('\n\nGenerating a yara file...\n\n')
     rules_list = libfunc_mkrule.get_rules(tab)
-    # output yara rule
-    libfunc_mkrule.output_rules(rules_list, rule_output_path)
-    return rule_output_path
+    libfunc_mkrule.output_rules(rules_list, yara_output_path)
 
-def mkother(tc_path, tc_name):
-    # create depend list
-    depend_list_output_path = STELFTOOLS_PATH + "_tmpdir/dlists/" + tc_name + ".dlist"
-    alias_list_output_path = STELFTOOLS_PATH + "_tmpdir/alias_list/" + tc_name + ".alist"
-
-    static_lib_file_list = get_static_lib_file_list(tc_path)
-    # make depend_list
-    depend_list = {}
-    for filename in static_lib_file_list:
-        # c-lang only fast mode
-        #skip c++ objfile (libstdc++)
-        cpp_obj_list = ['libstdc++.a']
-        if filename.split('/')[-1] in cpp_obj_list:
-            continue
-        #print(filename) # debug
-        try:
-            ftype = magic.from_file(filename, mime = True)
-            if ftype == 'application/x-object': # .o file
-                with open(filename, 'rb') as f:
-                    fname =  filename.split('/')[-1]
-                    depend_list.update(libfunc_deparse.func_depend_analy(f, fname))
-            elif ftype == 'application/x-archive': # .a file
-                objfiles = libfunc_deparse.fetch_object_arfile(filename)
-                for f in objfiles:
-                    fname = f.header.name.decode('utf-8')
-                    depend_list.update(libfunc_deparse.func_depend_analy(f, fname))
-        except magic.MagicException:
-            continue
     formatted_depend_data = libfunc_deparse.fmt_depend_data(depend_list)
-    # output depend list
-    libfunc_deparse.output_dlist(formatted_depend_data, depend_list_output_path)
-    # output alias list
-    libfunc_deparse.output_alist(formatted_depend_data, alias_list_output_path)
-    return depend_list_output_path, alias_list_output_path
+    libfunc_deparse.output_dlist(formatted_depend_data, dlist_output_path)
+    libfunc_deparse.output_alist(formatted_depend_data, alist_output_path)
+
+    return yara_output_path, dlist_output_path, alist_output_path
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog = sys.argv[0])
@@ -255,17 +309,11 @@ if __name__ == '__main__':
         tc_path = "/".join(args.compiler_path.split('/')[0:(len(args.compiler_path.split('/'))-2)])
     arch = args.arch
 
-    # create yara rule
-    yara_rule_path = mkrule(tc_path, tc_name)
-    # output log
+    yara_rule_path, depend_list_path, alias_list_path = mkrule_and_other(tc_path, tc_name)
     if os.path.exists(yara_rule_path):
         print('[successfully created] yara rule : %s' % yara_rule_path)
-    # set compiler path
     if os.path.exists(tc_compiler_path):
         print('[successfully checked] toolchain compiler path : %s' % tc_compiler_path)
-    # create dependency list and alias list
-    depend_list_path, alias_list_path = mkother(tc_path, tc_name)
-    # output log
     if os.path.exists(depend_list_path):
         print('[successfully created] dependency list : %s' % depend_list_path)
     if os.path.exists(alias_list_path):

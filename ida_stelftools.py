@@ -162,8 +162,7 @@ def func_ident(tc_cfg_path):
 def stelftools_create(tc_path, tc_name, arch, tc_compiler_path):
     print('start stelftools : create toolchain items -->')
     start = time.time()
-    yara_rule_path = mkrule(tc_path, tc_name)
-    depend_list_path, alias_list_path = mkother(tc_path, tc_name)
+    yara_rule_path, depend_list_path, alias_list_path = mkrule_and_other(tc_path, tc_name)
     #print(yara_rule_path)
     #print(depend_list_path)
     #print(alias_list_path)
