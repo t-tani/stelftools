@@ -147,11 +147,17 @@ jobs:
           fetch-depth: 0
 
       - name: Download all signature artifacts
+        # upload-artifact@v4 strips the longest common path prefix
+        # (here: 'signatures/') when packaging multiple `path:` entries,
+        # so the archive's internal layout starts at `yara/`, `configs/`,
+        # `deps/`. Set the download destination to `signatures/` so the
+        # files land back at signatures/yara/<family>/... where the
+        # subsequent `git add signatures/yara/...` step expects them.
         uses: actions/download-artifact@v4
         with:
           pattern: sig-*
           merge-multiple: true
-          path: .
+          path: signatures
 
       - name: Inspect new files
         run: |
