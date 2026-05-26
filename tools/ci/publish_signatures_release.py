@@ -116,19 +116,20 @@ def _covers_for(arch_dir: Path) -> list[str]:
     return sorted(p.stem for p in arch_dir.glob("*.json"))
 
 
-def _resolve_default_base_url(remote_url: str, tag: str) -> str:
-    """Translate a git remote URL into a Release attachment base URL.
-
-    Accepts both ``git@github.com:owner/repo.git`` and ``https://github.com/owner/repo[.git]``.
-    """
+def _repo_slug_from_remote(remote_url: str) -> str:
+    """``owner/repo`` from either an ssh or https GitHub remote URL."""
     if remote_url.startswith("git@github.com:"):
-        repo_slug = remote_url[len("git@github.com:") :]
+        slug = remote_url[len("git@github.com:") :]
     elif remote_url.startswith("https://github.com/"):
-        repo_slug = remote_url[len("https://github.com/") :]
+        slug = remote_url[len("https://github.com/") :]
     else:
         raise SystemExit(f"can't derive release URL from remote: {remote_url!r}")
-    repo_slug = repo_slug.rstrip("/").removesuffix(".git")
-    return f"https://github.com/{repo_slug}/releases/download/{tag}"
+    return slug.rstrip("/").removesuffix(".git")
+
+
+def _resolve_default_base_url(remote_url: str, tag: str) -> str:
+    """Translate a git remote URL into a Release attachment base URL."""
+    return f"https://github.com/{_repo_slug_from_remote(remote_url)}/releases/download/{tag}"
 
 
 def _git_remote_url(repo_root: Path) -> str:
@@ -232,7 +233,7 @@ def build_manifest(
 
 def _gh_release_create(
     tag: str, archives: Iterable[Path], notes: str, target_branch: str,
-    *, draft: bool = False,
+    *, draft: bool = False, repo: str | None = None,
 ) -> None:
     cmd = [
         "gh", "release", "create", tag,
@@ -240,6 +241,12 @@ def _gh_release_create(
         "--title", tag,
         "--notes", notes,
     ]
+    if repo:
+        # Pin to the origin remote's owner/repo. Without this gh would
+        # pick a remote on its own — when origin is a fork and upstream
+        # is the canonical repo, gh resolves to upstream and 404s with
+        # the misleading "workflow scope may be required" hint.
+        cmd.extend(["--repo", repo])
     if draft:
         cmd.append("--draft")
     cmd.extend(str(p) for p in archives)
@@ -400,9 +407,10 @@ def main(argv: list[str] | None = None) -> int:
             f"{len(archives)} (family, arch) bundles, "
             f"{sum(a['size_bytes'] for a in manifest['assets']) / (1024 ** 3):.1f} GB total."
         )
+        repo_slug = _repo_slug_from_remote(_git_remote_url(repo_root))
         _gh_release_create(
             args.tag, archives, notes, args.target_branch,
-            draft=args.draft,
+            draft=args.draft, repo=repo_slug,
         )
 
         manifest_out = Path(args.manifest_out) if args.manifest_out \

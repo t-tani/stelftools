@@ -1,7 +1,2624 @@
 {
   "schema_version": 1,
-  "manifest_version": "0.0.0",
-  "release_tag": null,
-  "release_base_url": null,
-  "assets": []
+  "manifest_version": "2026-05-27",
+  "release_tag": "signatures-2026-05-27",
+  "release_base_url": "https://github.com/t-tani/stelftools/releases/download/signatures-2026-05-27",
+  "assets": [
+    {
+      "name": "aboriginal-linux-armv4eb.tar.zst",
+      "family": "aboriginal-linux",
+      "arch": "armv4eb",
+      "lief_arch_match": [
+        "arm",
+        "armv4l",
+        "armv4eb",
+        "armv4tl",
+        "armv5l",
+        "armv5-eabi",
+        "armv6l",
+        "armv6-eabihf",
+        "armv7l",
+        "armv7-eabihf",
+        "armv7m"
+      ],
+      "sha256": "51b9dd43be4263cd56a447553f8a11412fd7b5ed6f766314c56b5eda9a2e11bf",
+      "size_bytes": 458271,
+      "covers": [
+        "al-1.0.0_armv4eb",
+        "al-1.0.1_armv4eb",
+        "al-1.0.2_armv4eb",
+        "al-1.0.3_armv4eb",
+        "al-1.1.0_armv4eb",
+        "al-1.1.1_armv4eb"
+      ]
+    },
+    {
+      "name": "aboriginal-linux-armv4l.tar.zst",
+      "family": "aboriginal-linux",
+      "arch": "armv4l",
+      "lief_arch_match": [
+        "arm",
+        "armv4l",
+        "armv4eb",
+        "armv4tl",
+        "armv5l",
+        "armv5-eabi",
+        "armv6l",
+        "armv6-eabihf",
+        "armv7l",
+        "armv7-eabihf",
+        "armv7m"
+      ],
+      "sha256": "09332d0d2451f01e2a8f6dd3ee4a8f06d513ec45f0a36651bec80002155767e8",
+      "size_bytes": 2159887,
+      "covers": [
+        "al-1.0.0_armv4l",
+        "al-1.0.1_armv4l",
+        "al-1.0.2_armv4l",
+        "al-1.0.3_armv4l",
+        "al-1.1.0_armv4l",
+        "al-1.1.1_armv4l",
+        "al-1.2.0_armv4l",
+        "al-1.2.1_armv4l",
+        "al-1.2.2_armv4l",
+        "al-1.2.3_armv4l",
+        "al-1.2.4_armv4l",
+        "al-1.2.5_armv4l",
+        "al-1.2.6_armv4l",
+        "al-1.2.7_armv4l",
+        "al-1.2.8_armv4l",
+        "al-1.2.9_armv4l",
+        "al-1.3.0_armv4l",
+        "al-1.4.0_armv4l",
+        "al-1.4.1_armv4l",
+        "al-1.4.2_armv4l",
+        "al-1.4.3_armv4l",
+        "al-1.4.5_armv4l"
+      ]
+    },
+    {
+      "name": "aboriginal-linux-armv4tl.tar.zst",
+      "family": "aboriginal-linux",
+      "arch": "armv4tl",
+      "lief_arch_match": [
+        "arm",
+        "armv4l",
+        "armv4eb",
+        "armv4tl",
+        "armv5l",
+        "armv5-eabi",
+        "armv6l",
+        "armv6-eabihf",
+        "armv7l",
+        "armv7-eabihf",
+        "armv7m"
+      ],
+      "sha256": "af5543becb52ba4da8d2769105e5a9bf8d1e748f123641689b9f43048e5bd4f1",
+      "size_bytes": 2463654,
+      "covers": [
+        "al-1.0.0_armv4tl",
+        "al-1.0.1_armv4tl",
+        "al-1.0.2_armv4tl",
+        "al-1.0.3_armv4tl",
+        "al-1.1.0_armv4tl",
+        "al-1.1.1_armv4tl",
+        "al-1.2.0_armv4tl",
+        "al-1.2.1_armv4tl",
+        "al-1.2.2_armv4tl",
+        "al-1.2.3_armv4tl",
+        "al-1.2.4_armv4tl",
+        "al-1.2.5_armv4tl",
+        "al-1.2.6_armv4tl",
+        "al-1.2.7_armv4tl",
+        "al-1.2.8_armv4tl",
+        "al-1.2.9_armv4tl",
+        "al-1.3.0_armv4tl",
+        "al-1.4.0_armv4tl",
+        "al-1.4.1_armv4tl",
+        "al-1.4.2_armv4tl",
+        "al-1.4.3_armv4tl",
+        "al-1.4.4_armv4tl",
+        "al-1.4.5_armv4tl"
+      ]
+    },
+    {
+      "name": "aboriginal-linux-armv5l.tar.zst",
+      "family": "aboriginal-linux",
+      "arch": "armv5l",
+      "lief_arch_match": [
+        "arm",
+        "armv4l",
+        "armv4eb",
+        "armv4tl",
+        "armv5l",
+        "armv5-eabi",
+        "armv6l",
+        "armv6-eabihf",
+        "armv7l",
+        "armv7-eabihf",
+        "armv7m"
+      ],
+      "sha256": "6f7c14cdf9729d2ec65abab58dbd9cb54369a80db3e989cd596314009f9bd845",
+      "size_bytes": 2440620,
+      "covers": [
+        "al-1.0.0_armv5l",
+        "al-1.0.1_armv5l",
+        "al-1.0.2_armv5l",
+        "al-1.0.3_armv5l",
+        "al-1.1.0_armv5l",
+        "al-1.1.1_armv5l",
+        "al-1.2.0_armv5l",
+        "al-1.2.1_armv5l",
+        "al-1.2.2_armv5l",
+        "al-1.2.3_armv5l",
+        "al-1.2.4_armv5l",
+        "al-1.2.5_armv5l",
+        "al-1.2.6_armv5l",
+        "al-1.2.7_armv5l",
+        "al-1.2.8_armv5l",
+        "al-1.2.9_armv5l",
+        "al-1.3.0_armv5l",
+        "al-1.4.0_armv5l",
+        "al-1.4.1_armv5l",
+        "al-1.4.2_armv5l",
+        "al-1.4.3_armv5l",
+        "al-1.4.4_armv5l",
+        "al-1.4.5_armv5l"
+      ]
+    },
+    {
+      "name": "aboriginal-linux-armv6l.tar.zst",
+      "family": "aboriginal-linux",
+      "arch": "armv6l",
+      "lief_arch_match": [
+        "arm",
+        "armv4l",
+        "armv4eb",
+        "armv4tl",
+        "armv5l",
+        "armv5-eabi",
+        "armv6l",
+        "armv6-eabihf",
+        "armv7l",
+        "armv7-eabihf",
+        "armv7m"
+      ],
+      "sha256": "dccc3a4dcecdc49f032aa80af23808a6ded056f0cc815023f43fa2c3be1f185e",
+      "size_bytes": 2389470,
+      "covers": [
+        "al-1.0.0_armv6l",
+        "al-1.0.1_armv6l",
+        "al-1.0.2_armv6l",
+        "al-1.0.3_armv6l",
+        "al-1.1.0_armv6l",
+        "al-1.1.1_armv6l",
+        "al-1.2.0_armv6l",
+        "al-1.2.1_armv6l",
+        "al-1.2.2_armv6l",
+        "al-1.2.3_armv6l",
+        "al-1.2.4_armv6l",
+        "al-1.2.5_armv6l",
+        "al-1.2.6_armv6l",
+        "al-1.2.7_armv6l",
+        "al-1.2.8_armv6l",
+        "al-1.2.9_armv6l",
+        "al-1.3.0_armv6l",
+        "al-1.4.0_armv6l",
+        "al-1.4.1_armv6l",
+        "al-1.4.2_armv6l",
+        "al-1.4.4_armv6l",
+        "al-1.4.5_armv6l"
+      ]
+    },
+    {
+      "name": "aboriginal-linux-armv7l.tar.zst",
+      "family": "aboriginal-linux",
+      "arch": "armv7l",
+      "lief_arch_match": [
+        "arm",
+        "armv4l",
+        "armv4eb",
+        "armv4tl",
+        "armv5l",
+        "armv5-eabi",
+        "armv6l",
+        "armv6-eabihf",
+        "armv7l",
+        "armv7-eabihf",
+        "armv7m"
+      ],
+      "sha256": "0ed1101f9f1839824233406999ef41d0edc1b90cfa9f52ab812b72bad558d8c1",
+      "size_bytes": 661301,
+      "covers": [
+        "al-1.2.1_armv7l",
+        "al-1.2.6_armv7l"
+      ]
+    },
+    {
+      "name": "aboriginal-linux-i486.tar.zst",
+      "family": "aboriginal-linux",
+      "arch": "i486",
+      "lief_arch_match": [
+        "i386",
+        "i486",
+        "i586",
+        "i686",
+        "x86",
+        "x86-core2",
+        "x86-i686"
+      ],
+      "sha256": "bc273c7dae851f1e9ba59f7ca4d462d35f7a492616222da1439dc3db2498f342",
+      "size_bytes": 2208628,
+      "covers": [
+        "al-1.0.0_i486",
+        "al-1.0.1_i486",
+        "al-1.0.2_i486",
+        "al-1.0.3_i486",
+        "al-1.1.0_i486",
+        "al-1.1.1_i486",
+        "al-1.2.0_i486",
+        "al-1.2.1_i486",
+        "al-1.2.2_i486",
+        "al-1.2.3_i486",
+        "al-1.2.4_i486",
+        "al-1.2.5_i486",
+        "al-1.2.6_i486",
+        "al-1.2.7_i486",
+        "al-1.2.8_i486",
+        "al-1.2.9_i486",
+        "al-1.3.0_i486",
+        "al-1.4.0_i486",
+        "al-1.4.1_i486",
+        "al-1.4.2_i486",
+        "al-1.4.3_i486",
+        "al-1.4.4_i486",
+        "al-1.4.5_i486"
+      ]
+    },
+    {
+      "name": "aboriginal-linux-i586.tar.zst",
+      "family": "aboriginal-linux",
+      "arch": "i586",
+      "lief_arch_match": [
+        "i386",
+        "i486",
+        "i586",
+        "i686",
+        "x86",
+        "x86-core2",
+        "x86-i686"
+      ],
+      "sha256": "147583d170dcffd5fa410e18e3bffdbf43e108a97860d0e219c2301e95efdb3e",
+      "size_bytes": 1980720,
+      "covers": [
+        "al-1.0.0_i586",
+        "al-1.0.1_i586",
+        "al-1.0.2_i586",
+        "al-1.0.3_i586",
+        "al-1.1.0_i586",
+        "al-1.1.1_i586",
+        "al-1.2.0_i586",
+        "al-1.2.1_i586",
+        "al-1.2.2_i586",
+        "al-1.2.3_i586",
+        "al-1.2.4_i586",
+        "al-1.2.5_i586",
+        "al-1.2.6_i586",
+        "al-1.2.7_i586",
+        "al-1.2.8_i586",
+        "al-1.2.9_i586",
+        "al-1.3.0_i586",
+        "al-1.4.0_i586",
+        "al-1.4.1_i586",
+        "al-1.4.2_i586",
+        "al-1.4.3_i586",
+        "al-1.4.4_i586",
+        "al-1.4.5_i586"
+      ]
+    },
+    {
+      "name": "aboriginal-linux-i686.tar.zst",
+      "family": "aboriginal-linux",
+      "arch": "i686",
+      "lief_arch_match": [
+        "i386",
+        "i486",
+        "i586",
+        "i686",
+        "x86",
+        "x86-core2",
+        "x86-i686"
+      ],
+      "sha256": "8ff346ba78f0ac7a24cb479f942d0761c5f3bb99e350283c71f634d9137bd086",
+      "size_bytes": 1863326,
+      "covers": [
+        "al-1.0.0_i686",
+        "al-1.0.1_i686",
+        "al-1.0.2_i686",
+        "al-1.0.3_i686",
+        "al-1.1.0_i686",
+        "al-1.1.1_i686",
+        "al-1.2.0_i686",
+        "al-1.2.1_i686",
+        "al-1.2.2_i686",
+        "al-1.2.3_i686",
+        "al-1.2.4_i686",
+        "al-1.2.5_i686",
+        "al-1.2.6_i686",
+        "al-1.2.7_i686",
+        "al-1.2.8_i686",
+        "al-1.2.9_i686",
+        "al-1.3.0_i686",
+        "al-1.4.0_i686",
+        "al-1.4.1_i686",
+        "al-1.4.2_i686",
+        "al-1.4.3_i686",
+        "al-1.4.4_i686",
+        "al-1.4.5_i686"
+      ]
+    },
+    {
+      "name": "aboriginal-linux-m68k.tar.zst",
+      "family": "aboriginal-linux",
+      "arch": "m68k",
+      "lief_arch_match": [
+        "m68k",
+        "m68k-q800",
+        "m68k-mcf",
+        "m68k-mcf5208",
+        "m68000"
+      ],
+      "sha256": "2111b92d8bca3203df5be870df6cee91d53d056cd46de26a8f3358d7f5689aac",
+      "size_bytes": 2207434,
+      "covers": [
+        "al-1.0.0_m68k",
+        "al-1.0.1_m68k",
+        "al-1.0.2_m68k",
+        "al-1.0.3_m68k",
+        "al-1.1.0_m68k",
+        "al-1.1.1_m68k",
+        "al-1.2.0_m68k",
+        "al-1.2.1_m68k",
+        "al-1.2.2_m68k",
+        "al-1.2.3_m68k",
+        "al-1.2.4_m68k",
+        "al-1.2.5_m68k",
+        "al-1.2.6_m68k",
+        "al-1.2.7_m68k",
+        "al-1.2.8_m68k",
+        "al-1.2.9_m68k",
+        "al-1.3.0_m68k",
+        "al-1.4.0_m68k",
+        "al-1.4.1_m68k",
+        "al-1.4.2_m68k",
+        "al-1.4.3_m68k",
+        "al-1.4.4_m68k",
+        "al-1.4.5_m68k"
+      ]
+    },
+    {
+      "name": "aboriginal-linux-mips.tar.zst",
+      "family": "aboriginal-linux",
+      "arch": "mips",
+      "lief_arch_match": [
+        "mips",
+        "mips32"
+      ],
+      "sha256": "255178236faf75c692e9ee48c7e4c7ee623538036e1e29336520cd602b1a201e",
+      "size_bytes": 12168096,
+      "covers": [
+        "al-1.0.0_mips",
+        "al-1.0.1_mips",
+        "al-1.0.2_mips",
+        "al-1.0.3_mips",
+        "al-1.1.0_mips",
+        "al-1.1.1_mips",
+        "al-1.2.0_mips",
+        "al-1.2.1_mips",
+        "al-1.2.2_mips",
+        "al-1.2.3_mips",
+        "al-1.2.4_mips",
+        "al-1.2.5_mips",
+        "al-1.2.6_mips",
+        "al-1.2.7_mips",
+        "al-1.2.8_mips",
+        "al-1.2.9_mips",
+        "al-1.3.0_mips",
+        "al-1.4.0_mips",
+        "al-1.4.1_mips",
+        "al-1.4.3_mips",
+        "al-1.4.4_mips",
+        "al-1.4.5_mips"
+      ]
+    },
+    {
+      "name": "aboriginal-linux-mips64.tar.zst",
+      "family": "aboriginal-linux",
+      "arch": "mips64",
+      "lief_arch_match": [
+        "mips64"
+      ],
+      "sha256": "5923e982d16d8692917133de063e6eb2c5d34f5ee2f4753a52fdc9223717708d",
+      "size_bytes": 11600222,
+      "covers": [
+        "al-1.0.0_mips64",
+        "al-1.0.1_mips64",
+        "al-1.0.2_mips64",
+        "al-1.0.3_mips64",
+        "al-1.1.0_mips64",
+        "al-1.1.1_mips64",
+        "al-1.2.0_mips64",
+        "al-1.2.1_mips64",
+        "al-1.2.2_mips64",
+        "al-1.2.3_mips64",
+        "al-1.2.4_mips64",
+        "al-1.2.5_mips64",
+        "al-1.2.6_mips64",
+        "al-1.2.7_mips64",
+        "al-1.2.8_mips64",
+        "al-1.2.9_mips64",
+        "al-1.3.0_mips64",
+        "al-1.4.0_mips64",
+        "al-1.4.1_mips64",
+        "al-1.4.2_mips64",
+        "al-1.4.4_mips64",
+        "al-1.4.5_mips64"
+      ]
+    },
+    {
+      "name": "aboriginal-linux-mipsel.tar.zst",
+      "family": "aboriginal-linux",
+      "arch": "mipsel",
+      "lief_arch_match": [
+        "mipsel",
+        "mips32el"
+      ],
+      "sha256": "383da8c397a49ff5384674c4d0c7022485160da9211d04f5f8c8b0f5a7901bb5",
+      "size_bytes": 13012087,
+      "covers": [
+        "al-1.0.0_mipsel",
+        "al-1.0.1_mipsel",
+        "al-1.0.2_mipsel",
+        "al-1.0.3_mipsel",
+        "al-1.1.0_mipsel",
+        "al-1.1.1_mipsel",
+        "al-1.2.0_mipsel",
+        "al-1.2.1_mipsel",
+        "al-1.2.2_mipsel",
+        "al-1.2.3_mipsel",
+        "al-1.2.4_mipsel",
+        "al-1.2.5_mipsel",
+        "al-1.2.6_mipsel",
+        "al-1.2.7_mipsel",
+        "al-1.2.8_mipsel",
+        "al-1.2.9_mipsel",
+        "al-1.3.0_mipsel",
+        "al-1.4.0_mipsel",
+        "al-1.4.1_mipsel",
+        "al-1.4.2_mipsel",
+        "al-1.4.3_mipsel",
+        "al-1.4.4_mipsel",
+        "al-1.4.5_mipsel"
+      ]
+    },
+    {
+      "name": "aboriginal-linux-powerpc-440fp.tar.zst",
+      "family": "aboriginal-linux",
+      "arch": "powerpc-440fp",
+      "lief_arch_match": [
+        "powerpc",
+        "powerpc-440fp",
+        "powerpc-e300c3",
+        "powerpc-e500mc",
+        "ppc"
+      ],
+      "sha256": "65a6aa1356c860297997eb8c2cc85891d7003903a7f528d76e4cea89b139706d",
+      "size_bytes": 1006835,
+      "covers": [
+        "al-1.0.0_powerpc-440fp",
+        "al-1.0.1_powerpc-440fp",
+        "al-1.0.2_powerpc-440fp",
+        "al-1.4.5_powerpc-440fp"
+      ]
+    },
+    {
+      "name": "aboriginal-linux-ppc.tar.zst",
+      "family": "aboriginal-linux",
+      "arch": "ppc",
+      "lief_arch_match": [
+        "powerpc",
+        "powerpc-440fp",
+        "powerpc-e300c3",
+        "powerpc-e500mc",
+        "ppc"
+      ],
+      "sha256": "b14e81ec6c83316a5844dd74721dd69826a9fc0fa76a0e1c059f304d47d75e47",
+      "size_bytes": 2522349,
+      "covers": [
+        "al-1.0.0_powerpc",
+        "al-1.0.1_powerpc",
+        "al-1.0.2_powerpc",
+        "al-1.0.3_powerpc",
+        "al-1.1.0_powerpc",
+        "al-1.1.1_powerpc",
+        "al-1.2.0_powerpc",
+        "al-1.2.1_powerpc",
+        "al-1.2.2_powerpc",
+        "al-1.2.3_powerpc",
+        "al-1.2.4_powerpc",
+        "al-1.2.5_powerpc",
+        "al-1.2.6_powerpc",
+        "al-1.2.7_powerpc",
+        "al-1.2.8_powerpc",
+        "al-1.2.9_powerpc",
+        "al-1.3.0_powerpc",
+        "al-1.4.0_powerpc",
+        "al-1.4.1_powerpc",
+        "al-1.4.2_powerpc",
+        "al-1.4.3_powerpc",
+        "al-1.4.4_powerpc",
+        "al-1.4.5_powerpc"
+      ]
+    },
+    {
+      "name": "aboriginal-linux-sh2eb.tar.zst",
+      "family": "aboriginal-linux",
+      "arch": "sh2eb",
+      "lief_arch_match": [
+        "sh2",
+        "sh2eb",
+        "sh2elf",
+        "sh4"
+      ],
+      "sha256": "ace245560312081dcff8cd530ec5b03716bb5840f7c6abc460cd63e1eb016eb8",
+      "size_bytes": 929469,
+      "covers": [
+        "al-1.4.2_sh2eb",
+        "al-1.4.3_sh2eb",
+        "al-1.4.4_sh2eb",
+        "al-1.4.5_sh2eb"
+      ]
+    },
+    {
+      "name": "aboriginal-linux-sh2elf.tar.zst",
+      "family": "aboriginal-linux",
+      "arch": "sh2elf",
+      "lief_arch_match": [
+        "sh2",
+        "sh2eb",
+        "sh2elf",
+        "sh4"
+      ],
+      "sha256": "11c61d569ec04e8d495a37b0e3f4832c10968395398063ea5fae87d6741a2903",
+      "size_bytes": 678728,
+      "covers": [
+        "al-1.4.2_sh2elf",
+        "al-1.4.3_sh2elf",
+        "al-1.4.4_sh2elf",
+        "al-1.4.5_sh2elf"
+      ]
+    },
+    {
+      "name": "aboriginal-linux-sh4.tar.zst",
+      "family": "aboriginal-linux",
+      "arch": "sh4",
+      "lief_arch_match": [
+        "sh2",
+        "sh2eb",
+        "sh2elf",
+        "sh4"
+      ],
+      "sha256": "ffaa5dcceb5f9bb29b9634faaf9d06e5aa0fac5c600b9f7e0c174fb3d94c973a",
+      "size_bytes": 3054108,
+      "covers": [
+        "al-1.0.0_sh4",
+        "al-1.0.1_sh4",
+        "al-1.0.2_sh4",
+        "al-1.0.3_sh4",
+        "al-1.1.0_sh4",
+        "al-1.1.1_sh4",
+        "al-1.2.0_sh4",
+        "al-1.2.1_sh4",
+        "al-1.2.2_sh4",
+        "al-1.2.3_sh4",
+        "al-1.2.4_sh4",
+        "al-1.2.5_sh4",
+        "al-1.2.6_sh4",
+        "al-1.2.7_sh4",
+        "al-1.2.8_sh4",
+        "al-1.2.9_sh4",
+        "al-1.3.0_sh4",
+        "al-1.4.0_sh4",
+        "al-1.4.1_sh4",
+        "al-1.4.2_sh4",
+        "al-1.4.3_sh4",
+        "al-1.4.4_sh4",
+        "al-1.4.5_sh4"
+      ]
+    },
+    {
+      "name": "aboriginal-linux-sparc.tar.zst",
+      "family": "aboriginal-linux",
+      "arch": "sparc",
+      "lief_arch_match": [
+        "sparc"
+      ],
+      "sha256": "7421035489c2effa2dd299508da51c9c55a353ebd0b39bb8136864901704728a",
+      "size_bytes": 11703099,
+      "covers": [
+        "al-1.0.0_sparc",
+        "al-1.0.1_sparc",
+        "al-1.0.2_sparc",
+        "al-1.0.3_sparc",
+        "al-1.1.0_sparc",
+        "al-1.1.1_sparc",
+        "al-1.2.0_sparc",
+        "al-1.2.1_sparc",
+        "al-1.2.2_sparc",
+        "al-1.2.3_sparc",
+        "al-1.2.4_sparc",
+        "al-1.2.5_sparc",
+        "al-1.2.6_sparc",
+        "al-1.2.7_sparc",
+        "al-1.2.8_sparc",
+        "al-1.2.9_sparc",
+        "al-1.3.0_sparc",
+        "al-1.4.0_sparc",
+        "al-1.4.1_sparc",
+        "al-1.4.2_sparc",
+        "al-1.4.3_sparc",
+        "al-1.4.4_sparc",
+        "al-1.4.5_sparc"
+      ]
+    },
+    {
+      "name": "aboriginal-linux-x86_64.tar.zst",
+      "family": "aboriginal-linux",
+      "arch": "x86_64",
+      "lief_arch_match": [
+        "x86_64",
+        "amd64",
+        "x86-64",
+        "x86-64-core-i7"
+      ],
+      "sha256": "fd2d80df2d8e7a8e04ca2b0aa36b16460bf40a636a72b368854babaf2308d3e7",
+      "size_bytes": 2966830,
+      "covers": [
+        "al-1.0.2_x86_64",
+        "al-1.0.3_x86_64",
+        "al-1.1.0_x86_64",
+        "al-1.1.1_x86_64",
+        "al-1.2.0_x86_64",
+        "al-1.2.1_x86_64",
+        "al-1.2.2_x86_64",
+        "al-1.2.3_x86_64",
+        "al-1.2.4_x86_64",
+        "al-1.2.5_x86_64",
+        "al-1.2.6_x86_64",
+        "al-1.2.7_x86_64",
+        "al-1.2.8_x86_64",
+        "al-1.2.9_x86_64",
+        "al-1.3.0_x86_64",
+        "al-1.4.0_x86_64",
+        "al-1.4.1_x86_64",
+        "al-1.4.2_x86_64",
+        "al-1.4.3_x86_64",
+        "al-1.4.4_x86_64",
+        "al-1.4.5_x86_64"
+      ]
+    },
+    {
+      "name": "bootlin-stable-aarch64.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "aarch64",
+      "lief_arch_match": [
+        "arm64",
+        "AARCH64",
+        "aarch64"
+      ],
+      "sha256": "f88d5522d11a64689189bd2a39ca37360b3600e2528f6421d4a85ad36224705f",
+      "size_bytes": 76521052,
+      "covers": [
+        "bl-stable-2017.05_glibc_aarch64",
+        "bl-stable-2017.05_musl_aarch64",
+        "bl-stable-2017.05_uclibc_aarch64",
+        "bl-stable-2018.02-1_glibc_aarch64",
+        "bl-stable-2018.02-1_musl_aarch64",
+        "bl-stable-2018.02-1_uclibc_aarch64",
+        "bl-stable-2018.02-2_glibc_aarch64",
+        "bl-stable-2018.02-2_musl_aarch64",
+        "bl-stable-2018.02-2_uclibc_aarch64",
+        "bl-stable-2018.11-1_glibc_aarch64",
+        "bl-stable-2018.11-1_musl_aarch64",
+        "bl-stable-2018.11-1_uclibc_aarch64",
+        "bl-stable-2020.02-1_glibc_aarch64",
+        "bl-stable-2020.02-1_musl_aarch64",
+        "bl-stable-2020.02-1_uclibc_aarch64",
+        "bl-stable-2020.02-2_glibc_aarch64",
+        "bl-stable-2020.02-2_musl_aarch64",
+        "bl-stable-2020.02-2_uclibc_aarch64",
+        "bl-stable-2020.08-1_glibc_aarch64",
+        "bl-stable-2020.08-1_musl_aarch64",
+        "bl-stable-2020.08-1_uclibc_aarch64",
+        "bl-stable-2021.05-1_musl_aarch64",
+        "bl-stable-2021.05-1_uclibc_aarch64",
+        "bl-stable-2021.11-1_glibc_aarch64",
+        "bl-stable-2021.11-1_musl_aarch64",
+        "bl-stable-2021.11-1_uclibc_aarch64",
+        "bl-stable-2022.08-1_glibc_aarch64",
+        "bl-stable-2022.08-1_uclibc_aarch64",
+        "bl-stable-2022.08-2_musl_aarch64",
+        "bl-stable-2023.08-1_glibc_aarch64",
+        "bl-stable-2023.08-1_musl_aarch64",
+        "bl-stable-2023.08-1_uclibc_aarch64",
+        "bl-stable-2023.11-1_glibc_aarch64",
+        "bl-stable-2023.11-1_musl_aarch64",
+        "bl-stable-2023.11-1_uclibc_aarch64",
+        "bl-stable-2024.02-1_glibc_aarch64",
+        "bl-stable-2024.02-1_musl_aarch64",
+        "bl-stable-2024.02-1_uclibc_aarch64",
+        "bl-stable-2024.05-1_glibc_aarch64",
+        "bl-stable-2024.05-1_musl_aarch64",
+        "bl-stable-2024.05-1_uclibc_aarch64",
+        "bl-stable-2025.08-1_glibc_aarch64",
+        "bl-stable-2025.08-1_musl_aarch64",
+        "bl-stable-2025.08-1_uclibc_aarch64"
+      ]
+    },
+    {
+      "name": "bootlin-stable-aarch64be.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "aarch64be",
+      "lief_arch_match": [
+        "aarch64be"
+      ],
+      "sha256": "018f2be447ca6f51a610a8bacd0cc90f02a78e22c8bbb67d60fcd137723abcfd",
+      "size_bytes": 58147464,
+      "covers": [
+        "bl-stable-2018.02-1_glibc_aarch64be",
+        "bl-stable-2018.02-1_uclibc_aarch64be",
+        "bl-stable-2018.02-2_glibc_aarch64be",
+        "bl-stable-2018.02-2_uclibc_aarch64be",
+        "bl-stable-2018.11-1_glibc_aarch64be",
+        "bl-stable-2018.11-1_uclibc_aarch64be",
+        "bl-stable-2020.02-1_glibc_aarch64be",
+        "bl-stable-2020.02-1_uclibc_aarch64be",
+        "bl-stable-2020.02-2_glibc_aarch64be",
+        "bl-stable-2020.02-2_uclibc_aarch64be",
+        "bl-stable-2020.08-1_glibc_aarch64be",
+        "bl-stable-2020.08-1_uclibc_aarch64be",
+        "bl-stable-2021.11-1_glibc_aarch64be",
+        "bl-stable-2021.11-1_uclibc_aarch64be",
+        "bl-stable-2022.08-1_glibc_aarch64be",
+        "bl-stable-2022.08-1_uclibc_aarch64be",
+        "bl-stable-2023.08-1_glibc_aarch64be",
+        "bl-stable-2023.08-1_musl_aarch64be",
+        "bl-stable-2023.08-1_uclibc_aarch64be",
+        "bl-stable-2023.11-1_glibc_aarch64be",
+        "bl-stable-2023.11-1_musl_aarch64be",
+        "bl-stable-2023.11-1_uclibc_aarch64be",
+        "bl-stable-2024.02-1_glibc_aarch64be",
+        "bl-stable-2024.02-1_musl_aarch64be",
+        "bl-stable-2024.02-1_uclibc_aarch64be",
+        "bl-stable-2024.05-1_glibc_aarch64be",
+        "bl-stable-2024.05-1_musl_aarch64be",
+        "bl-stable-2024.05-1_uclibc_aarch64be",
+        "bl-stable-2025.08-1_glibc_aarch64be",
+        "bl-stable-2025.08-1_musl_aarch64be",
+        "bl-stable-2025.08-1_uclibc_aarch64be"
+      ]
+    },
+    {
+      "name": "bootlin-stable-arcle-750d.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "arcle-750d",
+      "lief_arch_match": [
+        "arcle-750d"
+      ],
+      "sha256": "876d94b0d7592ddb70826cb84d25054975895eae03411f65883e385820432fcf",
+      "size_bytes": 1575339,
+      "covers": [
+        "bl-stable-2018.02-1_uclibc_arcle-750d",
+        "bl-stable-2018.02-2_uclibc_arcle-750d",
+        "bl-stable-2018.11-1_uclibc_arcle-750d",
+        "bl-stable-2020.02-1_uclibc_arcle-750d",
+        "bl-stable-2020.02-2_uclibc_arcle-750d",
+        "bl-stable-2024.05-1_uclibc_arcle-750d",
+        "bl-stable-2025.08-1_uclibc_arcle-750d"
+      ]
+    },
+    {
+      "name": "bootlin-stable-arcle-hs38.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "arcle-hs38",
+      "lief_arch_match": [
+        "arcle-hs38"
+      ],
+      "sha256": "a61b87ebc7d5012d874bdfa9c7b661b4cdb53b7fe34c57e886fdc98bd9b19ae9",
+      "size_bytes": 1301276,
+      "covers": [
+        "bl-stable-2018.02-1_uclibc_arcle-hs38",
+        "bl-stable-2018.02-2_uclibc_arcle-hs38",
+        "bl-stable-2018.11-1_uclibc_arcle-hs38",
+        "bl-stable-2020.02-1_uclibc_arcle-hs38",
+        "bl-stable-2020.02-2_uclibc_arcle-hs38",
+        "bl-stable-2024.05-1_uclibc_arcle-hs38",
+        "bl-stable-2025.08-1_uclibc_arcle-hs38"
+      ]
+    },
+    {
+      "name": "bootlin-stable-armebv7-eabihf.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "armebv7-eabihf",
+      "lief_arch_match": [
+        "armebv7-eabihf"
+      ],
+      "sha256": "3b7dc8bc211a9f66b76b5f482c4e564f22aba3875bf15f3ee74c58fbbedd9335",
+      "size_bytes": 72060080,
+      "covers": [
+        "bl-stable-2018.02-1_glibc_armebv7-eabihf",
+        "bl-stable-2018.02-1_musl_armebv7-eabihf",
+        "bl-stable-2018.02-1_uclibc_armebv7-eabihf",
+        "bl-stable-2018.02-2_glibc_armebv7-eabihf",
+        "bl-stable-2018.02-2_musl_armebv7-eabihf",
+        "bl-stable-2018.02-2_uclibc_armebv7-eabihf",
+        "bl-stable-2018.11-1_glibc_armebv7-eabihf",
+        "bl-stable-2018.11-1_musl_armebv7-eabihf",
+        "bl-stable-2018.11-1_uclibc_armebv7-eabihf",
+        "bl-stable-2020.02-1_glibc_armebv7-eabihf",
+        "bl-stable-2020.02-1_musl_armebv7-eabihf",
+        "bl-stable-2020.02-1_uclibc_armebv7-eabihf",
+        "bl-stable-2020.02-2_glibc_armebv7-eabihf",
+        "bl-stable-2020.02-2_musl_armebv7-eabihf",
+        "bl-stable-2020.02-2_uclibc_armebv7-eabihf",
+        "bl-stable-2020.08-1_glibc_armebv7-eabihf",
+        "bl-stable-2020.08-1_musl_armebv7-eabihf",
+        "bl-stable-2020.08-1_uclibc_armebv7-eabihf",
+        "bl-stable-2021.05-1_glibc_armebv7-eabihf",
+        "bl-stable-2021.05-1_musl_armebv7-eabihf",
+        "bl-stable-2021.05-1_uclibc_armebv7-eabihf",
+        "bl-stable-2021.11-1_glibc_armebv7-eabihf",
+        "bl-stable-2021.11-1_musl_armebv7-eabihf",
+        "bl-stable-2021.11-1_uclibc_armebv7-eabihf",
+        "bl-stable-2022.08-1_glibc_armebv7-eabihf",
+        "bl-stable-2022.08-1_musl_armebv7-eabihf",
+        "bl-stable-2022.08-1_uclibc_armebv7-eabihf",
+        "bl-stable-2023.08-1_glibc_armebv7-eabihf",
+        "bl-stable-2023.08-1_musl_armebv7-eabihf",
+        "bl-stable-2023.08-1_uclibc_armebv7-eabihf",
+        "bl-stable-2023.11-1_glibc_armebv7-eabihf",
+        "bl-stable-2023.11-1_musl_armebv7-eabihf",
+        "bl-stable-2023.11-1_uclibc_armebv7-eabihf",
+        "bl-stable-2024.02-1_glibc_armebv7-eabihf",
+        "bl-stable-2024.02-1_musl_armebv7-eabihf",
+        "bl-stable-2024.02-1_uclibc_armebv7-eabihf",
+        "bl-stable-2024.05-1_glibc_armebv7-eabihf",
+        "bl-stable-2024.05-1_musl_armebv7-eabihf",
+        "bl-stable-2024.05-1_uclibc_armebv7-eabihf",
+        "bl-stable-2025.08-1_glibc_armebv7-eabihf",
+        "bl-stable-2025.08-1_musl_armebv7-eabihf",
+        "bl-stable-2025.08-1_uclibc_armebv7-eabihf"
+      ]
+    },
+    {
+      "name": "bootlin-stable-armv5-eabi.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "armv5-eabi",
+      "lief_arch_match": [
+        "arm",
+        "armv4l",
+        "armv4eb",
+        "armv4tl",
+        "armv5l",
+        "armv5-eabi",
+        "armv6l",
+        "armv6-eabihf",
+        "armv7l",
+        "armv7-eabihf",
+        "armv7m"
+      ],
+      "sha256": "0835715993b327261e11579418307f37eec8b81a40cf91293d9ab446c5a5eaca",
+      "size_bytes": 81204440,
+      "covers": [
+        "bl-stable-2017.05_glibc_armv5-eabi",
+        "bl-stable-2017.05_musl_armv5-eabi",
+        "bl-stable-2017.05_uclibc_armv5-eabi",
+        "bl-stable-2018.02-1_glibc_armv5-eabi",
+        "bl-stable-2018.02-1_musl_armv5-eabi",
+        "bl-stable-2018.02-1_uclibc_armv5-eabi",
+        "bl-stable-2018.02-2_glibc_armv5-eabi",
+        "bl-stable-2018.02-2_musl_armv5-eabi",
+        "bl-stable-2018.02-2_uclibc_armv5-eabi",
+        "bl-stable-2018.11-1_glibc_armv5-eabi",
+        "bl-stable-2018.11-1_musl_armv5-eabi",
+        "bl-stable-2018.11-1_uclibc_armv5-eabi",
+        "bl-stable-2020.02-1_glibc_armv5-eabi",
+        "bl-stable-2020.02-1_musl_armv5-eabi",
+        "bl-stable-2020.02-1_uclibc_armv5-eabi",
+        "bl-stable-2020.02-2_glibc_armv5-eabi",
+        "bl-stable-2020.02-2_musl_armv5-eabi",
+        "bl-stable-2020.02-2_uclibc_armv5-eabi",
+        "bl-stable-2020.08-1_glibc_armv5-eabi",
+        "bl-stable-2020.08-1_musl_armv5-eabi",
+        "bl-stable-2020.08-1_uclibc_armv5-eabi",
+        "bl-stable-2021.05-1_glibc_armv5-eabi",
+        "bl-stable-2021.05-1_musl_armv5-eabi",
+        "bl-stable-2021.05-1_uclibc_armv5-eabi",
+        "bl-stable-2021.11-1_glibc_armv5-eabi",
+        "bl-stable-2021.11-1_musl_armv5-eabi",
+        "bl-stable-2021.11-1_uclibc_armv5-eabi",
+        "bl-stable-2022.08-1_glibc_armv5-eabi",
+        "bl-stable-2022.08-1_musl_armv5-eabi",
+        "bl-stable-2022.08-1_uclibc_armv5-eabi",
+        "bl-stable-2023.08-1_glibc_armv5-eabi",
+        "bl-stable-2023.08-1_musl_armv5-eabi",
+        "bl-stable-2023.08-1_uclibc_armv5-eabi",
+        "bl-stable-2023.11-1_glibc_armv5-eabi",
+        "bl-stable-2023.11-1_musl_armv5-eabi",
+        "bl-stable-2023.11-1_uclibc_armv5-eabi",
+        "bl-stable-2024.02-1_glibc_armv5-eabi",
+        "bl-stable-2024.02-1_musl_armv5-eabi",
+        "bl-stable-2024.02-1_uclibc_armv5-eabi",
+        "bl-stable-2024.05-1_glibc_armv5-eabi",
+        "bl-stable-2024.05-1_musl_armv5-eabi",
+        "bl-stable-2024.05-1_uclibc_armv5-eabi",
+        "bl-stable-2025.08-1_glibc_armv5-eabi",
+        "bl-stable-2025.08-1_musl_armv5-eabi",
+        "bl-stable-2025.08-1_uclibc_armv5-eabi"
+      ]
+    },
+    {
+      "name": "bootlin-stable-armv6-eabihf.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "armv6-eabihf",
+      "lief_arch_match": [
+        "arm",
+        "armv4l",
+        "armv4eb",
+        "armv4tl",
+        "armv5l",
+        "armv5-eabi",
+        "armv6l",
+        "armv6-eabihf",
+        "armv7l",
+        "armv7-eabihf",
+        "armv7m"
+      ],
+      "sha256": "c652aea30d6af3c0aae8fd7f07309ebdd46d8d648143d243d891e2ddefc00ca2",
+      "size_bytes": 77604816,
+      "covers": [
+        "bl-stable-2017.05_glibc_armv6-eabihf",
+        "bl-stable-2017.05_musl_armv6-eabihf",
+        "bl-stable-2017.05_uclibc_armv6-eabihf",
+        "bl-stable-2018.02-1_glibc_armv6-eabihf",
+        "bl-stable-2018.02-1_musl_armv6-eabihf",
+        "bl-stable-2018.02-1_uclibc_armv6-eabihf",
+        "bl-stable-2018.02-2_glibc_armv6-eabihf",
+        "bl-stable-2018.02-2_musl_armv6-eabihf",
+        "bl-stable-2018.02-2_uclibc_armv6-eabihf",
+        "bl-stable-2018.11-1_glibc_armv6-eabihf",
+        "bl-stable-2018.11-1_musl_armv6-eabihf",
+        "bl-stable-2018.11-1_uclibc_armv6-eabihf",
+        "bl-stable-2020.02-1_glibc_armv6-eabihf",
+        "bl-stable-2020.02-1_musl_armv6-eabihf",
+        "bl-stable-2020.02-1_uclibc_armv6-eabihf",
+        "bl-stable-2020.02-2_glibc_armv6-eabihf",
+        "bl-stable-2020.02-2_musl_armv6-eabihf",
+        "bl-stable-2020.02-2_uclibc_armv6-eabihf",
+        "bl-stable-2020.08-1_glibc_armv6-eabihf",
+        "bl-stable-2020.08-1_musl_armv6-eabihf",
+        "bl-stable-2020.08-1_uclibc_armv6-eabihf",
+        "bl-stable-2021.05-1_glibc_armv6-eabihf",
+        "bl-stable-2021.05-1_musl_armv6-eabihf",
+        "bl-stable-2021.05-1_uclibc_armv6-eabihf",
+        "bl-stable-2021.11-1_glibc_armv6-eabihf",
+        "bl-stable-2021.11-1_musl_armv6-eabihf",
+        "bl-stable-2021.11-1_uclibc_armv6-eabihf",
+        "bl-stable-2022.08-1_glibc_armv6-eabihf",
+        "bl-stable-2022.08-1_musl_armv6-eabihf",
+        "bl-stable-2022.08-1_uclibc_armv6-eabihf",
+        "bl-stable-2023.08-1_glibc_armv6-eabihf",
+        "bl-stable-2023.08-1_musl_armv6-eabihf",
+        "bl-stable-2023.08-1_uclibc_armv6-eabihf",
+        "bl-stable-2023.11-1_glibc_armv6-eabihf",
+        "bl-stable-2023.11-1_musl_armv6-eabihf",
+        "bl-stable-2023.11-1_uclibc_armv6-eabihf",
+        "bl-stable-2024.02-1_glibc_armv6-eabihf",
+        "bl-stable-2024.02-1_musl_armv6-eabihf",
+        "bl-stable-2024.02-1_uclibc_armv6-eabihf",
+        "bl-stable-2024.05-1_glibc_armv6-eabihf",
+        "bl-stable-2024.05-1_musl_armv6-eabihf",
+        "bl-stable-2024.05-1_uclibc_armv6-eabihf",
+        "bl-stable-2025.08-1_glibc_armv6-eabihf",
+        "bl-stable-2025.08-1_musl_armv6-eabihf",
+        "bl-stable-2025.08-1_uclibc_armv6-eabihf"
+      ]
+    },
+    {
+      "name": "bootlin-stable-armv7-eabihf.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "armv7-eabihf",
+      "lief_arch_match": [
+        "arm",
+        "armv4l",
+        "armv4eb",
+        "armv4tl",
+        "armv5l",
+        "armv5-eabi",
+        "armv6l",
+        "armv6-eabihf",
+        "armv7l",
+        "armv7-eabihf",
+        "armv7m"
+      ],
+      "sha256": "a663ffcc7ecb726e5d1006c9b39fd84e827027af244c18e749ad6106fc7fd249",
+      "size_bytes": 79525366,
+      "covers": [
+        "bl-stable-2017.05_glibc_armv7-eabihf",
+        "bl-stable-2017.05_musl_armv7-eabihf",
+        "bl-stable-2017.05_uclibc_armv7-eabihf",
+        "bl-stable-2018.02-1_glibc_armv7-eabihf",
+        "bl-stable-2018.02-1_musl_armv7-eabihf",
+        "bl-stable-2018.02-1_uclibc_armv7-eabihf",
+        "bl-stable-2018.02-2_glibc_armv7-eabihf",
+        "bl-stable-2018.02-2_musl_armv7-eabihf",
+        "bl-stable-2018.02-2_uclibc_armv7-eabihf",
+        "bl-stable-2018.11-1_glibc_armv7-eabihf",
+        "bl-stable-2018.11-1_musl_armv7-eabihf",
+        "bl-stable-2018.11-1_uclibc_armv7-eabihf",
+        "bl-stable-2020.02-1_glibc_armv7-eabihf",
+        "bl-stable-2020.02-1_musl_armv7-eabihf",
+        "bl-stable-2020.02-1_uclibc_armv7-eabihf",
+        "bl-stable-2020.02-2_glibc_armv7-eabihf",
+        "bl-stable-2020.02-2_musl_armv7-eabihf",
+        "bl-stable-2020.02-2_uclibc_armv7-eabihf",
+        "bl-stable-2020.08-1_glibc_armv7-eabihf",
+        "bl-stable-2020.08-1_musl_armv7-eabihf",
+        "bl-stable-2020.08-1_uclibc_armv7-eabihf",
+        "bl-stable-2021.05-1_glibc_armv7-eabihf",
+        "bl-stable-2021.05-1_musl_armv7-eabihf",
+        "bl-stable-2021.05-1_uclibc_armv7-eabihf",
+        "bl-stable-2021.11-1_glibc_armv7-eabihf",
+        "bl-stable-2021.11-1_musl_armv7-eabihf",
+        "bl-stable-2021.11-1_uclibc_armv7-eabihf",
+        "bl-stable-2022.08-1_glibc_armv7-eabihf",
+        "bl-stable-2022.08-1_musl_armv7-eabihf",
+        "bl-stable-2022.08-1_uclibc_armv7-eabihf",
+        "bl-stable-2023.08-1_glibc_armv7-eabihf",
+        "bl-stable-2023.08-1_musl_armv7-eabihf",
+        "bl-stable-2023.08-1_uclibc_armv7-eabihf",
+        "bl-stable-2023.11-1_glibc_armv7-eabihf",
+        "bl-stable-2023.11-1_musl_armv7-eabihf",
+        "bl-stable-2023.11-1_uclibc_armv7-eabihf",
+        "bl-stable-2024.02-1_glibc_armv7-eabihf",
+        "bl-stable-2024.02-1_musl_armv7-eabihf",
+        "bl-stable-2024.02-1_uclibc_armv7-eabihf",
+        "bl-stable-2024.05-1_glibc_armv7-eabihf",
+        "bl-stable-2024.05-1_musl_armv7-eabihf",
+        "bl-stable-2024.05-1_uclibc_armv7-eabihf",
+        "bl-stable-2025.08-1_glibc_armv7-eabihf",
+        "bl-stable-2025.08-1_musl_armv7-eabihf",
+        "bl-stable-2025.08-1_uclibc_armv7-eabihf"
+      ]
+    },
+    {
+      "name": "bootlin-stable-armv7m.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "armv7m",
+      "lief_arch_match": [
+        "arm",
+        "armv4l",
+        "armv4eb",
+        "armv4tl",
+        "armv5l",
+        "armv5-eabi",
+        "armv6l",
+        "armv6-eabihf",
+        "armv7l",
+        "armv7-eabihf",
+        "armv7m"
+      ],
+      "sha256": "483389b8ca2a0fe580e5461161fbea3a5e88c9fd238784dfeb145528dcaad741",
+      "size_bytes": 6714534,
+      "covers": [
+        "bl-stable-2017.05_uclibc_armv7m",
+        "bl-stable-2018.02-1_uclibc_armv7m",
+        "bl-stable-2018.02-2_uclibc_armv7m",
+        "bl-stable-2018.11-1_uclibc_armv7m",
+        "bl-stable-2020.02-1_uclibc_armv7m",
+        "bl-stable-2020.02-2_uclibc_armv7m",
+        "bl-stable-2020.08-1_uclibc_armv7m",
+        "bl-stable-2021.05-1_uclibc_armv7m",
+        "bl-stable-2021.11-1_uclibc_armv7m",
+        "bl-stable-2022.08-1_uclibc_armv7m",
+        "bl-stable-2023.08-1_uclibc_armv7m",
+        "bl-stable-2023.11-1_uclibc_armv7m",
+        "bl-stable-2024.02-1_uclibc_armv7m",
+        "bl-stable-2024.05-1_uclibc_armv7m",
+        "bl-stable-2025.08-1_uclibc_armv7m"
+      ]
+    },
+    {
+      "name": "bootlin-stable-m68k-68xxx.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "m68k-68xxx",
+      "lief_arch_match": [
+        "m68k-68xxx"
+      ],
+      "sha256": "612960d3cfd3331f3e9a2f4935f329a526a691734451fbce39f575739f8fbfa0",
+      "size_bytes": 30220360,
+      "covers": [
+        "bl-stable-2018.02-1_uclibc_m68k-68xxx",
+        "bl-stable-2018.02-2_uclibc_m68k-68xxx",
+        "bl-stable-2018.11-1_uclibc_m68k-68xxx",
+        "bl-stable-2020.02-1_uclibc_m68k-68xxx",
+        "bl-stable-2020.02-2_uclibc_m68k-68xxx",
+        "bl-stable-2020.08-1_uclibc_m68k-68xxx",
+        "bl-stable-2021.05-1_uclibc_m68k-68xxx",
+        "bl-stable-2021.11-1_uclibc_m68k-68xxx",
+        "bl-stable-2022.08-1_uclibc_m68k-68xxx",
+        "bl-stable-2023.08-1_uclibc_m68k-68xxx",
+        "bl-stable-2023.11-1_glibc_m68k-68xxx",
+        "bl-stable-2023.11-1_musl_m68k-68xxx",
+        "bl-stable-2023.11-1_uclibc_m68k-68xxx",
+        "bl-stable-2024.02-1_glibc_m68k-68xxx",
+        "bl-stable-2024.02-1_musl_m68k-68xxx",
+        "bl-stable-2024.02-1_uclibc_m68k-68xxx",
+        "bl-stable-2024.05-1_glibc_m68k-68xxx",
+        "bl-stable-2024.05-1_musl_m68k-68xxx",
+        "bl-stable-2024.05-1_uclibc_m68k-68xxx",
+        "bl-stable-2025.08-1_glibc_m68k-68xxx",
+        "bl-stable-2025.08-1_musl_m68k-68xxx",
+        "bl-stable-2025.08-1_uclibc_m68k-68xxx"
+      ]
+    },
+    {
+      "name": "bootlin-stable-m68k-coldfire.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "m68k-coldfire",
+      "lief_arch_match": [
+        "m68k-coldfire"
+      ],
+      "sha256": "fb02beb7a57ae1448503ab49f6cd03b41c3be14c0eae7eac8e2f2eb3488888cb",
+      "size_bytes": 14765578,
+      "covers": [
+        "bl-stable-2018.02-1_uclibc_m68k-coldfire",
+        "bl-stable-2018.11-1_uclibc_m68k-coldfire",
+        "bl-stable-2020.02-1_uclibc_m68k-coldfire",
+        "bl-stable-2020.02-2_uclibc_m68k-coldfire",
+        "bl-stable-2020.08-1_uclibc_m68k-coldfire",
+        "bl-stable-2021.05-1_uclibc_m68k-coldfire",
+        "bl-stable-2021.11-1_uclibc_m68k-coldfire",
+        "bl-stable-2023.08-1_uclibc_m68k-coldfire",
+        "bl-stable-2023.11-1_uclibc_m68k-coldfire",
+        "bl-stable-2024.02-1_uclibc_m68k-coldfire",
+        "bl-stable-2024.05-1_uclibc_m68k-coldfire",
+        "bl-stable-2025.08-1_uclibc_m68k-coldfire"
+      ]
+    },
+    {
+      "name": "bootlin-stable-mips.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "mips",
+      "lief_arch_match": [
+        "mips",
+        "mips32"
+      ],
+      "sha256": "912615079df6bcf1d0ee091332938f44221ed5c50c71a869ce454b7f101a354e",
+      "size_bytes": 35794841,
+      "covers": [
+        "bl-stable-2017.05_glibc_mips32",
+        "bl-stable-2017.05_musl_mips32",
+        "bl-stable-2017.05_uclibc_mips32",
+        "bl-stable-2018.02-1_glibc_mips32",
+        "bl-stable-2018.02-1_musl_mips32",
+        "bl-stable-2018.02-1_uclibc_mips32",
+        "bl-stable-2018.02-2_glibc_mips32",
+        "bl-stable-2018.02-2_musl_mips32",
+        "bl-stable-2018.02-2_uclibc_mips32",
+        "bl-stable-2018.11-1_glibc_mips32",
+        "bl-stable-2018.11-1_musl_mips32",
+        "bl-stable-2018.11-1_uclibc_mips32",
+        "bl-stable-2020.02-1_glibc_mips32",
+        "bl-stable-2020.02-1_musl_mips32",
+        "bl-stable-2020.02-1_uclibc_mips32",
+        "bl-stable-2020.02-2_glibc_mips32",
+        "bl-stable-2020.02-2_musl_mips32",
+        "bl-stable-2020.02-2_uclibc_mips32",
+        "bl-stable-2020.08-1_glibc_mips32",
+        "bl-stable-2020.08-1_musl_mips32",
+        "bl-stable-2020.08-1_uclibc_mips32",
+        "bl-stable-2021.11-1_glibc_mips32",
+        "bl-stable-2021.11-1_musl_mips32",
+        "bl-stable-2021.11-1_uclibc_mips32"
+      ]
+    },
+    {
+      "name": "bootlin-stable-mips32.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "mips32",
+      "lief_arch_match": [
+        "mips",
+        "mips32"
+      ],
+      "sha256": "7338fe3111a1795d47301ecadd5584203a89d8c686382e5432466d7702abe885",
+      "size_bytes": 47156673,
+      "covers": [
+        "bl-stable-2021.05-1_glibc_mips32",
+        "bl-stable-2021.05-1_musl_mips32",
+        "bl-stable-2021.05-1_uclibc_mips32",
+        "bl-stable-2022.08-1_glibc_mips32",
+        "bl-stable-2022.08-1_musl_mips32",
+        "bl-stable-2022.08-1_uclibc_mips32",
+        "bl-stable-2023.08-1_glibc_mips32",
+        "bl-stable-2023.08-1_musl_mips32",
+        "bl-stable-2023.08-1_uclibc_mips32",
+        "bl-stable-2023.11-1_glibc_mips32",
+        "bl-stable-2023.11-1_musl_mips32",
+        "bl-stable-2023.11-1_uclibc_mips32",
+        "bl-stable-2024.02-1_glibc_mips32",
+        "bl-stable-2024.02-1_musl_mips32",
+        "bl-stable-2024.02-1_uclibc_mips32",
+        "bl-stable-2024.05-1_glibc_mips32",
+        "bl-stable-2024.05-1_musl_mips32",
+        "bl-stable-2024.05-1_uclibc_mips32",
+        "bl-stable-2025.08-1_glibc_mips32",
+        "bl-stable-2025.08-1_musl_mips32",
+        "bl-stable-2025.08-1_uclibc_mips32"
+      ]
+    },
+    {
+      "name": "bootlin-stable-mips32el.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "mips32el",
+      "lief_arch_match": [
+        "mipsel",
+        "mips32el"
+      ],
+      "sha256": "aaeb200e223a635d771347ca7c57466f19be14bb26cf96b16a9eab6bb1d8ff4a",
+      "size_bytes": 44856891,
+      "covers": [
+        "bl-stable-2021.05-1_musl_mips32el",
+        "bl-stable-2021.05-1_uclibc_mips32el",
+        "bl-stable-2022.08-1_glibc_mips32el",
+        "bl-stable-2022.08-1_musl_mips32el",
+        "bl-stable-2022.08-1_uclibc_mips32el",
+        "bl-stable-2023.08-1_glibc_mips32el",
+        "bl-stable-2023.08-1_musl_mips32el",
+        "bl-stable-2023.08-1_uclibc_mips32el",
+        "bl-stable-2023.11-1_glibc_mips32el",
+        "bl-stable-2023.11-1_musl_mips32el",
+        "bl-stable-2023.11-1_uclibc_mips32el",
+        "bl-stable-2024.02-1_glibc_mips32el",
+        "bl-stable-2024.02-1_musl_mips32el",
+        "bl-stable-2024.02-1_uclibc_mips32el",
+        "bl-stable-2024.05-1_glibc_mips32el",
+        "bl-stable-2024.05-1_musl_mips32el",
+        "bl-stable-2024.05-1_uclibc_mips32el",
+        "bl-stable-2025.08-1_glibc_mips32el",
+        "bl-stable-2025.08-1_musl_mips32el",
+        "bl-stable-2025.08-1_uclibc_mips32el"
+      ]
+    },
+    {
+      "name": "bootlin-stable-mips32r5el.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "mips32r5el",
+      "lief_arch_match": [
+        "mips32r5el"
+      ],
+      "sha256": "072dc10cc18aa6082e75fb9794865e195d44a6b60670e9d42e7f832a87ab069b",
+      "size_bytes": 68148065,
+      "covers": [
+        "bl-stable-2018.02-1_musl_mips32r5el",
+        "bl-stable-2018.02-1_uclibc_mips32r5el",
+        "bl-stable-2018.02-2_musl_mips32r5el",
+        "bl-stable-2018.02-2_uclibc_mips32r5el",
+        "bl-stable-2018.11-1_musl_mips32r5el",
+        "bl-stable-2018.11-1_uclibc_mips32r5el",
+        "bl-stable-2020.02-1_musl_mips32r5el",
+        "bl-stable-2020.02-1_uclibc_mips32r5el",
+        "bl-stable-2020.02-2_musl_mips32r5el",
+        "bl-stable-2020.02-2_uclibc_mips32r5el",
+        "bl-stable-2020.08-1_glibc_mips32r5el",
+        "bl-stable-2020.08-1_musl_mips32r5el",
+        "bl-stable-2020.08-1_uclibc_mips32r5el",
+        "bl-stable-2021.05-1_glibc_mips32r5el",
+        "bl-stable-2021.05-1_musl_mips32r5el",
+        "bl-stable-2021.05-1_uclibc_mips32r5el",
+        "bl-stable-2021.11-1_glibc_mips32r5el",
+        "bl-stable-2021.11-1_musl_mips32r5el",
+        "bl-stable-2021.11-1_uclibc_mips32r5el",
+        "bl-stable-2022.08-1_glibc_mips32r5el",
+        "bl-stable-2022.08-1_musl_mips32r5el",
+        "bl-stable-2022.08-1_uclibc_mips32r5el",
+        "bl-stable-2023.08-1_glibc_mips32r5el",
+        "bl-stable-2023.08-1_musl_mips32r5el",
+        "bl-stable-2023.08-1_uclibc_mips32r5el",
+        "bl-stable-2023.11-1_glibc_mips32r5el",
+        "bl-stable-2023.11-1_musl_mips32r5el",
+        "bl-stable-2023.11-1_uclibc_mips32r5el",
+        "bl-stable-2024.02-1_glibc_mips32r5el",
+        "bl-stable-2024.02-1_musl_mips32r5el",
+        "bl-stable-2024.02-1_uclibc_mips32r5el",
+        "bl-stable-2024.05-1_glibc_mips32r5el",
+        "bl-stable-2024.05-1_musl_mips32r5el",
+        "bl-stable-2024.05-1_uclibc_mips32r5el",
+        "bl-stable-2025.08-1_glibc_mips32r5el",
+        "bl-stable-2025.08-1_musl_mips32r5el",
+        "bl-stable-2025.08-1_uclibc_mips32r5el"
+      ]
+    },
+    {
+      "name": "bootlin-stable-mipsel.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "mipsel",
+      "lief_arch_match": [
+        "mipsel",
+        "mips32el"
+      ],
+      "sha256": "ffbd81c02c2062cebb0cc85346652756043f69599284fe55d61cbf978cf787db",
+      "size_bytes": 36134488,
+      "covers": [
+        "bl-stable-2017.05_glibc_mips32el",
+        "bl-stable-2017.05_musl_mips32el",
+        "bl-stable-2017.05_uclibc_mips32el",
+        "bl-stable-2018.02-1_glibc_mips32el",
+        "bl-stable-2018.02-1_musl_mips32el",
+        "bl-stable-2018.02-1_uclibc_mips32el",
+        "bl-stable-2018.02-2_glibc_mips32el",
+        "bl-stable-2018.02-2_musl_mips32el",
+        "bl-stable-2018.02-2_uclibc_mips32el",
+        "bl-stable-2018.11-1_glibc_mips32el",
+        "bl-stable-2018.11-1_musl_mips32el",
+        "bl-stable-2018.11-1_uclibc_mips32el",
+        "bl-stable-2020.02-1_glibc_mips32el",
+        "bl-stable-2020.02-1_musl_mips32el",
+        "bl-stable-2020.02-1_uclibc_mips32el",
+        "bl-stable-2020.02-2_glibc_mips32el",
+        "bl-stable-2020.02-2_musl_mips32el",
+        "bl-stable-2020.02-2_uclibc_mips32el",
+        "bl-stable-2020.08-1_glibc_mips32el",
+        "bl-stable-2020.08-1_musl_mips32el",
+        "bl-stable-2020.08-1_uclibc_mips32el",
+        "bl-stable-2021.11-1_glibc_mips32el",
+        "bl-stable-2021.11-1_musl_mips32el",
+        "bl-stable-2021.11-1_uclibc_mips32el"
+      ]
+    },
+    {
+      "name": "bootlin-stable-powerpc-440fp.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "powerpc-440fp",
+      "lief_arch_match": [
+        "powerpc",
+        "powerpc-440fp",
+        "powerpc-e300c3",
+        "powerpc-e500mc",
+        "ppc"
+      ],
+      "sha256": "13f008f9496f9204ee91bd86bd880fe1bc419cf4f59a5c943e5d7ae0ab275ec1",
+      "size_bytes": 65339312,
+      "covers": [
+        "bl-stable-2020.08-1_glibc_powerpc-440fp",
+        "bl-stable-2020.08-1_musl_powerpc-440fp",
+        "bl-stable-2020.08-1_uclibc_powerpc-440fp",
+        "bl-stable-2020.08-2_glibc_powerpc-440fp",
+        "bl-stable-2020.08-2_musl_powerpc-440fp",
+        "bl-stable-2020.08-2_uclibc_powerpc-440fp",
+        "bl-stable-2021.05-1_glibc_powerpc-440fp",
+        "bl-stable-2021.05-1_musl_powerpc-440fp",
+        "bl-stable-2021.05-1_uclibc_powerpc-440fp",
+        "bl-stable-2021.11-1_glibc_powerpc-440fp",
+        "bl-stable-2021.11-1_musl_powerpc-440fp",
+        "bl-stable-2021.11-1_uclibc_powerpc-440fp",
+        "bl-stable-2022.08-1_glibc_powerpc-440fp",
+        "bl-stable-2022.08-1_musl_powerpc-440fp",
+        "bl-stable-2022.08-1_uclibc_powerpc-440fp",
+        "bl-stable-2023.08-1_glibc_powerpc-440fp",
+        "bl-stable-2023.08-1_musl_powerpc-440fp",
+        "bl-stable-2023.08-1_uclibc_powerpc-440fp",
+        "bl-stable-2023.11-1_glibc_powerpc-440fp",
+        "bl-stable-2023.11-1_musl_powerpc-440fp",
+        "bl-stable-2023.11-1_uclibc_powerpc-440fp",
+        "bl-stable-2024.02-1_glibc_powerpc-440fp",
+        "bl-stable-2024.02-1_musl_powerpc-440fp",
+        "bl-stable-2024.02-1_uclibc_powerpc-440fp",
+        "bl-stable-2024.05-1_glibc_powerpc-440fp",
+        "bl-stable-2024.05-1_musl_powerpc-440fp",
+        "bl-stable-2024.05-1_uclibc_powerpc-440fp",
+        "bl-stable-2025.08-1_glibc_powerpc-440fp",
+        "bl-stable-2025.08-1_musl_powerpc-440fp",
+        "bl-stable-2025.08-1_uclibc_powerpc-440fp"
+      ]
+    },
+    {
+      "name": "bootlin-stable-powerpc-e300c3.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "powerpc-e300c3",
+      "lief_arch_match": [
+        "powerpc",
+        "powerpc-440fp",
+        "powerpc-e300c3",
+        "powerpc-e500mc",
+        "ppc"
+      ],
+      "sha256": "cc85edf614e280fb280b06545753b3246c8c2a34da51424d7f006eb1ae585106",
+      "size_bytes": 59224440,
+      "covers": [
+        "bl-stable-2020.08-1_glibc_powerpc-e300c3",
+        "bl-stable-2020.08-1_musl_powerpc-e300c3",
+        "bl-stable-2020.08-1_uclibc_powerpc-e300c3",
+        "bl-stable-2021.05-1_glibc_powerpc-e300c3",
+        "bl-stable-2021.05-1_musl_powerpc-e300c3",
+        "bl-stable-2021.05-1_uclibc_powerpc-e300c3",
+        "bl-stable-2021.11-1_glibc_powerpc-e300c3",
+        "bl-stable-2021.11-1_musl_powerpc-e300c3",
+        "bl-stable-2021.11-1_uclibc_powerpc-e300c3",
+        "bl-stable-2022.08-1_glibc_powerpc-e300c3",
+        "bl-stable-2022.08-1_musl_powerpc-e300c3",
+        "bl-stable-2022.08-1_uclibc_powerpc-e300c3",
+        "bl-stable-2023.08-1_glibc_powerpc-e300c3",
+        "bl-stable-2023.08-1_musl_powerpc-e300c3",
+        "bl-stable-2023.08-1_uclibc_powerpc-e300c3",
+        "bl-stable-2023.11-1_glibc_powerpc-e300c3",
+        "bl-stable-2023.11-1_musl_powerpc-e300c3",
+        "bl-stable-2023.11-1_uclibc_powerpc-e300c3",
+        "bl-stable-2024.02-1_glibc_powerpc-e300c3",
+        "bl-stable-2024.02-1_musl_powerpc-e300c3",
+        "bl-stable-2024.02-1_uclibc_powerpc-e300c3",
+        "bl-stable-2024.05-1_glibc_powerpc-e300c3",
+        "bl-stable-2024.05-1_musl_powerpc-e300c3",
+        "bl-stable-2024.05-1_uclibc_powerpc-e300c3",
+        "bl-stable-2025.08-1_glibc_powerpc-e300c3",
+        "bl-stable-2025.08-1_musl_powerpc-e300c3",
+        "bl-stable-2025.08-1_uclibc_powerpc-e300c3"
+      ]
+    },
+    {
+      "name": "bootlin-stable-powerpc-e500mc.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "powerpc-e500mc",
+      "lief_arch_match": [
+        "powerpc",
+        "powerpc-440fp",
+        "powerpc-e300c3",
+        "powerpc-e500mc",
+        "ppc"
+      ],
+      "sha256": "100bc202809d1f31088b9728a8df6989495350260c11278f1135706a7de3e840",
+      "size_bytes": 80627491,
+      "covers": [
+        "bl-stable-2017.05_glibc_powerpc-e500mc",
+        "bl-stable-2017.05_musl_powerpc-e500mc",
+        "bl-stable-2017.05_uclibc_powerpc-e500mc",
+        "bl-stable-2018.02-1_glibc_powerpc-e500mc",
+        "bl-stable-2018.02-1_musl_powerpc-e500mc",
+        "bl-stable-2018.02-1_uclibc_powerpc-e500mc",
+        "bl-stable-2018.02-2_glibc_powerpc-e500mc",
+        "bl-stable-2018.02-2_musl_powerpc-e500mc",
+        "bl-stable-2018.02-2_uclibc_powerpc-e500mc",
+        "bl-stable-2018.11-1_glibc_powerpc-e500mc",
+        "bl-stable-2018.11-1_musl_powerpc-e500mc",
+        "bl-stable-2018.11-1_uclibc_powerpc-e500mc",
+        "bl-stable-2020.02-1_glibc_powerpc-e500mc",
+        "bl-stable-2020.02-1_musl_powerpc-e500mc",
+        "bl-stable-2020.02-1_uclibc_powerpc-e500mc",
+        "bl-stable-2020.02-2_glibc_powerpc-e500mc",
+        "bl-stable-2020.02-2_musl_powerpc-e500mc",
+        "bl-stable-2020.02-2_uclibc_powerpc-e500mc",
+        "bl-stable-2020.08-1_glibc_powerpc-e500mc",
+        "bl-stable-2020.08-1_musl_powerpc-e500mc",
+        "bl-stable-2020.08-1_uclibc_powerpc-e500mc",
+        "bl-stable-2021.05-1_glibc_powerpc-e500mc",
+        "bl-stable-2021.05-1_musl_powerpc-e500mc",
+        "bl-stable-2021.05-1_uclibc_powerpc-e500mc",
+        "bl-stable-2021.11-1_glibc_powerpc-e500mc",
+        "bl-stable-2021.11-1_musl_powerpc-e500mc",
+        "bl-stable-2021.11-1_uclibc_powerpc-e500mc",
+        "bl-stable-2022.08-1_glibc_powerpc-e500mc",
+        "bl-stable-2022.08-1_musl_powerpc-e500mc",
+        "bl-stable-2022.08-1_uclibc_powerpc-e500mc",
+        "bl-stable-2023.08-1_glibc_powerpc-e500mc",
+        "bl-stable-2023.08-1_musl_powerpc-e500mc",
+        "bl-stable-2023.08-1_uclibc_powerpc-e500mc",
+        "bl-stable-2023.11-1_glibc_powerpc-e500mc",
+        "bl-stable-2023.11-1_musl_powerpc-e500mc",
+        "bl-stable-2023.11-1_uclibc_powerpc-e500mc",
+        "bl-stable-2024.02-1_glibc_powerpc-e500mc",
+        "bl-stable-2024.02-1_musl_powerpc-e500mc",
+        "bl-stable-2024.02-1_uclibc_powerpc-e500mc",
+        "bl-stable-2024.05-1_glibc_powerpc-e500mc",
+        "bl-stable-2024.05-1_musl_powerpc-e500mc",
+        "bl-stable-2024.05-1_uclibc_powerpc-e500mc",
+        "bl-stable-2025.08-1_glibc_powerpc-e500mc",
+        "bl-stable-2025.08-1_musl_powerpc-e500mc",
+        "bl-stable-2025.08-1_uclibc_powerpc-e500mc"
+      ]
+    },
+    {
+      "name": "bootlin-stable-riscv32-ilp32d.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "riscv32-ilp32d",
+      "lief_arch_match": [
+        "riscv32-ilp32d"
+      ],
+      "sha256": "7ed06b4f6940b7d70e53debe0eadd7197c258adf7d9d9d1faf6c668261ade4bd",
+      "size_bytes": 8070543,
+      "covers": [
+        "bl-stable-2024.02-1_musl_riscv32-ilp32d",
+        "bl-stable-2024.05-1_glibc_riscv32-ilp32d",
+        "bl-stable-2024.05-1_musl_riscv32-ilp32d",
+        "bl-stable-2024.05-1_uclibc_riscv32-ilp32d",
+        "bl-stable-2025.08-1_glibc_riscv32-ilp32d",
+        "bl-stable-2025.08-1_musl_riscv32-ilp32d",
+        "bl-stable-2025.08-1_uclibc_riscv32-ilp32d"
+      ]
+    },
+    {
+      "name": "bootlin-stable-x86-64-core-i7.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "x86-64-core-i7",
+      "lief_arch_match": [
+        "x86_64",
+        "amd64",
+        "x86-64",
+        "x86-64-core-i7"
+      ],
+      "sha256": "df1c91fe55c4a1f08b8707e441cbcc18b648505d4e19773a4cb1b5eef1c04fcc",
+      "size_bytes": 44004278,
+      "covers": [
+        "bl-stable-2022.08-1_glibc_x86-64-core-i7",
+        "bl-stable-2022.08-1_musl_x86-64-core-i7",
+        "bl-stable-2022.08-1_uclibc_x86-64-core-i7",
+        "bl-stable-2023.08-1_glibc_x86-64-core-i7",
+        "bl-stable-2023.08-1_musl_x86-64-core-i7",
+        "bl-stable-2023.08-1_uclibc_x86-64-core-i7",
+        "bl-stable-2023.11-1_glibc_x86-64-core-i7",
+        "bl-stable-2023.11-1_musl_x86-64-core-i7",
+        "bl-stable-2023.11-1_uclibc_x86-64-core-i7",
+        "bl-stable-2024.02-1_glibc_x86-64-core-i7",
+        "bl-stable-2024.02-1_musl_x86-64-core-i7",
+        "bl-stable-2024.02-1_uclibc_x86-64-core-i7",
+        "bl-stable-2024.05-1_glibc_x86-64-core-i7",
+        "bl-stable-2024.05-1_musl_x86-64-core-i7",
+        "bl-stable-2024.05-1_uclibc_x86-64-core-i7",
+        "bl-stable-2025.08-1_glibc_x86-64-core-i7",
+        "bl-stable-2025.08-1_musl_x86-64-core-i7",
+        "bl-stable-2025.08-1_uclibc_x86-64-core-i7"
+      ]
+    },
+    {
+      "name": "bootlin-stable-x86-64-v2.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "x86-64-v2",
+      "lief_arch_match": [
+        "x86-64-v2"
+      ],
+      "sha256": "feda786bf1b7eb413dc7d868b5472a19e3181ed38a5e8a89bd3051b6924ca671",
+      "size_bytes": 43999419,
+      "covers": [
+        "bl-stable-2022.08-1_glibc_x86-64-v2",
+        "bl-stable-2022.08-1_musl_x86-64-v2",
+        "bl-stable-2022.08-1_uclibc_x86-64-v2",
+        "bl-stable-2023.08-1_glibc_x86-64-v2",
+        "bl-stable-2023.08-1_musl_x86-64-v2",
+        "bl-stable-2023.08-1_uclibc_x86-64-v2",
+        "bl-stable-2023.11-1_glibc_x86-64-v2",
+        "bl-stable-2023.11-1_musl_x86-64-v2",
+        "bl-stable-2023.11-1_uclibc_x86-64-v2",
+        "bl-stable-2024.02-1_glibc_x86-64-v2",
+        "bl-stable-2024.02-1_musl_x86-64-v2",
+        "bl-stable-2024.02-1_uclibc_x86-64-v2",
+        "bl-stable-2024.05-1_glibc_x86-64-v2",
+        "bl-stable-2024.05-1_musl_x86-64-v2",
+        "bl-stable-2024.05-1_uclibc_x86-64-v2",
+        "bl-stable-2025.08-1_glibc_x86-64-v2",
+        "bl-stable-2025.08-1_musl_x86-64-v2",
+        "bl-stable-2025.08-1_uclibc_x86-64-v2"
+      ]
+    },
+    {
+      "name": "bootlin-stable-x86-64-v3.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "x86-64-v3",
+      "lief_arch_match": [
+        "x86-64-v3"
+      ],
+      "sha256": "c1e6db454096a5094e5cedb03af48f2883539b179ff60f39f32384d35508859e",
+      "size_bytes": 43751939,
+      "covers": [
+        "bl-stable-2022.08-1_glibc_x86-64-v3",
+        "bl-stable-2022.08-1_musl_x86-64-v3",
+        "bl-stable-2022.08-1_uclibc_x86-64-v3",
+        "bl-stable-2023.08-1_glibc_x86-64-v3",
+        "bl-stable-2023.08-1_musl_x86-64-v3",
+        "bl-stable-2023.08-1_uclibc_x86-64-v3",
+        "bl-stable-2023.11-1_glibc_x86-64-v3",
+        "bl-stable-2023.11-1_musl_x86-64-v3",
+        "bl-stable-2023.11-1_uclibc_x86-64-v3",
+        "bl-stable-2024.02-1_glibc_x86-64-v3",
+        "bl-stable-2024.02-1_musl_x86-64-v3",
+        "bl-stable-2024.02-1_uclibc_x86-64-v3",
+        "bl-stable-2024.05-1_glibc_x86-64-v3",
+        "bl-stable-2024.05-1_musl_x86-64-v3",
+        "bl-stable-2024.05-1_uclibc_x86-64-v3",
+        "bl-stable-2025.08-1_glibc_x86-64-v3",
+        "bl-stable-2025.08-1_musl_x86-64-v3",
+        "bl-stable-2025.08-1_uclibc_x86-64-v3"
+      ]
+    },
+    {
+      "name": "bootlin-stable-x86-64-v4.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "x86-64-v4",
+      "lief_arch_match": [
+        "x86-64-v4"
+      ],
+      "sha256": "83834d0aa6e85c7ab23a8add36862ca50bfca990fe32f4a414cb8eb399df8618",
+      "size_bytes": 42421717,
+      "covers": [
+        "bl-stable-2022.08-1_glibc_x86-64-v4",
+        "bl-stable-2022.08-1_musl_x86-64-v4",
+        "bl-stable-2022.08-1_uclibc_x86-64-v4",
+        "bl-stable-2023.08-1_glibc_x86-64-v4",
+        "bl-stable-2023.08-1_musl_x86-64-v4",
+        "bl-stable-2023.08-1_uclibc_x86-64-v4",
+        "bl-stable-2023.11-1_glibc_x86-64-v4",
+        "bl-stable-2023.11-1_musl_x86-64-v4",
+        "bl-stable-2023.11-1_uclibc_x86-64-v4",
+        "bl-stable-2024.02-1_glibc_x86-64-v4",
+        "bl-stable-2024.02-1_musl_x86-64-v4",
+        "bl-stable-2024.02-1_uclibc_x86-64-v4",
+        "bl-stable-2024.05-1_glibc_x86-64-v4",
+        "bl-stable-2024.05-1_musl_x86-64-v4",
+        "bl-stable-2024.05-1_uclibc_x86-64-v4",
+        "bl-stable-2025.08-1_glibc_x86-64-v4",
+        "bl-stable-2025.08-1_musl_x86-64-v4",
+        "bl-stable-2025.08-1_uclibc_x86-64-v4"
+      ]
+    },
+    {
+      "name": "bootlin-stable-x86-64.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "x86-64",
+      "lief_arch_match": [
+        "x86_64",
+        "amd64",
+        "x86-64",
+        "x86-64-core-i7"
+      ],
+      "sha256": "caec01e2280c47a50e8391650fb2b2398e0dfdcf90a6cec47623cef3c81d527d",
+      "size_bytes": 51678055,
+      "covers": [
+        "bl-stable-2021.11-5_glibc_x86-64",
+        "bl-stable-2021.11-5_musl_x86-64",
+        "bl-stable-2021.11-5_uclibc_x86-64",
+        "bl-stable-2022.08-1_glibc_x86-64",
+        "bl-stable-2022.08-1_musl_x86-64",
+        "bl-stable-2022.08-1_uclibc_x86-64",
+        "bl-stable-2023.08-1_glibc_x86-64",
+        "bl-stable-2023.08-1_musl_x86-64",
+        "bl-stable-2023.08-1_uclibc_x86-64",
+        "bl-stable-2023.11-1_glibc_x86-64",
+        "bl-stable-2023.11-1_musl_x86-64",
+        "bl-stable-2023.11-1_uclibc_x86-64",
+        "bl-stable-2024.02-1_glibc_x86-64",
+        "bl-stable-2024.02-1_musl_x86-64",
+        "bl-stable-2024.02-1_uclibc_x86-64",
+        "bl-stable-2024.05-1_glibc_x86-64",
+        "bl-stable-2024.05-1_musl_x86-64",
+        "bl-stable-2024.05-1_uclibc_x86-64",
+        "bl-stable-2025.08-1_glibc_x86-64",
+        "bl-stable-2025.08-1_musl_x86-64",
+        "bl-stable-2025.08-1_uclibc_x86-64"
+      ]
+    },
+    {
+      "name": "bootlin-stable-x86-core2.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "x86-core2",
+      "lief_arch_match": [
+        "i386",
+        "i486",
+        "i586",
+        "i686",
+        "x86",
+        "x86-core2",
+        "x86-i686"
+      ],
+      "sha256": "fa11d553fc1098ab01181841421325d288f9a5c8ed16a5ba05db61e862e35724",
+      "size_bytes": 80839580,
+      "covers": [
+        "bl-stable-2017.05_glibc_x86-core2",
+        "bl-stable-2017.05_musl_x86-core2",
+        "bl-stable-2017.05_uclibc_x86-core2",
+        "bl-stable-2018.02-1_glibc_x86-core2",
+        "bl-stable-2018.02-1_musl_x86-core2",
+        "bl-stable-2018.02-1_uclibc_x86-core2",
+        "bl-stable-2018.02-2_glibc_x86-core2",
+        "bl-stable-2018.02-2_musl_x86-core2",
+        "bl-stable-2018.02-2_uclibc_x86-core2",
+        "bl-stable-2018.11-1_glibc_x86-core2",
+        "bl-stable-2018.11-1_musl_x86-core2",
+        "bl-stable-2018.11-1_uclibc_x86-core2",
+        "bl-stable-2020.02-1_glibc_x86-core2",
+        "bl-stable-2020.02-1_musl_x86-core2",
+        "bl-stable-2020.02-1_uclibc_x86-core2",
+        "bl-stable-2020.02-2_glibc_x86-core2",
+        "bl-stable-2020.02-2_musl_x86-core2",
+        "bl-stable-2020.02-2_uclibc_x86-core2",
+        "bl-stable-2020.08-1_glibc_x86-core2",
+        "bl-stable-2020.08-1_musl_x86-core2",
+        "bl-stable-2020.08-1_uclibc_x86-core2",
+        "bl-stable-2021.11-1_glibc_x86-core2",
+        "bl-stable-2021.11-1_musl_x86-core2",
+        "bl-stable-2021.11-1_uclibc_x86-core2",
+        "bl-stable-2022.08-1_glibc_x86-core2",
+        "bl-stable-2022.08-1_musl_x86-core2",
+        "bl-stable-2022.08-1_uclibc_x86-core2",
+        "bl-stable-2023.08-1_glibc_x86-core2",
+        "bl-stable-2023.08-1_musl_x86-core2",
+        "bl-stable-2023.08-1_uclibc_x86-core2",
+        "bl-stable-2023.11-1_glibc_x86-core2",
+        "bl-stable-2023.11-1_musl_x86-core2",
+        "bl-stable-2023.11-1_uclibc_x86-core2",
+        "bl-stable-2024.02-1_glibc_x86-core2",
+        "bl-stable-2024.02-1_musl_x86-core2",
+        "bl-stable-2024.02-1_uclibc_x86-core2",
+        "bl-stable-2024.05-1_glibc_x86-core2",
+        "bl-stable-2024.05-1_musl_x86-core2",
+        "bl-stable-2024.05-1_uclibc_x86-core2",
+        "bl-stable-2025.08-1_glibc_x86-core2",
+        "bl-stable-2025.08-1_musl_x86-core2",
+        "bl-stable-2025.08-1_uclibc_x86-core2"
+      ]
+    },
+    {
+      "name": "bootlin-stable-x86-i686.tar.zst",
+      "family": "bootlin-stable",
+      "arch": "x86-i686",
+      "lief_arch_match": [
+        "i386",
+        "i486",
+        "i586",
+        "i686",
+        "x86",
+        "x86-core2",
+        "x86-i686"
+      ],
+      "sha256": "d70b3f009a2be3add88ed3c2a6e67a548e4b6c178df373393ce38526175f1ceb",
+      "size_bytes": 82632138,
+      "covers": [
+        "bl-stable-2017.05_glibc_x86-i686",
+        "bl-stable-2017.05_musl_x86-i686",
+        "bl-stable-2017.05_uclibc_x86-i686",
+        "bl-stable-2018.02-1_glibc_x86-i686",
+        "bl-stable-2018.02-1_musl_x86-i686",
+        "bl-stable-2018.02-1_uclibc_x86-i686",
+        "bl-stable-2018.02-2_glibc_x86-i686",
+        "bl-stable-2018.02-2_musl_x86-i686",
+        "bl-stable-2018.11-1_glibc_x86-i686",
+        "bl-stable-2018.11-1_musl_x86-i686",
+        "bl-stable-2018.11-1_uclibc_x86-i686",
+        "bl-stable-2020.02-1_glibc_x86-i686",
+        "bl-stable-2020.02-1_musl_x86-i686",
+        "bl-stable-2020.02-1_uclibc_x86-i686",
+        "bl-stable-2020.02-2_glibc_x86-i686",
+        "bl-stable-2020.02-2_musl_x86-i686",
+        "bl-stable-2020.02-2_uclibc_x86-i686",
+        "bl-stable-2020.08-1_glibc_x86-i686",
+        "bl-stable-2020.08-1_musl_x86-i686",
+        "bl-stable-2020.08-1_uclibc_x86-i686",
+        "bl-stable-2021.11-1_glibc_x86-i686",
+        "bl-stable-2021.11-1_musl_x86-i686",
+        "bl-stable-2021.11-1_uclibc_x86-i686",
+        "bl-stable-2022.08-1_glibc_x86-i686",
+        "bl-stable-2022.08-1_musl_x86-i686",
+        "bl-stable-2022.08-1_uclibc_x86-i686",
+        "bl-stable-2023.08-1_glibc_x86-i686",
+        "bl-stable-2023.08-1_musl_x86-i686",
+        "bl-stable-2023.08-1_uclibc_x86-i686",
+        "bl-stable-2023.11-1_glibc_x86-i686",
+        "bl-stable-2023.11-1_musl_x86-i686",
+        "bl-stable-2023.11-1_uclibc_x86-i686",
+        "bl-stable-2024.02-1_glibc_x86-i686",
+        "bl-stable-2024.02-1_musl_x86-i686",
+        "bl-stable-2024.02-1_uclibc_x86-i686",
+        "bl-stable-2024.05-1_glibc_x86-i686",
+        "bl-stable-2024.05-1_musl_x86-i686",
+        "bl-stable-2024.05-1_uclibc_x86-i686",
+        "bl-stable-2025.08-1_glibc_x86-i686",
+        "bl-stable-2025.08-1_musl_x86-i686",
+        "bl-stable-2025.08-1_uclibc_x86-i686"
+      ]
+    },
+    {
+      "name": "buildroot-aarch64.tar.zst",
+      "family": "buildroot",
+      "arch": "aarch64",
+      "lief_arch_match": [
+        "arm64",
+        "AARCH64",
+        "aarch64"
+      ],
+      "sha256": "27775649a80d2d27fc8463d09f7b853384ead76c776a908a2e6577aec9cad91e",
+      "size_bytes": 9045898,
+      "covers": [
+        "br-2020.08.3_glibc_aarch64",
+        "br-2020.08.3_musl_aarch64",
+        "br-2020.08.3_uclibc_aarch64"
+      ]
+    },
+    {
+      "name": "buildroot-arm.tar.zst",
+      "family": "buildroot",
+      "arch": "arm",
+      "lief_arch_match": [
+        "arm",
+        "armv4l",
+        "armv4eb",
+        "armv4tl",
+        "armv5l",
+        "armv5-eabi",
+        "armv6l",
+        "armv6-eabihf",
+        "armv7l",
+        "armv7-eabihf",
+        "armv7m"
+      ],
+      "sha256": "c1a0fa027a0341291318d66b1ffc58137fd81f0bf1bcfe47a24e8fb167a28c1d",
+      "size_bytes": 5695344,
+      "covers": [
+        "br-2020.08.3_glibc_arm",
+        "br-2020.08.3_musl_arm",
+        "br-2020.08.3_uclibc_arm"
+      ]
+    },
+    {
+      "name": "buildroot-i686.tar.zst",
+      "family": "buildroot",
+      "arch": "i686",
+      "lief_arch_match": [
+        "i386",
+        "i486",
+        "i586",
+        "i686",
+        "x86",
+        "x86-core2",
+        "x86-i686"
+      ],
+      "sha256": "341ef0c6dbe2a4b80bc896d0d64bd638d55ff3c5771f2c3b6521ee3dbc490c86",
+      "size_bytes": 6003512,
+      "covers": [
+        "br-2020.08.3_glibc_i686",
+        "br-2020.08.3_musl_i686",
+        "br-2020.08.3_uclibc_i686"
+      ]
+    },
+    {
+      "name": "buildroot-mips.tar.zst",
+      "family": "buildroot",
+      "arch": "mips",
+      "lief_arch_match": [
+        "mips",
+        "mips32"
+      ],
+      "sha256": "bc35a1f74d26210a0d7da6d136c2c2ef669e4798836a5e705516d4a823bb0b5b",
+      "size_bytes": 6090818,
+      "covers": [
+        "br-2020.08.3_glibc_mips",
+        "br-2020.08.3_musl_mips",
+        "br-2020.08.3_uclibc_mips"
+      ]
+    },
+    {
+      "name": "buildroot-mips64.tar.zst",
+      "family": "buildroot",
+      "arch": "mips64",
+      "lief_arch_match": [
+        "mips64"
+      ],
+      "sha256": "63eb13daffb20b1efb8c73a50b6a4de49a6060d1ef351d5a6319461b98573a17",
+      "size_bytes": 6117763,
+      "covers": [
+        "br-2020.08.3_glibc_mips64",
+        "br-2020.08.3_musl_mips64",
+        "br-2020.08.3_uclibc_mips64"
+      ]
+    },
+    {
+      "name": "buildroot-mips64el.tar.zst",
+      "family": "buildroot",
+      "arch": "mips64el",
+      "lief_arch_match": [
+        "mips64el"
+      ],
+      "sha256": "da354c53f3bf6c3f7ea02596712fa4282a5c3030fa815b0b1c41dcc6a379ad56",
+      "size_bytes": 6178070,
+      "covers": [
+        "br-2020.08.3_glibc_mips64el",
+        "br-2020.08.3_musl_mips64el",
+        "br-2020.08.3_uclibc_mips64el"
+      ]
+    },
+    {
+      "name": "buildroot-mipsel.tar.zst",
+      "family": "buildroot",
+      "arch": "mipsel",
+      "lief_arch_match": [
+        "mipsel",
+        "mips32el"
+      ],
+      "sha256": "9967d12a8da35d2010c58730e4b48ce3777421f7c7acd86539645fed953b6cc9",
+      "size_bytes": 6128311,
+      "covers": [
+        "br-2020.08.3_glibc_mipsel",
+        "br-2020.08.3_musl_mipsel",
+        "br-2020.08.3_uclibc_mipsel"
+      ]
+    },
+    {
+      "name": "buildroot-ppc.tar.zst",
+      "family": "buildroot",
+      "arch": "ppc",
+      "lief_arch_match": [
+        "powerpc",
+        "powerpc-440fp",
+        "powerpc-e300c3",
+        "powerpc-e500mc",
+        "ppc"
+      ],
+      "sha256": "2a62644a5b48f2027915c359b4bad12a4b4543b210729d63b803b89fbe412ca8",
+      "size_bytes": 5758357,
+      "covers": [
+        "br-2020.08.3_glibc_ppc",
+        "br-2020.08.3_musl_ppc",
+        "br-2020.08.3_uclibc_ppc"
+      ]
+    },
+    {
+      "name": "buildroot-ppc64.tar.zst",
+      "family": "buildroot",
+      "arch": "ppc64",
+      "lief_arch_match": [
+        "ppc64",
+        "powerpc64",
+        "powerpc64-e6500",
+        "powerpc64-pwoer8"
+      ],
+      "sha256": "1a761a18792f30047f48ca63e9b6e91abb41719bb9fd5c37145e330818ab7bb6",
+      "size_bytes": 5139991,
+      "covers": [
+        "br-2020.08.3_glibc_ppc64",
+        "br-2020.08.3_musl_ppc64"
+      ]
+    },
+    {
+      "name": "buildroot-risc-v-32.tar.zst",
+      "family": "buildroot",
+      "arch": "risc-v-32",
+      "lief_arch_match": [
+        "risc-v",
+        "riscv",
+        "risc-v-32",
+        "risc-v-64"
+      ],
+      "sha256": "9272cb8a8b5723eded4953c4fd4da9cd70b6753ffb68eeda4f6bed0e10f1073a",
+      "size_bytes": 2499126,
+      "covers": [
+        "br-2020.08.3_glibc_risc-v-32"
+      ]
+    },
+    {
+      "name": "buildroot-risc-v-64.tar.zst",
+      "family": "buildroot",
+      "arch": "risc-v-64",
+      "lief_arch_match": [
+        "risc-v",
+        "riscv",
+        "risc-v-32",
+        "risc-v-64"
+      ],
+      "sha256": "7d042a844391cc357571b202f351f8e43d972b7d4b918b559d7de1976313d38e",
+      "size_bytes": 4065468,
+      "covers": [
+        "br-2020.08.3_glibc_risc-v-64",
+        "br-2020.08.3_musl_risc-v-64"
+      ]
+    },
+    {
+      "name": "buildroot-sparc.tar.zst",
+      "family": "buildroot",
+      "arch": "sparc",
+      "lief_arch_match": [
+        "sparc"
+      ],
+      "sha256": "d6f8b4a18df26f63b6665df1ab67acc6cd8b80407f6d3b70743cad9bebd6cc10",
+      "size_bytes": 1632656,
+      "covers": [
+        "br-2020.08.3_uclibc_sparc"
+      ]
+    },
+    {
+      "name": "buildroot-sparc64.tar.zst",
+      "family": "buildroot",
+      "arch": "sparc64",
+      "lief_arch_match": [
+        "sparc64"
+      ],
+      "sha256": "90b7e123c8d5d4195eb1cbb0a1a518eff4074bcfd716d0e53087b874aacdbba9",
+      "size_bytes": 2463283,
+      "covers": [
+        "br-2020.08.3_glibc_sparc64"
+      ]
+    },
+    {
+      "name": "buildroot-x86_64.tar.zst",
+      "family": "buildroot",
+      "arch": "x86_64",
+      "lief_arch_match": [
+        "x86_64",
+        "amd64",
+        "x86-64",
+        "x86-64-core-i7"
+      ],
+      "sha256": "1c58c17d82dffdaf377a7d10e7a68ca9976245d98b0495288bdf7321bc82a269",
+      "size_bytes": 5926628,
+      "covers": [
+        "br-2020.08.3_glibc_x86_64",
+        "br-2020.08.3_musl_x86_64",
+        "br-2020.08.3_uclibc_x86_64"
+      ]
+    },
+    {
+      "name": "firmware-linux-armv4eb.tar.zst",
+      "family": "firmware-linux",
+      "arch": "armv4eb",
+      "lief_arch_match": [
+        "arm",
+        "armv4l",
+        "armv4eb",
+        "armv4tl",
+        "armv5l",
+        "armv5-eabi",
+        "armv6l",
+        "armv6-eabihf",
+        "armv7l",
+        "armv7-eabihf",
+        "armv7m"
+      ],
+      "sha256": "dfe5db2534fc5fa7419820827d6acc359564ef74ba4df430ea871e865a5ee480",
+      "size_bytes": 380015,
+      "covers": [
+        "fl-0.9.10_armv4eb",
+        "fl-0.9.11_armv4eb",
+        "fl-0.9.7_armv4eb",
+        "fl-0.9.8_armv4eb",
+        "fl-0.9.9_armv4eb"
+      ]
+    },
+    {
+      "name": "firmware-linux-armv4l.tar.zst",
+      "family": "firmware-linux",
+      "arch": "armv4l",
+      "lief_arch_match": [
+        "arm",
+        "armv4l",
+        "armv4eb",
+        "armv4tl",
+        "armv5l",
+        "armv5-eabi",
+        "armv6l",
+        "armv6-eabihf",
+        "armv7l",
+        "armv7-eabihf",
+        "armv7m"
+      ],
+      "sha256": "8b2c9daaaf807144a9cbca9ba37b1104e9efd596002250f20acca2ed6a93690a",
+      "size_bytes": 537854,
+      "covers": [
+        "fl-0.9.10_armv4l",
+        "fl-0.9.11_armv4l",
+        "fl-0.9.6_armv4l",
+        "fl-0.9.7_armv4l",
+        "fl-0.9.8_armv4l",
+        "fl-0.9.9_armv4l"
+      ]
+    },
+    {
+      "name": "firmware-linux-armv5l.tar.zst",
+      "family": "firmware-linux",
+      "arch": "armv5l",
+      "lief_arch_match": [
+        "arm",
+        "armv4l",
+        "armv4eb",
+        "armv4tl",
+        "armv5l",
+        "armv5-eabi",
+        "armv6l",
+        "armv6-eabihf",
+        "armv7l",
+        "armv7-eabihf",
+        "armv7m"
+      ],
+      "sha256": "767233a0ae6226bbd2a74382ab4ba2f39e4325cfba0728609e1fb5ef958e20a1",
+      "size_bytes": 526120,
+      "covers": [
+        "fl-0.9.6_armv5l",
+        "fl-0.9.7_armv5l"
+      ]
+    },
+    {
+      "name": "firmware-linux-armv6l.tar.zst",
+      "family": "firmware-linux",
+      "arch": "armv6l",
+      "lief_arch_match": [
+        "arm",
+        "armv4l",
+        "armv4eb",
+        "armv4tl",
+        "armv5l",
+        "armv5-eabi",
+        "armv6l",
+        "armv6-eabihf",
+        "armv7l",
+        "armv7-eabihf",
+        "armv7m"
+      ],
+      "sha256": "87833e3f77ebf2eb8a9179be6302659eafabdbdb98b4de10dcce4a6c50af7b6c",
+      "size_bytes": 320000,
+      "covers": [
+        "fl-0.9.7_armv6l"
+      ]
+    },
+    {
+      "name": "firmware-linux-i486.tar.zst",
+      "family": "firmware-linux",
+      "arch": "i486",
+      "lief_arch_match": [
+        "i386",
+        "i486",
+        "i586",
+        "i686",
+        "x86",
+        "x86-core2",
+        "x86-i686"
+      ],
+      "sha256": "f43d315f33c3df81a91b183998400f85fc880c0e0acf4fe02d77ebe6fc2c0df1",
+      "size_bytes": 308807,
+      "covers": [
+        "fl-0.9.11_i486"
+      ]
+    },
+    {
+      "name": "firmware-linux-i586.tar.zst",
+      "family": "firmware-linux",
+      "arch": "i586",
+      "lief_arch_match": [
+        "i386",
+        "i486",
+        "i586",
+        "i686",
+        "x86",
+        "x86-core2",
+        "x86-i686"
+      ],
+      "sha256": "13dd37c09e65c704565f0f9863db52782dbe0acf6969c3604796ed172d48e7bf",
+      "size_bytes": 443535,
+      "covers": [
+        "fl-0.9.10_i586",
+        "fl-0.9.11_i586",
+        "fl-0.9.6_i586",
+        "fl-0.9.7_i586",
+        "fl-0.9.8_i586",
+        "fl-0.9.9_i586"
+      ]
+    },
+    {
+      "name": "firmware-linux-i686.tar.zst",
+      "family": "firmware-linux",
+      "arch": "i686",
+      "lief_arch_match": [
+        "i386",
+        "i486",
+        "i586",
+        "i686",
+        "x86",
+        "x86-core2",
+        "x86-i686"
+      ],
+      "sha256": "56bf76c3c3ffcf98d3b2a5d083dd08e1126cb0efa815ec7868fcb80aff8030b3",
+      "size_bytes": 455422,
+      "covers": [
+        "fl-0.9.10_i686",
+        "fl-0.9.11_i686",
+        "fl-0.9.6_i686",
+        "fl-0.9.7_i686",
+        "fl-0.9.8_i686",
+        "fl-0.9.9_i686"
+      ]
+    },
+    {
+      "name": "firmware-linux-m68k.tar.zst",
+      "family": "firmware-linux",
+      "arch": "m68k",
+      "lief_arch_match": [
+        "m68k",
+        "m68k-q800",
+        "m68k-mcf",
+        "m68k-mcf5208",
+        "m68000"
+      ],
+      "sha256": "6e1df78f5c8128ae60d4fc6527263bf061f900eae31aa817782b089882a03d45",
+      "size_bytes": 389139,
+      "covers": [
+        "fl-0.9.6_m68k",
+        "fl-0.9.7_m68k",
+        "fl-0.9.8_m68k"
+      ]
+    },
+    {
+      "name": "firmware-linux-mips.tar.zst",
+      "family": "firmware-linux",
+      "arch": "mips",
+      "lief_arch_match": [
+        "mips",
+        "mips32"
+      ],
+      "sha256": "b12e757e09692a399c8028d212ac817f93d744e30e869e9502a130c9fbccb616",
+      "size_bytes": 777240,
+      "covers": [
+        "fl-0.9.10_mips",
+        "fl-0.9.11_mips",
+        "fl-0.9.6_mips",
+        "fl-0.9.7_mips",
+        "fl-0.9.8_mips",
+        "fl-0.9.9_mips"
+      ]
+    },
+    {
+      "name": "firmware-linux-mips64.tar.zst",
+      "family": "firmware-linux",
+      "arch": "mips64",
+      "lief_arch_match": [
+        "mips64"
+      ],
+      "sha256": "de570fd6695ad3af1f9f4e75e16b7b405cad8467a5db2c53d0ed916ca5a9bb71",
+      "size_bytes": 361210,
+      "covers": [
+        "fl-0.9.11_mips64"
+      ]
+    },
+    {
+      "name": "firmware-linux-mipsel.tar.zst",
+      "family": "firmware-linux",
+      "arch": "mipsel",
+      "lief_arch_match": [
+        "mipsel",
+        "mips32el"
+      ],
+      "sha256": "b6bc8a02e9263fab8682363a19658993a4fef0da456a2f778dddc1c377a1fc0a",
+      "size_bytes": 788582,
+      "covers": [
+        "fl-0.9.10_mipsel",
+        "fl-0.9.11_mipsel",
+        "fl-0.9.6_mipsel",
+        "fl-0.9.7_mipsel",
+        "fl-0.9.8_mipsel",
+        "fl-0.9.9_mipsel"
+      ]
+    },
+    {
+      "name": "firmware-linux-powerpc-440fp.tar.zst",
+      "family": "firmware-linux",
+      "arch": "powerpc-440fp",
+      "lief_arch_match": [
+        "powerpc",
+        "powerpc-440fp",
+        "powerpc-e300c3",
+        "powerpc-e500mc",
+        "ppc"
+      ],
+      "sha256": "d0409272b0b934e3f9c53f2f98c31ae0a352cdde682003aeb628946ad2ad3f0f",
+      "size_bytes": 464526,
+      "covers": [
+        "fl-0.9.6_powerpc-440fp",
+        "fl-0.9.7_powerpc-440fp"
+      ]
+    },
+    {
+      "name": "firmware-linux-ppc.tar.zst",
+      "family": "firmware-linux",
+      "arch": "ppc",
+      "lief_arch_match": [
+        "powerpc",
+        "powerpc-440fp",
+        "powerpc-e300c3",
+        "powerpc-e500mc",
+        "ppc"
+      ],
+      "sha256": "f9e916415576d037e690c81cd2a6a52de118ffdadb6ca1e183497c47bc677635",
+      "size_bytes": 571768,
+      "covers": [
+        "fl-0.9.10_powerpc",
+        "fl-0.9.11_powerpc",
+        "fl-0.9.6_powerpc",
+        "fl-0.9.7_powerpc",
+        "fl-0.9.8_powerpc",
+        "fl-0.9.9_powerpc"
+      ]
+    },
+    {
+      "name": "firmware-linux-sh4.tar.zst",
+      "family": "firmware-linux",
+      "arch": "sh4",
+      "lief_arch_match": [
+        "sh2",
+        "sh2eb",
+        "sh2elf",
+        "sh4"
+      ],
+      "sha256": "16f9e99d6b82a6fc2b891dcb8819a95a31d912406f05859967f1e32627388c3f",
+      "size_bytes": 477705,
+      "covers": [
+        "fl-0.9.6_sh4",
+        "fl-0.9.7_sh4"
+      ]
+    },
+    {
+      "name": "firmware-linux-sparc.tar.zst",
+      "family": "firmware-linux",
+      "arch": "sparc",
+      "lief_arch_match": [
+        "sparc"
+      ],
+      "sha256": "497c6ee0124bd783054d6a62d12d706094addbc46acaf8f1ee0023e8c0986546",
+      "size_bytes": 603976,
+      "covers": [
+        "fl-0.9.10_sparc",
+        "fl-0.9.11_sparc",
+        "fl-0.9.6_sparc",
+        "fl-0.9.7_sparc",
+        "fl-0.9.8_sparc"
+      ]
+    },
+    {
+      "name": "firmware-linux-x86_64.tar.zst",
+      "family": "firmware-linux",
+      "arch": "x86_64",
+      "lief_arch_match": [
+        "x86_64",
+        "amd64",
+        "x86-64",
+        "x86-64-core-i7"
+      ],
+      "sha256": "1013d12ffe349acf8e06b30e2f7907a4f435d7325f9d515f0a0bebc2bd02be8f",
+      "size_bytes": 479737,
+      "covers": [
+        "fl-0.9.10_x86_64",
+        "fl-0.9.11_x86_64",
+        "fl-0.9.6_x86_64",
+        "fl-0.9.7_x86_64",
+        "fl-0.9.8_x86_64",
+        "fl-0.9.9_x86_64"
+      ]
+    },
+    {
+      "name": "synopsys-arc-gnu-arc.tar.zst",
+      "family": "synopsys-arc-gnu",
+      "arch": "arc",
+      "lief_arch_match": [
+        "arc"
+      ],
+      "sha256": "97bf03f56ff0b3106b61c0eb7a8ae4310b9b292e868583092395a1d37fcfb914",
+      "size_bytes": 662820,
+      "covers": [
+        "synopsys_arc_gnu_2017.09_prebuilt_uclibc_le_arc700_linux"
+      ]
+    },
+    {
+      "name": "uclibc-pub-armv4l.tar.zst",
+      "family": "uclibc-pub",
+      "arch": "armv4l",
+      "lief_arch_match": [
+        "arm",
+        "armv4l",
+        "armv4eb",
+        "armv4tl",
+        "armv5l",
+        "armv5-eabi",
+        "armv6l",
+        "armv6-eabihf",
+        "armv7l",
+        "armv7-eabihf",
+        "armv7m"
+      ],
+      "sha256": "b99549bb05795e1f98ebfb3ef8bdb75cefa34b5bddae1017ec6d6f2edee58470",
+      "size_bytes": 342784,
+      "covers": [
+        "ucli-pub-0.9.30.1_armv4l",
+        "ucli-pub-0.9.30_armv4l"
+      ]
+    },
+    {
+      "name": "uclibc-pub-armv5l.tar.zst",
+      "family": "uclibc-pub",
+      "arch": "armv5l",
+      "lief_arch_match": [
+        "arm",
+        "armv4l",
+        "armv4eb",
+        "armv4tl",
+        "armv5l",
+        "armv5-eabi",
+        "armv6l",
+        "armv6-eabihf",
+        "armv7l",
+        "armv7-eabihf",
+        "armv7m"
+      ],
+      "sha256": "3c7e80b6a504bdeefcb39dbd03c131a6498468b79566bf2c2adf9ba85cb9348d",
+      "size_bytes": 331056,
+      "covers": [
+        "ucli-pub-0.9.30.1_armv5l",
+        "ucli-pub-0.9.30_armv5l"
+      ]
+    },
+    {
+      "name": "uclibc-pub-i586.tar.zst",
+      "family": "uclibc-pub",
+      "arch": "i586",
+      "lief_arch_match": [
+        "i386",
+        "i486",
+        "i586",
+        "i686",
+        "x86",
+        "x86-core2",
+        "x86-i686"
+      ],
+      "sha256": "848b50d04207e4681a2b7d7ba84a31aa7749f4d3f58e10df3355aeb99ba93d22",
+      "size_bytes": 310391,
+      "covers": [
+        "ucli-pub-0.9.30.1_i586",
+        "ucli-pub-0.9.30_i586"
+      ]
+    },
+    {
+      "name": "uclibc-pub-i686.tar.zst",
+      "family": "uclibc-pub",
+      "arch": "i686",
+      "lief_arch_match": [
+        "i386",
+        "i486",
+        "i586",
+        "i686",
+        "x86",
+        "x86-core2",
+        "x86-i686"
+      ],
+      "sha256": "f2663f350169c2ac03f47b0bbd7b32e18e80e23a570b5745e9a4742a86c2567d",
+      "size_bytes": 312564,
+      "covers": [
+        "ucli-pub-0.9.30.1_i686",
+        "ucli-pub-0.9.30_i686"
+      ]
+    },
+    {
+      "name": "uclibc-pub-m68k.tar.zst",
+      "family": "uclibc-pub",
+      "arch": "m68k",
+      "lief_arch_match": [
+        "m68k",
+        "m68k-q800",
+        "m68k-mcf",
+        "m68k-mcf5208",
+        "m68000"
+      ],
+      "sha256": "5636c5bdd48629c0051f2569e17144585cb0651960d7a245d07c703ff167102d",
+      "size_bytes": 337704,
+      "covers": [
+        "ucli-pub-0.9.30.1_m68k",
+        "ucli-pub-0.9.30_m68k"
+      ]
+    },
+    {
+      "name": "uclibc-pub-mips.tar.zst",
+      "family": "uclibc-pub",
+      "arch": "mips",
+      "lief_arch_match": [
+        "mips",
+        "mips32"
+      ],
+      "sha256": "f00e5d8069289a4cdf89ef7c793a397b70e836d3569c7a697623bb29145ea95c",
+      "size_bytes": 354849,
+      "covers": [
+        "ucli-pub-0.9.30.1_mips",
+        "ucli-pub-0.9.30_mips"
+      ]
+    },
+    {
+      "name": "uclibc-pub-mipsel.tar.zst",
+      "family": "uclibc-pub",
+      "arch": "mipsel",
+      "lief_arch_match": [
+        "mipsel",
+        "mips32el"
+      ],
+      "sha256": "83c6a176b95cdfa31d478be6f0d6e37bdd26a5d9145ac3f5c6ae89870fd1f8ef",
+      "size_bytes": 357409,
+      "covers": [
+        "ucli-pub-0.9.30.1_mipsel",
+        "ucli-pub-0.9.30_mipsel"
+      ]
+    },
+    {
+      "name": "uclibc-pub-ppc.tar.zst",
+      "family": "uclibc-pub",
+      "arch": "ppc",
+      "lief_arch_match": [
+        "powerpc",
+        "powerpc-440fp",
+        "powerpc-e300c3",
+        "powerpc-e500mc",
+        "ppc"
+      ],
+      "sha256": "c16d2c94f8d93395ce04b75ca326a4c0673a378c3e7d548c2011a05f4693ca2e",
+      "size_bytes": 411709,
+      "covers": [
+        "ucli-pub-0.9.30.1_powerpc",
+        "ucli-pub-0.9.30_powerpc"
+      ]
+    },
+    {
+      "name": "uclibc-pub-sh4.tar.zst",
+      "family": "uclibc-pub",
+      "arch": "sh4",
+      "lief_arch_match": [
+        "sh2",
+        "sh2eb",
+        "sh2elf",
+        "sh4"
+      ],
+      "sha256": "09e00706bdbbba4562530d43e88d5f901a0fafabfdf612fefd4c43a7042e947a",
+      "size_bytes": 363990,
+      "covers": [
+        "ucli-pub-0.9.30.1_sh4",
+        "ucli-pub-0.9.30_sh4"
+      ]
+    },
+    {
+      "name": "uclibc-pub-sparc.tar.zst",
+      "family": "uclibc-pub",
+      "arch": "sparc",
+      "lief_arch_match": [
+        "sparc"
+      ],
+      "sha256": "115f18be6ec8c11a80c18b06af358252ae00d2fc5d3c3389c53da832df305251",
+      "size_bytes": 321670,
+      "covers": [
+        "ucli-pub-0.9.30.1_sparc",
+        "ucli-pub-0.9.30_sparc"
+      ]
+    },
+    {
+      "name": "uclibc-pub-x86_64.tar.zst",
+      "family": "uclibc-pub",
+      "arch": "x86_64",
+      "lief_arch_match": [
+        "x86_64",
+        "amd64",
+        "x86-64",
+        "x86-64-core-i7"
+      ],
+      "sha256": "de5d2ad49cca4a7a2e843eb271d7ea91ed1358b49459e99715389c47cb9117c0",
+      "size_bytes": 323678,
+      "covers": [
+        "ucli-pub-0.9.30.1_x86_64",
+        "ucli-pub-0.9.30_x86_64"
+      ]
+    }
+  ]
 }
