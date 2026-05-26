@@ -38,10 +38,10 @@ jobs:
       count: ${{ steps.diff.outputs.count }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -97,10 +97,10 @@ jobs:
     timeout-minutes: 90
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -125,12 +125,12 @@ jobs:
             --python python
 
       - name: Bundle signature into a tarball
-        # upload-artifact@v4 strips the longest common path prefix
+        # actions/upload-artifact strips the longest common path prefix
         # across all `path:` entries. With four siblings under
         # signatures/<family>/<arch>/ the LCP would be that directory
         # and the archive would lose the family/arch path. Tar from the
         # signatures/ root so the artifact preserves the layout
-        # verbatim and the commit job can extract straight into place.
+        # verbatim and the publish job can extract straight into place.
         run: |
           set -eux
           mkdir -p /tmp/sig-out
@@ -141,92 +141,129 @@ jobs:
             "${{ matrix.family }}/${{ matrix.arch }}/${{ matrix.signature_name }}.alist"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sig-${{ matrix.signature_name }}
           if-no-files-found: error
           retention-days: 7
           path: /tmp/sig-out/${{ matrix.signature_name }}.tar
 
-  commit:
+  publish:
     needs: [discover, build]
     # Run whenever discover produced a non-empty matrix, even if some
     # build matrix entries failed. With `fail-fast: false` on the build
     # job the surviving entries still upload their artifacts; this
-    # commit job picks them up so a single transient failure (Bootlin
+    # publish job picks them up so a single transient failure (Bootlin
     # 5xx, a flaky tarball, etc.) does not waste an entire dispatch.
     # `discover.result == 'success'` keeps us from running on a broken
     # index step; `always()` is required to override the implicit
     # "skip on needs failure" behavior that `success()` would impose.
     if: ${{ always() && needs.discover.result == 'success' && needs.discover.outputs.count != '0' }}
     runs-on: ubuntu-latest
+    # Fetch + extract + re-tar of the full signature catalog at
+    # zstd-15 dominates the wall time. 120 minutes leaves room for the
+    # large Bootlin arches without hitting the 6-hour job ceiling.
+    timeout-minutes: 120
+    permissions:
+      contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: Download all signature artifacts
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install stelftools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+
+      - name: Stage signatures + publish output on /mnt
+        # ubuntu-latest mounts /mnt as a roomy temp volume (~60 GB)
+        # while the / partition only has ~14 GB free after the runner
+        # image. The full signature catalog unpacks to ~12 GB, so we
+        # route the fetch destination and the publish staging dir to
+        # /mnt to avoid filling the root disk.
+        run: |
+          sudo mkdir -p /mnt/sigs /mnt/publish-stage
+          sudo chown "$USER":"$USER" /mnt/sigs /mnt/publish-stage
+          echo "STELFTOOLS_SIGNATURES_DIR=/mnt/sigs" >> "$GITHUB_ENV"
+          echo "PUBLISH_STAGING=/mnt/publish-stage" >> "$GITHUB_ENV"
+
+      - name: Download all build artifacts
         # Each artifact carries a single tarball containing
         # <family>/<arch>/<signature_name>.{yara,json,dlist,alist}.
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: sig-*
           merge-multiple: true
           path: /tmp/sig-archives
 
-      - name: Extract tarballs into signatures tree
+      - name: Fetch existing signature catalog
+        # Pre-load every (family, arch) that's already in the published
+        # manifest so the next publish carries the full catalog, not
+        # just this run's deltas. Without this step the new manifest
+        # would replace the previous one with only the newly-built
+        # entries and orphan every URL pip-install users currently
+        # depend on.
+        run: |
+          stelftools-fetch-signatures
+
+      - name: Layer new build artifacts on top
         run: |
           set -eux
           for tar in /tmp/sig-archives/*.tar; do
-            tar -C signatures -xf "$tar"
+            tar -C "$STELFTOOLS_SIGNATURES_DIR" -xf "$tar"
           done
 
       - name: Inspect new files
         run: |
-          find signatures -path 'signatures/bootlin-*/*/bl-*.yara' -newer /etc/hostname | head -20
-          find signatures -path 'signatures/bootlin-*/*/bl-*.json' -newer /etc/hostname | head -20
+          find "$STELFTOOLS_SIGNATURES_DIR" \
+            -path '*/bootlin-*/*/bl-*.yara' -newer /etc/hostname | head -20
 
-      - name: Commit and push to ci-refresh branch
+      - name: Publish draft release + refresh manifest
+        env:
+          # gh release create reads GH_TOKEN (or GITHUB_TOKEN); the
+          # workflow's contents: write permission lets it create the
+          # release on the same repo.
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="signatures-$(date -u +%Y-%m-%d)"
+          python tools/ci/publish_signatures_release.py \
+            --draft \
+            --zstd-level 15 \
+            --staging-dir "$PUBLISH_STAGING" \
+            --tag "$tag" \
+            --target-branch main
+
+      - name: Commit manifest to ci-refresh branch
         run: |
           set -eux
-          branch="ci/bootlin-refresh-$(date -u +%Y%m%d-%H%M)"
+          branch="ci/manifest-refresh-$(date -u +%Y%m%d-%H%M)"
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -b "$branch"
-          git add 'signatures/bootlin-*/**/bl-*.yara' \
-                  'signatures/bootlin-*/**/bl-*.json' \
-                  'signatures/bootlin-*/**/bl-*.dlist' \
-                  'signatures/bootlin-*/**/bl-*.alist'
+          git add stelftools/signatures_manifest.json
           if git diff --cached --quiet; then
-            echo "no new signatures staged"
+            echo "no manifest change to commit"
             exit 0
           fi
-          # Subject lists added signature names so reviewers see scope without
-          # opening the diff. Body keeps the per-line breakdown.
-          names=$(git diff --cached --name-only -- 'signatures/**' \
-                    | grep '\.yara$' \
-                    | sed -E 's#^signatures/[^/]+/[^/]+/##; s#\.yara$##' \
-                    | sort)
-          first=$(echo "$names" | head -1)
-          n=$(echo "$names" | wc -l)
-          # The "+N more" tail must NOT come from a `[ N -gt 1 ] && echo`
-          # subshell — when N is 1 the test fails and its exit status
-          # leaks out of the command substitution, triggering set -e on
-          # the surrounding assignment. Compute the tail with an if so
-          # the only path that yields a non-zero exit is genuine failure.
-          if [ "$n" -gt 1 ]; then
-            extra=" (+$((n - 1)) more)"
-          else
-            extra=""
-          fi
-          subject="[feat/ci] add Bootlin signatures: ${first}${extra}"
+          tag="signatures-$(date -u +%Y-%m-%d)"
+          subject="[ci/manifest] point at $tag draft release"
           {
             echo "$subject"
             echo
             echo "Generated by .github/workflows/refresh-bootlin.yml run $GITHUB_RUN_ID."
             echo
-            echo "$names"
+            echo "Promote the draft release at"
+            echo "  https://github.com/$GITHUB_REPOSITORY/releases"
+            echo "before merging this branch — otherwise pip-install users"
+            echo "will 404 against the manifest's URLs until the release"
+            echo "is published."
           } > .commit-msg
           git commit -F .commit-msg
           rm .commit-msg

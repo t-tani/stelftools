@@ -49,6 +49,7 @@ if str(_REPO_ROOT) not in sys.path:
 
 from stelftools.families import known_families  # noqa: E402
 from stelftools.bruteforce import lief_arch_group_for  # noqa: E402
+from stelftools import sigstore  # noqa: E402
 
 
 # Streaming chunk for sha256 + size accounting. 1 MiB keeps memory
@@ -93,8 +94,14 @@ def _build_tarball(
 
 
 def _enumerate_pairs(repo_root: Path) -> list[tuple[str, str, Path]]:
-    """Return [(family, arch, arch_dir), ...] for every populated pair."""
-    sig_root = repo_root / "signatures"
+    """Return [(family, arch, arch_dir), ...] for every populated pair.
+
+    The signatures root is resolved via sigstore so the publish step
+    honors ``$STELFTOOLS_SIGNATURES_DIR`` — CI runs override the path
+    to land the fetch + new builds on the runner's roomy /mnt volume
+    instead of competing with the checkout for the 14 GB / partition.
+    """
+    sig_root = sigstore.signatures_root()
     pairs: list[tuple[str, str, Path]] = []
     if not sig_root.is_dir():
         return pairs
