@@ -104,10 +104,15 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install stelftools deps
+      - name: Install stelftools
         run: |
           python -m pip install --upgrade pip
-          python -m pip install arpy yara-x capstone pyelftools python-magic cxxfilt lief
+          # Editable install pulls dependencies from pyproject.toml and
+          # exposes `python -m stelftools.info_create` (driven by
+          # build_bootlin_signature.sh below) plus the console-script
+          # entry points. The qiling extra is left out — the CI runner
+          # never executes a qiling-backed plugin.
+          python -m pip install -e .
 
       - name: Build signature
         run: |
