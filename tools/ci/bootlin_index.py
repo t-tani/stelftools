@@ -37,6 +37,26 @@ TARBALL_RE = re.compile(
     r"\.tar\.(?P<ext>xz|bz2)$"
 )
 
+# Architectures Bootlin ships that ``stelftools.mkrule``'s per-arch
+# dispatch does not handle yet. A CI build against any of these would
+# fail at ``exit(-1)`` after downloading and extracting the toolchain,
+# so the workflow drops them at index time. Keep this set in sync with
+# the dispatch table in ``stelftools/mkrule.py``; remove an entry once
+# the matcher grows a corresponding branch.
+DEFAULT_UNSUPPORTED_ARCHES = frozenset({
+    "bfin",
+    "microblazebe",
+    "microblazeel",
+    "nios2",
+    "openrisc",
+    "xtensa-lx60",
+    "s390x-z13",
+    # RISC-V 64-bit is gated behind a commented-out branch in
+    # mkrule.py; mark unsupported until that branch is restored.
+    "riscv64",
+    "riscv64-lp64d",
+})
+
 
 @dataclass(frozen=True)
 class Entry:
@@ -159,10 +179,20 @@ def filter_entries(
     archs: set[str] | None,
     since: str | None,
     until: str | None,
+    exclude_archs: set[str] | None = None,
+    newest_first: bool = True,
 ) -> list[Entry]:
+    """Filter and order index entries.
+
+    The default ordering is **release descending** (newest first) so the
+    workflow's ``max_jobs`` slice picks the most recently published
+    toolchains. The earlier ascending order kept the monthly cron
+    forever stuck on 2018-era releases.
+    """
     result: list[Entry] = []
     since_key = _release_sort_key(since) if since else None
     until_key = _release_sort_key(until) if until else None
+    exclude_archs = exclude_archs or set()
     for entry in entries:
         if entry.stability not in stability:
             continue
@@ -170,13 +200,25 @@ def filter_entries(
             continue
         if archs is not None and entry.arch not in archs:
             continue
+        if entry.arch in exclude_archs:
+            continue
         key = _release_sort_key(entry.release)
         if since_key is not None and key < since_key:
             continue
         if until_key is not None and key > until_key:
             continue
         result.append(entry)
-    result.sort(key=lambda e: (_release_sort_key(e.release), e.libc, e.arch))
+    if newest_first:
+        # Negate the release tuple so ``sort`` keeps libc / arch
+        # ascending while putting the newest release first; this keeps
+        # the per-release group order stable across runs.
+        result.sort(key=lambda e: (
+            tuple(-x for x in _release_sort_key(e.release)),
+            e.libc,
+            e.arch,
+        ))
+    else:
+        result.sort(key=lambda e: (_release_sort_key(e.release), e.libc, e.arch))
     return result
 
 
@@ -220,6 +262,19 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--until",
         help="Latest release in YYYY.MM[-N] form (inclusive)",
     )
+    p.add_argument(
+        "--exclude-arch",
+        default=",".join(sorted(DEFAULT_UNSUPPORTED_ARCHES)),
+        help="Comma-separated arches to drop from the output. Default "
+             "excludes the arches that stelftools.mkrule cannot yet "
+             "handle. Pass an empty string to disable the filter.",
+    )
+    p.add_argument(
+        "--oldest-first",
+        action="store_true",
+        help="Sort by release ascending (default is newest-first so "
+             "max_jobs picks the most recent toolchains).",
+    )
     p.add_argument("--workers", type=int, default=8)
     return p.parse_args(argv)
 
@@ -241,6 +296,8 @@ def main(argv: list[str] | None = None) -> int:
         archs=None,
         since=args.since,
         until=args.until,
+        exclude_archs={x.strip() for x in args.exclude_arch.split(",") if x.strip()},
+        newest_first=not args.oldest_first,
     )
     payload = [
         asdict(e) | {"signature_name": e.signature_name, "family": e.family}

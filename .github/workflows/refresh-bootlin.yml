@@ -138,7 +138,15 @@ jobs:
 
   commit:
     needs: [discover, build]
-    if: needs.discover.outputs.count != '0' && success()
+    # Run whenever discover produced a non-empty matrix, even if some
+    # build matrix entries failed. With `fail-fast: false` on the build
+    # job the surviving entries still upload their artifacts; this
+    # commit job picks them up so a single transient failure (Bootlin
+    # 5xx, a flaky tarball, etc.) does not waste an entire dispatch.
+    # `discover.result == 'success'` keeps us from running on a broken
+    # index step; `always()` is required to override the implicit
+    # "skip on needs failure" behavior that `success()` would impose.
+    if: ${{ always() && needs.discover.result == 'success' && needs.discover.outputs.count != '0' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
