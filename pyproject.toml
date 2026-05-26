@@ -49,6 +49,7 @@ dev = [
 stelftools-ident = "stelftools.ident:main"
 stelftools-mkrule = "stelftools.info_create:main"
 stelftools-bruteforce = "stelftools.bruteforce:main"
+stelftools-symbolize = "stelftools.symbolize:main"
 
 [project.urls]
 Homepage = "https://github.com/t-tani/stelftools"
