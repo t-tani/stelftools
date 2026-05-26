@@ -107,7 +107,7 @@ python3 ./func_ident.py -cfg ./signatures/configs/<family>/{name of toolchain}.j
 
 Example
 ```bash
-$ python3 ./func_ident.py -cfg ./signatures/configs/<family>/ucli-pub-0.9.30.1_i586.json -target ./sample/main.i586
+$ python3 ./func_ident.py -cfg ./signatures/configs/<family>/ucli-pub-0.9.30.1_i586.json -target ./samples/built/main.i586
 0x8048094 _fini,_init
 0x80480b0 __get_pc_thunk_bx
 0x80480c0 __do_global_dtors_aux
