@@ -1040,12 +1040,18 @@ def create_rule(syms, hexstr_opecodes, options = []):
     #     rule += '\t\tsize = "%d"\n' % (syms[0]['size'])
     rule += '\t\tsize = "%d"\n' % (syms[0]['size'])
     if 'objfiles' in options:
-        rule += '\t\tobjfiles = "%s"\n' % ', '.join(list(objnames)[:5])
+        # Sort before truncating so the 5 objfiles recorded in the rule are
+        # deterministic across runs. The prior list(set(...)) iterated in
+        # set-hash order, which varies with insertion sequence — a
+        # cosmetic concern that became real when the [:5] slice picked
+        # different five names depending on how merge_dicts had appended
+        # archive contributions.
+        rule += '\t\tobjfiles = "%s"\n' % ', '.join(sorted(objnames)[:5])
     if 'exports' in options:
-        for objname, syms in exports:
+        for objname, syms in sorted(exports):
             rule += '\t\texports_%s = "%s"\n' % (objname, syms)
     if 'imports' in options:
-        for objname, syms in imports:
+        for objname, syms in sorted(imports):
             rule += '\t\timports_%s = "%s"\n' % (objname, syms)
     if 'prototype' in options:
         rule += '\t\tprototype = "%s, %s"\n' % ('void', 'void')
