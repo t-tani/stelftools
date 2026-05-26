@@ -840,7 +840,7 @@ def _parse_rule_lengths(yara_rule_path):
     return lengths
 
 
-CACHE_DIR = STELFTOOLS_PATH + "cache/"
+CACHE_DIR = STELFTOOLS_PATH + ".cache/yara/"
 
 
 def compile_yara_file(yara_rule_path):
@@ -850,7 +850,7 @@ def compile_yara_file(yara_rule_path):
     # whose identifier has length >= L per merge iteration, avoiding
     # the per-L recompile that the loop in run_one used to do.
     #
-    # Compiled rules are persisted under STELFTOOLS_PATH/cache/ as
+    # Compiled rules are persisted under STELFTOOLS_PATH/.cache/yara/ as
     # <basename>.yarc + <basename>.lengths.json. A warm hit deserialises
     # ~8x faster than recompiling, which is the dominant per-cfg cost
     # in the bruteforce driver. Cache invalidates when the .yara file
