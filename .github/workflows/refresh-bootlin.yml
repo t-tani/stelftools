@@ -184,7 +184,19 @@ jobs:
           names=$(git diff --cached --name-only -- 'signatures/yara/**' \
                     | sed -E 's#^signatures/yara/[^/]+/##; s#\.yara$##' \
                     | sort)
-          subject="[feat/ci] add Bootlin signatures: $(echo "$names" | head -1)$([ $(echo "$names" | wc -l) -gt 1 ] && echo " (+$(($(echo "$names" | wc -l) - 1)) more)")"
+          first=$(echo "$names" | head -1)
+          n=$(echo "$names" | wc -l)
+          # The "+N more" tail must NOT come from a `[ N -gt 1 ] && echo`
+          # subshell — when N is 1 the test fails and its exit status
+          # leaks out of the command substitution, triggering set -e on
+          # the surrounding assignment. Compute the tail with an if so
+          # the only path that yields a non-zero exit is genuine failure.
+          if [ "$n" -gt 1 ]; then
+            extra=" (+$((n - 1)) more)"
+          else
+            extra=""
+          fi
+          subject="[feat/ci] add Bootlin signatures: ${first}${extra}"
           {
             echo "$subject"
             echo
