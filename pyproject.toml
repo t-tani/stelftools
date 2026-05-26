@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stelftools"
+version = "0.3.0"
+description = "Cross-architecture static-library function identification via YARA signatures"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+authors = [
+    { name = "Shu Akabane" },
+    { name = "Toshihiro Tani" },
+]
+keywords = ["yara", "static-analysis", "elf", "reverse-engineering", "firmware"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Information Technology",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Security",
+    "Topic :: Software Development :: Disassemblers",
+    "License :: OSI Approved :: MIT License",
+]
+dependencies = [
+    # Versions are floors that match what setup/init.sh installed under
+    # the bare pip3 calls before this package gained a pyproject.toml.
+    # Bumping these is fine; lowering them needs a re-test against the
+    # libfunc_info_create + ident smoke runs that this CI exercises.
+    "arpy>=2.3",
+    "capstone>=5.0",
+    "cxxfilt>=0.3",
+    "lief>=0.14",
+    "pyelftools>=0.30",
+    "python-magic>=0.4.27",
+    "yara-x>=0.10",
+]
+
+[project.optional-dependencies]
+# Pulled in by tools/setup/init.sh only when the qiling plugin path is in
+# use; left out of the default install so headless CI runs stay slim.
+qiling = ["qiling>=1.4"]
+
+[project.scripts]
+stelftools-ident = "stelftools.ident:main"
+stelftools-mkrule = "stelftools.info_create:main"
+stelftools-bruteforce = "stelftools.bruteforce:main"
+
+[project.urls]
+Homepage = "https://github.com/t-tani/stelftools"
+Upstream = "https://github.com/shuakabane/stelftools"
+
+[tool.setuptools.packages.find]
+include = ["stelftools*"]
+exclude = ["plugins*", "tools*", "samples*", "signatures*", "research*", "docs*"]
