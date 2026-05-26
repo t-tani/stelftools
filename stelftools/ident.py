@@ -17,12 +17,12 @@ from capstone import *
 from elftools.elf.elffile import ELFFile
 from elftools.common import exceptions
 
-import DubMaker
+from . import dub_maker as DubMaker
 
-# Resolve through any symlinks (IDA/Ghidra plugin setup symlinks
-# this file into the host tool's plugin directory) so the trailing
-# slash form keeps every `STELFTOOLS_PATH + 'subdir/file'` concat working.
-STELFTOOLS_PATH = str(Path(__file__).resolve().parent) + "/"
+# Anchor at the repository root (the parent of the stelftools/ package
+# directory). Resolves through any symlinks so plugins set up by the
+# host tool (IDA/Ghidra) still find the signatures tree.
+STELFTOOLS_PATH = str(Path(__file__).resolve().parent.parent) + "/"
 
 INIT_CRT_FUNC_LIST = ['__init', '_init', '.init', \
         '_start', '_start_c', '__start', 'hlt', '__gmon_start__', 'set_fast_math', \
@@ -1735,7 +1735,7 @@ def run_one(target_path, cfg_info, relative_paths=True):
     return run_one_with_state(state, cfg_info, relative_paths=relative_paths)
 
 
-if __name__ == '__main__':
+def main():
     args = set_args()
 
     if args.cfg and os.path.exists(args.cfg):
@@ -1756,3 +1756,6 @@ if __name__ == '__main__':
         exit(-1)
 
     output(target_info, args.target, args.output_style)
+
+if __name__ == '__main__':
+    main()

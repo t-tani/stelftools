@@ -8,7 +8,9 @@ import subprocess
 import argparse
 from pathlib import Path
 
-STELFTOOLS_PATH = str(Path(__file__).resolve().parent) + "/"
+# Anchor at the repository root (the parent of the stelftools/ package
+# directory) so runtime caches under .cache/runtime/ resolve correctly.
+STELFTOOLS_PATH = str(Path(__file__).resolve().parent.parent) + "/"
 
 def get_funclist(funclist_path):
     with open(funclist_path, 'r') as f:
@@ -299,7 +301,7 @@ def get_order_list(func_list, toolchain_path, dummy_bin_name):
         # output_func_order_list(func_order_list) # dbg
     return func_order_list, global_sym_func_order_list, exclude_error_func_list
 
-if __name__ == '__main__':
+def main():
     args = arg_parser()
     func_list = get_funclist(args.funclist_path)
     include_list, macro_list, no_man_func_list, exclude_error_func_list = get_func_include_and_macro(func_list)
@@ -314,4 +316,7 @@ if __name__ == '__main__':
             os.remove(output_file)
     else:
         output_func_order_list(func_order_list)
+
+if __name__ == '__main__':
+    main()
 

@@ -196,7 +196,7 @@ def fmt_depend_data(depend_list):
                 # formatted_depend_data.append([caller, callee, hex(offset)]) # hex
     return formatted_depend_data
 
-if __name__ == '__main__':
+def main():
     if len(sys.argv) < 2:
         print('[WORNING] : Please input the path to the static library')
         exit(1)
@@ -229,3 +229,6 @@ if __name__ == '__main__':
         gen_depend_graph(formatted_depend_data)
     elif args.output == 'no':
         None
+
+if __name__ == '__main__':
+    main()

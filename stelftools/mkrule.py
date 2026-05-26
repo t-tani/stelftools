@@ -1109,7 +1109,7 @@ def output_rules(rules_list, output_path):
             f.write("%s\n" % rule)
     #print('Completed successfully ->', output_path)
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(prog = sys.argv[0])
     parser.add_argument('--version', '-v', action = 'version', version = '%s %s' % (sys.argv[0], VERSION))
     parser.add_argument('--excluded-api', type = str, help = 'File name of a list that includes api names to be excluded')
@@ -1226,6 +1226,9 @@ if __name__ == '__main__':
     else: # stdout
         for rules in rules_list:
             print(rules)
+
+if __name__ == '__main__':
+    main()
 
     #if args.save_api:
     #    output_function_names(args.save_api, tab.values())

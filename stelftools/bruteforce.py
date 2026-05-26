@@ -33,13 +33,12 @@ _handler.setFormatter(logging.Formatter(
 log.addHandler(_handler)
 log.setLevel(logging.INFO)
 
-# Make `import func_ident` work whether this script is invoked from the
-# stelftools directory directly or from elsewhere.
-_THIS_DIR = Path(__file__).resolve().parent
-sys.path.insert(0, str(_THIS_DIR))
-import func_ident  # noqa: E402
+from . import ident as func_ident  # noqa: E402
 
-TOOLCHAIN_CONFIG_DIR = _THIS_DIR / "signatures" / "configs"
+# Anchor at the repo root: the package sits one level below it, so the
+# signatures tree lives at parent / "signatures" / "configs".
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+TOOLCHAIN_CONFIG_DIR = _REPO_ROOT / "signatures" / "configs"
 
 
 def set_args():

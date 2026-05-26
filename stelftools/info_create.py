@@ -21,12 +21,15 @@ from elftools.elf.elffile import ELFFile
 from elftools.elf.relocation import RelocationSection
 from elftools.elf.sections import SymbolTableSection
 
-import libfunc_mkrule # make lib func rule script
-import libfunc_deparse # parse lib func dependency script
-from stelftools.families import family_for
+from . import mkrule as libfunc_mkrule
+from . import deparse as libfunc_deparse
+from .families import family_for
 from pathlib import Path
 
-STELFTOOLS_PATH = str(Path(__file__).resolve().parent) + "/"
+# Anchor at the repository root (the parent of the stelftools/ package
+# directory). Downstream code joins relative paths from the JSON cfg
+# (`signatures/yara/<family>/...` etc.) onto this prefix.
+STELFTOOLS_PATH = str(Path(__file__).resolve().parent.parent) + "/"
 
 MINIMUM_PATTERN_LENGTH = 0
 MAXIMUM_PATTERN_LENGTH=15000
@@ -365,7 +368,7 @@ def mkrule_and_other(tc_path, tc_name, workers=None):
 
     return yara_output_path, dlist_output_path, alist_output_path
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(prog = sys.argv[0])
     parser.add_argument('-name', help = 'Toolchain name')
     parser.add_argument('--toolchain_path', '-tp', help = 'Toolchain path')
@@ -406,3 +409,7 @@ if __name__ == '__main__':
             alias_list_path, \
             depend_list_path \
             )
+
+
+if __name__ == '__main__':
+    main()
