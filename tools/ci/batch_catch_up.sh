@@ -9,6 +9,11 @@
 # total catch-up finishes overnight instead of consuming the monthly
 # CI minute pool.
 #
+# Requires ``uv`` (https://docs.astral.sh/uv/). The script creates a
+# project-local ``.venv`` if one is not already present and runs
+# ``uv pip install -e .`` to bring the stelftools package into it
+# before any build kicks off. ``.venv/`` is gitignored.
+#
 # Idempotent: a signature whose .yara already lives in the on-disk
 # tree is skipped, so re-runs (after Ctrl-C, OOM, or simple resume)
 # only pay for the ones that have not landed yet.
@@ -35,8 +40,8 @@ Options:
                          so --parallel 2 saturates a 12-core box; bump only if
                          you have many spare cores.
   --dry-run              List what would be built and exit. No tarballs fetched.
-  --python PATH          Python interpreter forwarded to build_bootlin_signature.sh.
-                         Default: $(command -v python3).
+  --skip-sync            Skip the up-front ``uv pip install -e .`` step. Useful
+                         when re-running and the .venv is already current.
   -h, --help             This message.
 
 Examples:
@@ -58,7 +63,7 @@ libc="glibc,musl,uclibc"
 arch=""
 parallel=2
 dry_run=0
-python_bin="${PYTHON:-$(command -v python3)}"
+skip_sync=0
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -68,7 +73,7 @@ while [ $# -gt 0 ]; do
         --arch) arch="$2"; shift 2;;
         --parallel) parallel="$2"; shift 2;;
         --dry-run) dry_run=1; shift;;
-        --python) python_bin="$2"; shift 2;;
+        --skip-sync) skip_sync=1; shift;;
         -h|--help) usage;;
         *) printf 'unknown argument: %s\n' "$1" >&2; usage;;
     esac
@@ -84,6 +89,28 @@ fi
 
 repo_root="$(cd -- "$(dirname -- "$0")/../.." && pwd)"
 cd "$repo_root"
+
+if ! command -v uv >/dev/null 2>&1; then
+    printf 'uv is required (https://docs.astral.sh/uv/); install and re-run.\n' >&2
+    exit 2
+fi
+
+venv_dir="$repo_root/.venv"
+if [ "$skip_sync" -eq 0 ]; then
+    if [ ! -d "$venv_dir" ]; then
+        printf '[batch] creating %s with uv ...\n' "$venv_dir" >&2
+        uv venv "$venv_dir"
+    fi
+    printf '[batch] uv pip install -e . into %s ...\n' "$venv_dir" >&2
+    VIRTUAL_ENV="$venv_dir" uv pip install --quiet -e .
+fi
+
+python_bin="$venv_dir/bin/python"
+if [ ! -x "$python_bin" ]; then
+    printf 'expected uv-managed python at %s but did not find one. ' "$python_bin" >&2
+    printf 'Re-run without --skip-sync to bootstrap the environment.\n' >&2
+    exit 2
+fi
 
 log_dir="$repo_root/.cache/batch_logs"
 mkdir -p "$log_dir"

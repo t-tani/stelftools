@@ -5,6 +5,7 @@ _bootlin_work/
 build/
 dist/
 .ruff_cache/
+.venv/
 
 # Legacy yara-x compile cache location. The current code writes to
 # .cache/yara/ instead; the old name is kept ignored so an older
