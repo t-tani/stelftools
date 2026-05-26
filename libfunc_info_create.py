@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import io
+import multiprocessing
 import os
 import re
 import shutil
@@ -140,8 +141,93 @@ def _named_bytesio(data, name):
     return buf
 
 
-def mkrule_and_other(tc_path, tc_name):
-    """Build the yara, dlist, and alist outputs in a single file walk.
+def _process_one_file(filename):
+    """Worker: build the (tab, crt_tab, depend) deltas for a single file.
+
+    Returns ``None`` for files the caller skips (libstdc++.a top-level,
+    file types neither archive/object/executable, magic failures), or
+    ``('error', mime, path)`` for genuinely unsupported types so the
+    main process can log and exit. Otherwise returns
+    ``(tab, crt_tab, depend)``.
+
+    Must stay picklable for multiprocessing.Pool; relies only on
+    module-level state.
+    """
+    leaf = filename.split('/')[-1]
+    if leaf in _EXCLUDE_BOTH_TOPLEVEL:
+        return None
+    try:
+        ftype = magic.from_file(filename, mime=True)
+    except magic.MagicException:
+        return None
+
+    skip_opecode_outer = leaf in _EXCLUDE_OPECODE_TOPLEVEL
+    tab = {}
+    crt_tab = {}
+    depend = {}
+
+    if ftype == 'application/x-archive':
+        rel_arfile = leaf
+        try:
+            ar = arpy.Archive(os.path.abspath(filename))
+        except Exception:
+            return None
+        for of in ar:
+            inner_fname = of.header.name.decode('utf-8')
+            data = of.read()
+            if not data:
+                continue
+            buf = _named_bytesio(data, inner_fname)
+            if inner_fname not in _EXCLUDE_OPECODE_IN_ARCHIVE:
+                newtab, new_crt_tab = libfunc_mkrule.fetch_opecodes(buf, arfile=rel_arfile)
+                tab = libfunc_mkrule.merge_dicts(tab, newtab)
+                crt_tab = libfunc_mkrule.merge_dicts(crt_tab, new_crt_tab)
+            buf.seek(0)
+            depend.update(libfunc_deparse.func_depend_analy(buf, inner_fname))
+
+    elif ftype == 'application/x-object':
+        with open(filename, 'rb') as f:
+            data = f.read()
+        buf = _named_bytesio(data, filename)
+        if not skip_opecode_outer:
+            newtab, new_crt_tab = libfunc_mkrule.fetch_opecodes(buf)
+            tab = libfunc_mkrule.merge_dicts(tab, newtab)
+            crt_tab = libfunc_mkrule.merge_dicts(crt_tab, new_crt_tab)
+        buf.seek(0)
+        depend.update(libfunc_deparse.func_depend_analy(buf, leaf))
+
+    elif ftype in _EXECUTABLE_MIMES:
+        if skip_opecode_outer:
+            return None
+        with open(filename, 'rb') as f:
+            newtab, new_crt_tab = libfunc_mkrule.fetch_opecodes(f, exapis=[])
+        tab = libfunc_mkrule.merge_dicts(tab, newtab)
+        crt_tab = libfunc_mkrule.merge_dicts(crt_tab, new_crt_tab)
+
+    elif ftype in ('text/plain', 'inode/symlink'):
+        return None
+    else:
+        return ('error', ftype, filename)
+
+    return (tab, crt_tab, depend)
+
+
+def _default_worker_count():
+    """Half the available CPUs, capped at 8, with a floor of 1.
+
+    The merge step in the main process is also CPU-bound (unpickling +
+    dict merges), so leaving headroom for it tends to win over saturating
+    every core with workers. The cap reflects diminishing returns past
+    eight workers — pyelftools' relocation parsing is the per-archive
+    bottleneck and there are around sixty archives in a typical glibc
+    toolchain, so wall time floors at roughly one-eighth of serial.
+    """
+    cpu = os.cpu_count() or 1
+    return max(1, min(8, cpu // 2))
+
+
+def mkrule_and_other(tc_path, tc_name, workers=None):
+    """Build the yara, dlist, and alist outputs in a single (optionally parallel) file walk.
 
     The earlier pipeline ran mkrule() to discover opcodes and write the
     yara file, then mkother() walked the same static-library set a
@@ -157,6 +243,14 @@ def mkrule_and_other(tc_path, tc_name):
     original two functions are preserved verbatim — the rule pass still
     skips Scrt1.o / crtbegin*.o / aeabi_sighandlers.o while the depend
     pass descends into them, and both passes skip libstdc++.a.
+
+    When ``workers`` is greater than one, archive-level processing is
+    dispatched to a ``multiprocessing.Pool`` and results merged back in
+    submission order (``imap`` preserves order even when workers
+    complete out of order), so the final tab / depend_list orderings —
+    and therefore the rendered yara / dlist / alist — match the serial
+    output byte-for-byte. ``workers=None`` consults
+    :func:`_default_worker_count`.
     """
     yara_output_path = STELFTOOLS_PATH + "yara-patterns/" + tc_name + ".yara"
     dlist_output_path = STELFTOOLS_PATH + "_tmpdir/dlists/" + tc_name + ".dlist"
@@ -164,74 +258,43 @@ def mkrule_and_other(tc_path, tc_name):
 
     static_lib_file_list = get_static_lib_file_list(tc_path)
 
-    logging.info('Analyzing archive files...')
+    if workers is None:
+        workers = _default_worker_count()
+
+    logging.info('Analyzing archive files with %d worker(s)...', workers)
     tab = {}
     crt_tab = {}
     depend_list = {}
 
-    for filename in static_lib_file_list:
-        leaf = filename.split('/')[-1]
-        if leaf in _EXCLUDE_BOTH_TOPLEVEL:
-            continue
-        try:
-            ftype = magic.from_file(filename, mime=True)
-        except magic.MagicException:
-            continue
-
-        skip_opecode_outer = leaf in _EXCLUDE_OPECODE_TOPLEVEL
-
-        if ftype == 'application/x-archive':
-            rel_arfile = leaf
-            try:
-                ar = arpy.Archive(os.path.abspath(filename))
-            except Exception:
-                continue
-            for of in ar:
-                inner_fname = of.header.name.decode('utf-8')
-                data = of.read()
-                # Some archive members (.SYMDEF, padding) read back as
-                # empty; both passes used to silently no-op on them
-                # because pyelftools rejected the input.
-                if not data:
+    if workers > 1:
+        # chunksize=1 keeps load balancing tight: libc.a (~30 s) would
+        # otherwise serialise behind any larger chunk it shared.
+        with multiprocessing.Pool(processes=workers) as pool:
+            results = pool.imap(_process_one_file, static_lib_file_list, chunksize=1)
+            for result in results:
+                if result is None:
                     continue
-                buf = _named_bytesio(data, inner_fname)
-
-                if inner_fname not in _EXCLUDE_OPECODE_IN_ARCHIVE:
-                    newtab, new_crt_tab = libfunc_mkrule.fetch_opecodes(buf, arfile=rel_arfile)
-                    tab = libfunc_mkrule.merge_dicts(tab, newtab)
-                    crt_tab = libfunc_mkrule.merge_dicts(crt_tab, new_crt_tab)
-
-                buf.seek(0)
-                depend_list.update(libfunc_deparse.func_depend_analy(buf, inner_fname))
-
-        elif ftype == 'application/x-object':
-            with open(filename, 'rb') as f:
-                data = f.read()
-            buf = _named_bytesio(data, filename)
-
-            if not skip_opecode_outer:
-                newtab, new_crt_tab = libfunc_mkrule.fetch_opecodes(buf)
+                if isinstance(result, tuple) and result and result[0] == 'error':
+                    _, ftype, fname = result
+                    logging.error('Not supported file type of %s: %s' % (fname, ftype))
+                    exit(-1)
+                newtab, new_crt_tab, new_depend = result
                 tab = libfunc_mkrule.merge_dicts(tab, newtab)
                 crt_tab = libfunc_mkrule.merge_dicts(crt_tab, new_crt_tab)
-
-            buf.seek(0)
-            depend_list.update(libfunc_deparse.func_depend_analy(buf, leaf))
-
-        elif ftype in _EXECUTABLE_MIMES:
-            # Executables only fed the opcode pass in the original
-            # pipeline; libfunc_deparse never received them.
-            if skip_opecode_outer:
+                depend_list.update(new_depend)
+    else:
+        for filename in static_lib_file_list:
+            result = _process_one_file(filename)
+            if result is None:
                 continue
-            with open(filename, 'rb') as f:
-                newtab, new_crt_tab = libfunc_mkrule.fetch_opecodes(f, exapis=[])
+            if isinstance(result, tuple) and result and result[0] == 'error':
+                _, ftype, fname = result
+                logging.error('Not supported file type of %s: %s' % (fname, ftype))
+                exit(-1)
+            newtab, new_crt_tab, new_depend = result
             tab = libfunc_mkrule.merge_dicts(tab, newtab)
             crt_tab = libfunc_mkrule.merge_dicts(crt_tab, new_crt_tab)
-
-        elif ftype in ('text/plain', 'inode/symlink'):
-            continue
-        else:
-            logging.error('Not supported file type of %s: %s' % (filename, ftype))
-            exit(-1)
+            depend_list.update(new_depend)
 
     # marge crt opecode
     _tmp_crt_info = {}
@@ -299,6 +362,12 @@ if __name__ == '__main__':
     parser.add_argument('--toolchain_path', '-tp', help = 'Toolchain path')
     parser.add_argument('--compiler_path', '-cp', help = 'Toolchain compiler path')
     parser.add_argument('-arch', help = 'arch')
+    parser.add_argument(
+        '--workers', '-j', type=int, default=0,
+        help='Worker processes for archive-level parallelism. '
+             '0 (default) auto-picks ~half the available CPUs, capped at 8; '
+             '1 forces the serial path; values >1 dispatch to a process pool.',
+    )
     args = parser.parse_args()
 
     tc_name = args.name
@@ -309,7 +378,8 @@ if __name__ == '__main__':
         tc_path = "/".join(args.compiler_path.split('/')[0:(len(args.compiler_path.split('/'))-2)])
     arch = args.arch
 
-    yara_rule_path, depend_list_path, alias_list_path = mkrule_and_other(tc_path, tc_name)
+    workers = None if args.workers <= 0 else args.workers
+    yara_rule_path, depend_list_path, alias_list_path = mkrule_and_other(tc_path, tc_name, workers=workers)
     if os.path.exists(yara_rule_path):
         print('[successfully created] yara rule : %s' % yara_rule_path)
     if os.path.exists(tc_compiler_path):
