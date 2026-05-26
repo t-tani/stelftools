@@ -1,0 +1,5 @@
+# Yara-x compile cache lives here. The directory is tracked so a fresh
+# clone already has the right placement; the cache content (*.yarc and
+# *.lengths.json files) are runtime artifacts and stay out of git.
+*
+!.gitignore

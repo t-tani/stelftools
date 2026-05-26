@@ -1,12 +1,21 @@
 __pycache__/
 *.pyc
 _bootlin_work/
-.cache/
-# Legacy yara-x compile cache location. The current code path writes to
-# .cache/yara/ instead; keep the old name ignored in case an older
-# checkout / pre-refactor func_ident run recreates it.
-cache/
 *.egg-info/
 build/
 dist/
 .ruff_cache/
+
+# Legacy yara-x compile cache location. The current code writes to
+# .cache/yara/ instead; the old name is kept ignored so an older
+# checkout (or a pre-refactor func_ident run) cannot accidentally
+# stage it.
+cache/
+
+# Runtime caches live under .cache/. We keep the .cache/yara/
+# directory tracked via .cache/yara/.gitignore so a fresh clone gets
+# the right place for the yara-x compile cache without having to
+# create it by hand; the contents themselves stay out of git.
+.cache/runtime/
+.cache/yara/*
+!.cache/yara/.gitignore
