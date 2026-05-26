@@ -17,12 +17,13 @@ from elftools.elf.constants import *
 
 from . import mkrule as libfunc_mkrule
 from . import deparse as libfunc_deparse
+from . import sigstore
 from .families import family_for
 from pathlib import Path
 
 # Anchor at the repository root (the parent of the stelftools/ package
 # directory). Reserved for non-signature caches (.cache/runtime, etc.);
-# signature artifacts live under signatures/<family>/<arch>/.
+# signature artifacts live under the resolver-managed signatures tree.
 STELFTOOLS_PATH = str(Path(__file__).resolve().parent.parent) + "/"
 
 MINIMUM_PATTERN_LENGTH = 0
@@ -30,8 +31,8 @@ MAXIMUM_PATTERN_LENGTH=15000
 
 
 def signature_dir(tc_name: str, arch: str) -> Path:
-    """Per-toolchain output directory: signatures/<family>/<arch>/."""
-    return Path(STELFTOOLS_PATH) / "signatures" / family_for(tc_name) / arch
+    """Per-toolchain output directory: <signatures_root>/<family>/<arch>/."""
+    return sigstore.signatures_root() / family_for(tc_name) / arch
 
 
 def create_toolchain_cfg_file(tc_name, arch, tc_compiler_path):

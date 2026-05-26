@@ -33,13 +33,13 @@ log.addHandler(_handler)
 log.setLevel(logging.INFO)
 
 from . import ident as func_ident  # noqa: E402
+from . import sigstore  # noqa: E402
 
-# Anchor at the repo root: the package sits one level below it, so the
-# signatures tree lives at parent / "signatures". Each toolchain's
-# cfg JSON, yara rules, dlist, and alist all sit together under
-# signatures/<family>/<arch>/.
-_REPO_ROOT = Path(__file__).resolve().parent.parent
-SIGNATURES_DIR = _REPO_ROOT / "signatures"
+# Each toolchain's cfg JSON, yara rules, dlist, and alist all sit
+# together under <signatures_root>/<family>/<arch>/. The root itself
+# is resolved per-call by sigstore so $STELFTOOLS_SIGNATURES_DIR set
+# in the environment takes effect even when this module was imported
+# before the variable was exported.
 
 
 def set_args():
@@ -203,10 +203,11 @@ def candidate_cfgs(target_path, arch_filter, libc_filter):
     """
     arch_set = set(arch_filter)
     cfgs = []
-    if not SIGNATURES_DIR.is_dir():
+    root = sigstore.signatures_root()
+    if not root.is_dir():
         return cfgs
     family_dirs = sorted(
-        (p for p in SIGNATURES_DIR.iterdir() if p.is_dir()),
+        (p for p in root.iterdir() if p.is_dir()),
         key=lambda p: _family_sort_key(p.name),
     )
     for family_dir in family_dirs:

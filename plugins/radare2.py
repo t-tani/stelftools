@@ -5,11 +5,14 @@ from pathlib import Path
 from termcolor import colored
 from pyfzf.pyfzf import FzfPrompt
 
-# Plugin sits one level below the stelftools root; the signature tree
-# and func_ident.py are anchored at the parent. Toolchain cfg JSONs
-# live at signatures/<family>/<arch>/<name>.json.
+# Plugin sits one level below the stelftools root. The signature tree
+# is resolved via sigstore so $STELFTOOLS_SIGNATURES_DIR and the XDG
+# cache fallback work the same as for the CLI entry points. Toolchain
+# cfg JSONs live at <signatures_root>/<family>/<arch>/<name>.json.
 STELFTOOLS_PATH = str(Path(__file__).resolve().parent.parent) + "/"
-STELFTOOLS_TOOLCHAIN_PATH = STELFTOOLS_PATH + 'signatures/'
+sys.path.insert(0, STELFTOOLS_PATH)
+from stelftools import sigstore  # noqa: E402
+STELFTOOLS_TOOLCHAIN_PATH = str(sigstore.signatures_root())
 
 def createR2Pipe():
     try:
@@ -49,7 +52,7 @@ else:
     # signatures/<family>/<arch>/ is partitioned per family then arch;
     # locate the chosen json by walking once instead of guessing both.
     matches = list(Path(STELFTOOLS_TOOLCHAIN_PATH).rglob(toolchain))
-    toolchain = str(matches[0]) if matches else str(STELFTOOLS_TOOLCHAIN_PATH + toolchain)
+    toolchain = str(matches[0]) if matches else str(Path(STELFTOOLS_TOOLCHAIN_PATH) / toolchain)
 
 run_cmd = [ \
             'python3', '-m', 'stelftools.ident', \
