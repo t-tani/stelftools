@@ -71,6 +71,36 @@ bash tools/ci/build_bootlin_signature.sh \
 `build_bootlin_signature.sh` cleans up the extracted toolchain on
 exit (pass `--keep` if you want to inspect it).
 
+## Bulk catch-up off-CI
+
+The monthly cron only chips at 12 signatures per run; closing the
+backlog of several hundred missing entries through CI would burn the
+whole monthly Actions budget for very little incremental value. The
+batch driver runs the same pipeline on a developer workstation
+instead:
+
+```bash
+# What would the next pass do?
+tools/ci/batch_catch_up.sh --dry-run
+
+# Run it. Default --parallel 2 saturates a 12-core box (each build
+# uses ~6 internal workers).
+tools/ci/batch_catch_up.sh --parallel 2
+
+# Catch up only the newest two Bootlin releases.
+tools/ci/batch_catch_up.sh --since 2024.05 --parallel 2
+```
+
+Per-toolchain logs land in `.cache/batch_logs/run-<UTC-timestamp>/`
+along with `succeeded.log`, `skipped.log`, and `failed.log` indexes.
+Re-running the script is safe: every entry whose `.yara` is already
+on disk is skipped, so a Ctrl-C or OOM only loses the in-flight builds.
+
+The resulting `signatures/` tree can grow by several gigabytes during
+a full catch-up. GitHub's HTTPS push tops out at 2 GB per push, so
+when pushing the bulk to origin use SSH and split the commit into
+release-sized chunks (commit per Bootlin release, push each one).
+
 ## Failure modes worth knowing
 
   - Bootlin reshuffles its HTML and the index parser misses tarballs.
