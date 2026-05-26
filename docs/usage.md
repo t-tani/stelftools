@@ -3,17 +3,17 @@ stelftools is usable on the command line or as a plugin for IDA Pro or Ghidra.
 ### init setup
 Install the python3 package used by stelftools and update the paths in scripts.  
 ```bash
-./setup/init.sh
+./tools/setup/init.sh
 ```
 ## IDA Pro plugin setup
 Create a symbolic link to stelftools in the IDA plugin directory.  
 ```bash
-./setup/ida_setup.sh {path to IDA Pro install directory}
+./tools/setup/ida.sh {path to IDA Pro install directory}
 ```
 ## Ghidra plugin setup  
 Create a symbolic link to stelftools in the ghidra script directory.  
 ```bash
-./setup/ghidra_setup.sh {path to ghidra install directory}
+./tools/setup/ghidra.sh {path to ghidra install directory}
 ```
 
 # How to Use

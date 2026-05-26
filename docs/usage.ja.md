@@ -3,18 +3,18 @@ stelftoolsはコマンドラインやIDA Pro, Ghidraのプラグインとして�
 ### init setup
 stelftoolsが使用するpython3 packageのインストール，スクリプト内のパスの更新を行います
 ```bash
-./setup/init.sh
+./tools/setup/init.sh
 ```
 ## IDA Pro plugin setup
 ### Install stelftools IDA Plugin  
 IDAのプラグインディレクトリにstelftoolsのシンボリックリンクを貼ります  
 ```bash
-./setup/ida_setup.sh {path to IDA Pro install directory}
+./tools/setup/ida.sh {path to IDA Pro install directory}
 ```
 ## Ghidra plugin setup  
 Ghidraのスクリプトディレクトリにstelftoolsのシンボリックリンクを貼ります  
 ```bash
-./setup/ghidra_setup.sh {path to ghidra install directory}
+./tools/setup/ghidra.sh {path to ghidra install directory}
 ```
 
 # How to Use  

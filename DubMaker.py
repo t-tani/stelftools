@@ -26,7 +26,7 @@ def get_func_include_and_macro(funclist):
     no_man_func_list = []
     exclude_error_func_list = []
     for func in funclist: # get function man list
-        func_man_path = STELFTOOLS_PATH + '/_tmpdir/man_datasets/' + func + '.man'
+        func_man_path = STELFTOOLS_PATH + '/.cache/runtime/man_datasets/' + func + '.man'
         if os.path.exists(func_man_path): # road link func man
             # load man result
             with open(func_man_path, 'r') as man_f:
@@ -100,7 +100,7 @@ def make_source_list(include_list, macro_list, func_list, no_man_func_list):
     #return c_source_list, compile_option
 
 def make_c_source(c_source_list, dummy_bin_name):
-    dummy_binary_path = STELFTOOLS_PATH + '/_tmpdir/dummy_bin/' + dummy_bin_name + '.c'
+    dummy_binary_path = STELFTOOLS_PATH + '/.cache/runtime/dummy_bin/' + dummy_bin_name + '.c'
     if os.path.exists(dummy_binary_path):
         os.remove(dummy_binary_path) # remove if it already exists.
     with open(dummy_binary_path, 'w') as source_f:
@@ -116,8 +116,8 @@ def build_source(toolchain_path, c_source_list, dummy_bin_name, exclude_error_fu
     while True:
         make_c_source(c_source_list, dummy_bin_name)
         error_func_list = []
-        dummy_bin_path = STELFTOOLS_PATH + '/_tmpdir/dummy_bin/' + dummy_bin_name
-        dummy_source_path = STELFTOOLS_PATH + '/_tmpdir/dummy_bin/' + dummy_bin_name + '.c'
+        dummy_bin_path = STELFTOOLS_PATH + '/.cache/runtime/dummy_bin/' + dummy_bin_name
+        dummy_source_path = STELFTOOLS_PATH + '/.cache/runtime/dummy_bin/' + dummy_bin_name + '.c'
         if len(compile_option) != 0:
             compile_stdout, compile_stderr = subprocess.Popen( \
                     [toolchain_path, '-o', dummy_bin_path, '-static', ''.join(compile_option), dummy_source_path], \
@@ -219,7 +219,7 @@ def get_func_order_list(dummy_bin_name):
     nm_list = []
     nm_addr_list = []
     func_order_list = []
-    dummy_bin_path = STELFTOOLS_PATH + '/_tmpdir/dummy_bin/' + dummy_bin_name
+    dummy_bin_path = STELFTOOLS_PATH + '/.cache/runtime/dummy_bin/' + dummy_bin_name
     nm_stdout, nm_stderr = subprocess.Popen( \
             'nm ' + dummy_bin_path + ' | grep -v "^ " | grep -v "\$[a-z]$" ', \
             shell=True, encoding='utf-8', stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
@@ -245,7 +245,7 @@ def get_only_global_sym_func_order_list(dummy_bin_name):
     nm_list = []
     nm_addr_list = []
     global_sym_func_order_list = []
-    dummy_bin_path = STELFTOOLS_PATH + '/_tmpdir/dummy_bin/' + dummy_bin_name
+    dummy_bin_path = STELFTOOLS_PATH + '/.cache/runtime/dummy_bin/' + dummy_bin_name
     nm_stdout, nm_stderr = subprocess.Popen( \
             'nm ' + dummy_bin_path + ' | grep -v "^ " | grep -v "\$[a-z]$" | grep " T " ', \
             shell=True, encoding='utf-8', stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()

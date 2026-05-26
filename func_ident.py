@@ -1279,15 +1279,15 @@ def id_func_name_for_linkorder(functions, target_path, toolchain_path, alias_lis
     #print(func_list, toolchain_path, target_path.split('/')[-1])
     # link order path
     link_order_list_path = \
-            STELFTOOLS_PATH + './_tmpdir/link_order_list/' \
+            STELFTOOLS_PATH + '.cache/runtime/link_order_list/' \
             + target_path.split('/')[-1] + '_'  + str(id_l_count) + '.olist'
     # global link order path
     global_link_order_list_path = \
-            STELFTOOLS_PATH + './_tmpdir/link_order_list/' \
+            STELFTOOLS_PATH + '.cache/runtime/link_order_list/' \
             + target_path.split('/')[-1] + '_'  + str(id_l_count) + 'g.olist'
     # global link order path
     all_link_order_list_path = \
-            STELFTOOLS_PATH + './_tmpdir/link_order_list/' \
+            STELFTOOLS_PATH + '.cache/runtime/link_order_list/' \
             + target_path.split('/')[-1] + '_'  + str(id_l_count) + 'all.olist'
     # get real link order list
     check_func_list = sorted(set(use_func_list) - set(exclude_func_list))

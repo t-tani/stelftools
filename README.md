@@ -74,7 +74,7 @@ The below table shows the results of the comparison. As you can see, `stelftools
 To install necessary python3 packages and configure the paths used in tools.  
 
 ```bash
-./setup/init.sh
+./tools/setup/init.sh
 ```
 
 #### IDA Pro plugin setup (Needed when you use in IDA plugin mode)
@@ -82,7 +82,7 @@ To install necessary python3 packages and configure the paths used in tools.
 To make a symblic link in the IDA's plugin directory to stelftools.
 
 ```bash
-./setup/ida_setup.sh {path to IDA Pro install directory}
+./tools/setup/ida.sh {path to IDA Pro install directory}
 ```
 
 ### How to Use
