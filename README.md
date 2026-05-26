@@ -77,6 +77,20 @@ To install necessary python3 packages and configure the paths used in tools.
 ./tools/setup/init.sh
 ```
 
+#### Fetch signatures
+
+The on-disk signature tree is not committed; it is distributed via GitHub Release attachments and pulled on demand. After a fresh clone:
+
+```bash
+# Everything (every family and arch in the manifest).
+stelftools-fetch-signatures
+
+# Only the arches you currently care about.
+stelftools-fetch-signatures --family bootlin-stable --arch mips32el,aarch64
+```
+
+Downloads land under `<repo>/signatures/` when the directory exists, or under `${XDG_DATA_HOME:-~/.local/share}/stelftools/signatures/` otherwise. Override with `STELFTOOLS_SIGNATURES_DIR=/some/path` or `--dest /some/path`.
+
 #### Development tools
 
 To work on the codebase, install the `dev` extra (currently just `ruff`).

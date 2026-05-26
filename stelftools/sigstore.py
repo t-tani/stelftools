@@ -55,9 +55,13 @@ def signatures_root() -> Path:
     if env:
         return Path(env).expanduser()
     in_repo = _in_repo_root()
-    # ``any(iterdir())`` keeps an empty in-repo signatures/ from
-    # shadowing the XDG cache fallback after a future repo cleanup
-    # where the heavy artifacts have been gitignored.
-    if in_repo.is_dir() and any(in_repo.iterdir()):
+    # Honor the in-repo location whenever the directory exists, even
+    # when it is empty: a clone right after ``git pull`` is the normal
+    # pre-fetch state, and falling through to XDG would route a later
+    # ``stelftools-fetch-signatures`` run away from the repo path the
+    # developer was using before. The XDG fallback fires only for
+    # non-clone installs (``pip install stelftools`` with no checkout
+    # alongside), where the repo path simply doesn't exist.
+    if in_repo.is_dir():
         return in_repo
     return _xdg_cache_root()

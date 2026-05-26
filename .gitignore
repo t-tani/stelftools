@@ -20,3 +20,25 @@ cache/
 .cache/runtime/
 .cache/yara/*
 !.cache/yara/.gitignore
+
+# Signature artifacts are distributed via GitHub Release attachments
+# (see stelftools/signatures_manifest.json); the on-disk tree is
+# populated by stelftools-fetch-signatures or by local mkrule runs.
+# Listed per family so a stray sibling (e.g. accidentally landed
+# binary, vendor add-on) still gets noticed by git status.
+/signatures/aboriginal-linux/
+/signatures/bootlin-stable/
+/signatures/buildroot/
+/signatures/crosstool-ng/
+/signatures/firmware-linux/
+/signatures/synopsys-arc-gnu/
+/signatures/uclibc-pub/
+
+# Legacy locations from the pre-<family>/<arch>/ layout. The orphan
+# yara files under signatures/yara/ have no matching cfg JSON and are
+# unreachable from the matcher; configs/ and deps/ no longer exist on
+# disk after the migration, but listing them prevents a future stale
+# checkout from staging them.
+/signatures/yara/
+/signatures/configs/
+/signatures/deps/
