@@ -11,7 +11,7 @@ license = { file = "LICENSE" }
 requires-python = ">=3.10"
 authors = [
     { name = "Shu Akabane" },
-    { name = "Toshihiro Tani" },
+    { name = "Tomoaki Tani" },
 ]
 keywords = ["yara", "static-analysis", "elf", "reverse-engineering", "firmware"]
 classifiers = [
