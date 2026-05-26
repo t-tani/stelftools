@@ -1,18 +1,27 @@
 #!/bin/bash
-# Runtime scratch directories live under .cache/runtime/ (gitignored).
-# STELFTOOLS_PATH is derived from each script's __file__, so no shell
-# patch is needed for the Python entry points to find their own root.
+# Install stelftools (and its declared dependencies via pyproject.toml)
+# into the current Python environment, then create the runtime scratch
+# directories under .cache/runtime/ (gitignored).
+#
+# Run from the stelftools repo root. The editable install means
+# subsequent `python -m stelftools.<module>` calls and the
+# stelftools-{ident,mkrule,bruteforce} console scripts pick up code
+# changes without a re-install.
 set -eu
 
-pip3 install yara-x
-pip3 install capstone
-pip3 install pyelftools
-pip3 install python-magic
-pip3 install arpy
-pip3 install cxxfilt
-pip3 install lief
-pip3 install qiling
+repo_root="$(cd -- "$(dirname -- "$0")/../.." && pwd)"
 
-mkdir -p .cache/runtime/man_datasets
-mkdir -p .cache/runtime/link_order_list
-mkdir -p .cache/runtime/dummy_bin
+# Pick uv when available (it is the project's pinned installer) and
+# fall back to plain pip otherwise so this script still works on a
+# fresh checkout without uv.
+if command -v uv >/dev/null 2>&1; then
+    uv pip install --editable "$repo_root"
+    uv pip install --editable "$repo_root[qiling]"
+else
+    pip3 install --editable "$repo_root"
+    pip3 install --editable "$repo_root[qiling]"
+fi
+
+mkdir -p "$repo_root/.cache/runtime/man_datasets"
+mkdir -p "$repo_root/.cache/runtime/link_order_list"
+mkdir -p "$repo_root/.cache/runtime/dummy_bin"
