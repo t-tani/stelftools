@@ -1,4 +1,6 @@
-import r2pipe, sys, subprocess, os
+import r2pipe
+import sys
+import subprocess
 from pathlib import Path
 from termcolor import colored
 from pyfzf.pyfzf import FzfPrompt
@@ -13,7 +15,7 @@ def createR2Pipe():
         pipe = r2pipe.open()
         pipe.cmd('a')
         return pipe
-    except:
+    except Exception:
         print(f'Unexpected error: {sys.exc_info()[0]}')
         return None
 
@@ -62,4 +64,4 @@ for res in res_list:
     addr = res.split(':')[0]
     funcname = res.split(':')[1]
     print(f'{addr}:{funcname}')
-    pipe.cmd(f'afn {funcname} @{addr}') 
+    pipe.cmd(f'afn {funcname} @{addr}')

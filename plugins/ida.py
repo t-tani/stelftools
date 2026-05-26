@@ -6,14 +6,13 @@
 # directory — host environments that have run `pip install -e .`
 # already find it on sys.path, but the sys.path bump keeps the plugin
 # usable on hosts where the install has not happened yet.
-import os, sys
+import os
+import sys
 _STELFTOOLS_ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 if _STELFTOOLS_ROOT not in sys.path:
     sys.path.insert(0, _STELFTOOLS_ROOT)
 
-import idc
 import idaapi
-import idautils
 import ida_nalt
 from shims import ida_shims
 

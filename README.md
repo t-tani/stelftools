@@ -77,6 +77,17 @@ To install necessary python3 packages and configure the paths used in tools.
 ./tools/setup/init.sh
 ```
 
+#### Development tools
+
+To work on the codebase, install the `dev` extra (currently just `ruff`).
+
+```bash
+uv pip install -e '.[dev]'
+ruff check .
+```
+
+Both commands are run from the repo root. The ruff configuration lives in `pyproject.toml`.
+
 #### IDA Pro plugin setup (Needed when you use in IDA plugin mode)
 
 To make a symblic link in the IDA's plugin directory to stelftools.

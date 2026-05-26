@@ -5,8 +5,6 @@ from ghidra.program.flatapi import FlatProgramAPI
 from ghidra.program.model.symbol import SourceType
 
 import os
-import sys
-import json
 import time
 import subprocess
 

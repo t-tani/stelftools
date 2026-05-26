@@ -3,9 +3,6 @@
 import io
 import multiprocessing
 import os
-import re
-import shutil
-import struct
 import sys
 import hashlib
 import logging
@@ -13,13 +10,9 @@ import collections
 import glob
 import argparse
 import arpy
-import cxxfilt
 import magic
 from capstone import *
 from elftools.elf.constants import *
-from elftools.elf.elffile import ELFFile
-from elftools.elf.relocation import RelocationSection
-from elftools.elf.sections import SymbolTableSection
 
 from . import mkrule as libfunc_mkrule
 from . import deparse as libfunc_deparse
@@ -40,7 +33,7 @@ def create_toolchain_cfg_file(tc_name, arch, yara_rule_path, tc_compiler_path, a
     depend_list_path = depend_list_path[len(STELFTOOLS_PATH):]
     cfg_dir = Path(STELFTOOLS_PATH) / "signatures" / "configs" / family_for(tc_name)
     cfg_dir.mkdir(parents=True, exist_ok=True)
-    with open(cfg_dir / (tc_name + ".json"), "wt") as f:
+    with open(cfg_dir / (tc_name + ".json"), "w") as f:
         f.write("{\n")
         f.write("  \"name\" : \"" + tc_name + "\",\n")
         f.write("  \"arch\" : \"" + arch + "\",\n")

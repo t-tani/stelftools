@@ -13,7 +13,7 @@ from pathlib import Path
 STELFTOOLS_PATH = str(Path(__file__).resolve().parent.parent) + "/"
 
 def get_funclist(funclist_path):
-    with open(funclist_path, 'r') as f:
+    with open(funclist_path) as f:
         funclist = [s.strip() for s in f.readlines()]
     f.close()
     # print(funclist) # dbg
@@ -24,14 +24,14 @@ def get_func_include_and_macro(funclist):
     #s_time = time.time() # dbg
     func_man_res_dict = {}
     include_list = []
-    macro_list = [] 
+    macro_list = []
     no_man_func_list = []
     exclude_error_func_list = []
     for func in funclist: # get function man list
         func_man_path = STELFTOOLS_PATH + '/.cache/runtime/man_datasets/' + func + '.man'
         if os.path.exists(func_man_path): # road link func man
             # load man result
-            with open(func_man_path, 'r') as man_f:
+            with open(func_man_path) as man_f:
                 man_res_list = [s.strip() for s in man_f.readlines()]
                 if len(man_res_list) == 0:
                     no_man_func_list.append(func)
@@ -146,7 +146,7 @@ def build_source(toolchain_path, c_source_list, dummy_bin_name, exclude_error_fu
         # warning only check
         if 'main' in c_stderr_list[0]:
             #print(c_stderr_list)
-            all_err_num = len((c_stderr_list)) - 1
+            all_err_num = len(c_stderr_list) - 1
             warn_num = 0
             for i in range(all_err_num):
                 #print(i, c_stderr_list[i+1])
@@ -223,7 +223,7 @@ def get_func_order_list(dummy_bin_name):
     func_order_list = []
     dummy_bin_path = STELFTOOLS_PATH + '/.cache/runtime/dummy_bin/' + dummy_bin_name
     nm_stdout, nm_stderr = subprocess.Popen( \
-            'nm ' + dummy_bin_path + ' | grep -v "^ " | grep -v "\$[a-z]$" ', \
+            'nm ' + dummy_bin_path + r' | grep -v "^ " | grep -v "\$[a-z]$" ', \
             shell=True, encoding='utf-8', stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
     for s in nm_stdout.splitlines():
         s_list = s.split(' ')
@@ -249,7 +249,7 @@ def get_only_global_sym_func_order_list(dummy_bin_name):
     global_sym_func_order_list = []
     dummy_bin_path = STELFTOOLS_PATH + '/.cache/runtime/dummy_bin/' + dummy_bin_name
     nm_stdout, nm_stderr = subprocess.Popen( \
-            'nm ' + dummy_bin_path + ' | grep -v "^ " | grep -v "\$[a-z]$" | grep " T " ', \
+            'nm ' + dummy_bin_path + r' | grep -v "^ " | grep -v "\$[a-z]$" | grep " T " ', \
             shell=True, encoding='utf-8', stdout=subprocess.PIPE, stderr=subprocess.PIPE).communicate()
     for s in nm_stdout.splitlines():
         s_list = s.split(' ')

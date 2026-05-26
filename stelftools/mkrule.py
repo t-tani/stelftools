@@ -19,12 +19,10 @@ import os
 import re
 import sys
 import shutil
-import struct
 import arpy
 #import ar
 from elftools.elf.elffile import ELFFile
 from elftools.elf.constants import *
-from elftools.elf.sections import SymbolTableSection
 from capstone import *
 import logging
 import hashlib
@@ -178,7 +176,7 @@ def fetch_opecodes(f, arfile = '', exapis = []):
                 # readelf -r /usr/lib/x86_64-linux-gnu/libc.a | cut -f3-4 -d' ' | grep R_ | cut -b10- | sort | uniq -c
                 # TODO: what's size? 009 R_X86_64_GOTPCREL 016 R_X86_64_GOTTPOFF 02a R_X86_64_REX_GOTP
                 # 001 R_X86_64_64 002 R_X86_64_PC32 004 R_X86_64_PLT32 009 R_X86_64_GOTPCREL
-                # 00a R_X86_64_32 00b R_X86_64_32S 013 R_X86_64_TLSGD 014 R_X86_64_TLSLD 
+                # 00a R_X86_64_32 00b R_X86_64_32S 013 R_X86_64_TLSGD 014 R_X86_64_TLSLD
                 # 015 R_X86_64_DTPOFF32 016 R_X86_64_GOTTPOFF
                 # 017 R_X86_64_TPOFF32 01a R_X86_64_GOTPC32 029 R_X86_64_GOTPCREL 02a R_X86_64_REX_GOTP
                 R_X86_64_GOTTPOFF = 0x16
@@ -300,7 +298,7 @@ def fetch_opecodes(f, arfile = '', exapis = []):
                     exit(-1)
             elif e['e_machine'] == 'EM_PPC' and e['e_ident']['EI_CLASS'] == 'ELFCLASS32':
                 # 0x00 R_PPC_NONE, 0x04 R_PPC_ADDR16_LO, 0x06 R_PPC_ADDR_16_HA, 0x0a R_PPC_REL24, 0x0e R_PPC_GOT16
-                # 0x12 R_PPC_PLTREL24, 0x17 R_PPC_LOCAL24PC, 0x1a R_PPC_REL32, 
+                # 0x12 R_PPC_PLTREL24, 0x17 R_PPC_LOCAL24PC, 0x1a R_PPC_REL32,
                 # 0x43 R_PPC_TLS, 0x57 R_PPC_GOT_TPREL16
                 # 0xfa R_PPC_REL16_HI 0xfc R_PPC_REL16_HA
                 R_PPC_TPREL16_LO = 0x46
@@ -351,7 +349,7 @@ def fetch_opecodes(f, arfile = '', exapis = []):
                 R_PPC64_TLSGD = 0x6b
                 R_PPC64_REL16_LO = 0xfa
                 R_PPC64_REL16_HA = 0xfc
-            
+
                 fix_offset = (offset // 4) * 4
                 if rtype in [R_PPC64_NONE]:
                     None
@@ -1149,7 +1147,7 @@ def main():
                 newtab, new_crt_tab = fetch_opecodes(f)
         elif ftype in ['application/x-executable', 'application/x-sharedlib', 'application/x-pie-executable']: # TODO: support other executables
             if args.excluded_api and os.path.exists(args.excluded_api):
-                with open(args.excluded_api, 'r') as f:
+                with open(args.excluded_api) as f:
                     exapis = f.read().split('\n')
             else:
                 exapis = []

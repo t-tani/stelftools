@@ -41,6 +41,9 @@ dependencies = [
 # Pulled in by tools/setup/init.sh only when the qiling plugin path is in
 # use; left out of the default install so headless CI runs stay slim.
 qiling = ["qiling>=1.4"]
+dev = [
+    "ruff>=0.6",
+]
 
 [project.scripts]
 stelftools-ident = "stelftools.ident:main"
@@ -54,3 +57,70 @@ Upstream = "https://github.com/shuakabane/stelftools"
 [tool.setuptools.packages.find]
 include = ["stelftools*"]
 exclude = ["plugins*", "tools*", "samples*", "signatures*", "research*", "docs*"]
+
+[tool.ruff]
+target-version = "py310"
+extend-exclude = ["research/**", "samples/**", "signatures/**", ".cache/**"]
+
+[tool.ruff.lint]
+# Default rule set: pycodestyle errors (E), pyflakes (F), warnings (W),
+# plus pyupgrade (UP) so we catch syntax that no longer pulls its weight
+# on the supported Python floor.
+select = ["E", "F", "W", "UP"]
+ignore = [
+    # The codebase deliberately uses '== None' / '== True' in a few
+    # tight-loop hot paths (matcher inner loops, relocation type
+    # branches) where the explicit form documents the comparison's
+    # value-space. Flip these by hand only when refactoring nearby
+    # logic, not as a sweeping rewrite.
+    "E711",
+    "E712",
+    # `if not x in y` style is everywhere in libfunc_mkrule.py's
+    # architecture dispatch. Mechanical rewrite is safe but noisy; left
+    # to a follow-up when the surrounding branches are revisited.
+    "E713",
+    # Plenty of dead local assignments survive in dispatch paths
+    # (assigned, never read). They are documentation about what the
+    # block computes; removing them shrinks the diff without changing
+    # behavior, so we tolerate them.
+    "F841",
+    # The big architecture dispatch keeps re-assigning a few R_*
+    # constants inside elif arms; that is pre-existing style and not
+    # worth churning during the package move.
+    "E741",
+    # Line length is mostly the architecture dispatch table in
+    # libfunc_mkrule.py and the relocation comment headers; clamping
+    # to 88 there bloats the diff for no readability gain. Re-enable
+    # selectively once those tables are restructured.
+    "E501",
+    # 'printf'-style %-formatting is the dominant style in
+    # libfunc_mkrule.py and friends. Migrating to f-strings is a
+    # mechanical but enormous diff against decades-old code; revisit
+    # in a dedicated pass.
+    "UP031",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# `from capstone import *` is how this codebase has always pulled the
+# Cs constructor and the dozens of CS_ARCH_* / CS_MODE_* constants used
+# in the per-architecture dispatch tables. Listing them by hand bloats
+# the import header without any analytical win, so we ignore the
+# star-import diagnostics here.
+"stelftools/ident.py" = ["F403", "F405"]
+"stelftools/mkrule.py" = ["F403", "F405"]
+"stelftools/info_create.py" = ["F403", "F405"]
+
+# Plugins bridge to the host RE tool's runtime; star imports are the
+# documented way to surface the matcher / generator helpers into IDA's
+# namespace, and sys.path is seeded before the package import so the
+# E402 module-not-at-top rule fires on what is in fact load-bearing.
+"plugins/ida.py" = ["F403", "F405", "E402"]
+# The Ghidra / Qiling / radare2 plugins reference host-injected names
+# (`state`, `askFile`, `currentProgram`, ...) that ruff cannot see.
+"plugins/ghidra.py" = ["F821"]
+# qiling.py keeps a QILING_PATH constant at the top of the file before
+# imports; that is documented placeholder users edit to point at their
+# rootfs collection, so the import-not-at-top finding fires on the
+# imports below the constant rather than on actual misplacement.
+"plugins/qiling.py" = ["F821", "E402"]
+"plugins/radare2.py" = ["F821"]

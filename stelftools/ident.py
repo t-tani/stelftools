@@ -1,6 +1,5 @@
 #! /usr/bin/env python3
 
-import glob
 import re
 import sys
 import os
@@ -8,7 +7,6 @@ import struct
 import yara_x
 import argparse
 import json
-import hashlib
 import subprocess
 import shutil
 from pathlib import Path
@@ -366,14 +364,14 @@ def objdump_disasm_bin(target, t_arch, t_bit, t_endian, top_inst_addr, bot_inst_
     target_inst = {}
     target_path = target.name
     OBJDUMP_PATH = _find_objdump(t_arch)
-    objdump_res = subprocess.run([OBJDUMP_PATH, '-d', target_path], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    objdump_res = subprocess.run([OBJDUMP_PATH, '-d', target_path], text=True, capture_output=True)
     for d_line in objdump_res.stdout.split('\n'):
         # del blank line
         if d_line == '':
             continue
         if re.search("^[ ]+[0-9a-fA-F]+", d_line) == None:
             continue
-        _addr = int(re.sub('[\s+|:]', '', d_line.split('\t')[0]), 16)
+        _addr = int(re.sub(r'[\s+|:]', '', d_line.split('\t')[0]), 16)
         _hex = [_h for _h in (d_line.split('\t')[1].split(' ')) if _h != '']
         _inst = ' '.join([_i for _i in (d_line.split('\t')[2:]) if _i != ''])
         #print(hex(_addr), _hex, _inst)
@@ -427,15 +425,15 @@ def parse_inst(target, target_inst, base_vaddr, t_arch, t_bit, t_endian, top_ins
                 elif i.mnemonic == 'bsr.s':
                     inst_size = 2
                 call_map.append([ \
-                        i.address, inst_size, int(re.sub('^\$', '0x', i.op_str), 16) \
+                        i.address, inst_size, int(re.sub(r'^\$', '0x', i.op_str), 16) \
                         ])
         elif t_arch in ['EM_MIPS']: # mips, mipsel, mips64, mips64el
             try:
                 if (i.mnemonic == 'lw' \
-                        and re.search("\(\$gp\)$", i.op_str) != None) \
+                        and re.search(r"\(\$gp\)$", i.op_str) != None) \
                         or ( i.mnemonic == 'ld' \
-                        and (re.search("\(\$gp\)$", i.op_str) != None \
-                        or re.search("\(\$a.\)$", i.op_str) != None)):
+                        and (re.search(r"\(\$gp\)$", i.op_str) != None \
+                        or re.search(r"\(\$a.\)$", i.op_str) != None)):
                     ref_got_offset = int( \
                             re.sub('-', '', i.op_str.split(' ')[1]).split('(')[0], \
                             16 \
@@ -782,7 +780,7 @@ def get_yara_rule(yara_rule_path, r_type, r_length):
 
     use_rule_list = []
     all_rule_line = []
-    with open(yara_rule_path, 'r') as yfp:
+    with open(yara_rule_path) as yfp:
         for rule_line in yfp:
             rule_line_fmt = rule_line.replace('\n', '')
             all_rule_line.append(rule_line_fmt)
@@ -792,7 +790,7 @@ def get_yara_rule(yara_rule_path, r_type, r_length):
             if yara_rule_line.startswith('rule'):
                 y_pattern = str(all_rule_line[line_index+7].strip('\t').strip('$pattern = {').strip(' }'))
                 # get yara rule real length
-                fmt_y_pattern = re.sub('(?<=\().*?(?=\))', 'XX', y_pattern).split(' ')
+                fmt_y_pattern = re.sub(r'(?<=\().*?(?=\))', 'XX', y_pattern).split(' ')
                 y_pattern_length = len(fmt_y_pattern) - fmt_y_pattern.count('??') # pattern len - wildcard len
                 # get yara rule type
                 fmt_r_type = str(all_rule_line[line_index+3].strip('\t').replace('type = \"', '').replace('\"', ''))
@@ -817,7 +815,7 @@ def _parse_rule_lengths(yara_rule_path):
     # get_yara_rule(). Used by run_one() to filter a single compiled
     # rule set per length bucket without re-parsing/recompiling.
     lengths = {}
-    with open(yara_rule_path, 'r') as fp:
+    with open(yara_rule_path) as fp:
         lines = [line.rstrip('\n') for line in fp]
     if not lines:
         return lengths
@@ -864,13 +862,13 @@ def compile_yara_file(yara_rule_path):
                 and os.path.getmtime(cache_lens) >= yara_mtime:
             with open(cache_yarc, 'rb') as fp:
                 rules = yara_x.Rules.deserialize_from(fp)
-            with open(cache_lens, 'r') as fp:
+            with open(cache_lens) as fp:
                 lengths = json.load(fp)
             return rules, lengths
     except (FileNotFoundError, OSError):
         pass
 
-    with open(yara_rule_path, 'r') as fp:
+    with open(yara_rule_path) as fp:
         src = fp.read()
     rules = yara_x.compile(src)
     lengths = _parse_rule_lengths(yara_rule_path)
@@ -1060,7 +1058,7 @@ def del_mismatch(functions):
 
 def get_alias_list(alias_list_path):
     alias_list = []
-    with open(alias_list_path, 'rt') as al_fp:
+    with open(alias_list_path) as al_fp:
         for alias in al_fp.readlines():
             alias_list.append(alias.rstrip('\n').split(','))
     return alias_list
@@ -1296,7 +1294,7 @@ def id_func_name_for_linkorder(functions, target_path, toolchain_path, alias_lis
             = DubMaker.get_order_list(check_func_list, toolchain_path, dummy_bin_name)
     exclude_func_list += _exclude_func_list
     # save link order list
-    with open(link_order_list_path, 'wt') as f:
+    with open(link_order_list_path, "w") as f:
         for func_link_order in func_link_order_list:
             f.write("%s\n" % func_link_order)
     # check
@@ -1352,7 +1350,7 @@ def _load_depend(d_list_path):
     depend_data = []
     caller_alias_index = {}
     try:
-        with open(d_list_path, 'r') as d_list:
+        with open(d_list_path) as d_list:
             for d in d_list:
                 d = d.strip().split(' ')
                 if len(d) < 3:
@@ -1618,7 +1616,7 @@ def arch_pattern_length(arch):
 
 def get_target_list(targets, lm_flag):
     if lm_flag == True:
-        with open(targets[0], "rt") as f:
+        with open(targets[0]) as f:
             target_list = f.readlines()
             target_list = [l.replace('\n', '') for l in target_list]
             return target_list

@@ -90,7 +90,7 @@ def analy_symtab(e, fname, symtab_list, reltab_dict):
     object_rel_info_dict= {}
     symtab_func_section_info = []
     for st_index, st_value, st_size, st_type, st_bind, st_vis, st_ndx, st_name in symtab_list:
-        if st_type == 'STT_FUNC' and type(st_ndx) == int:
+        if st_type == 'STT_FUNC' and isinstance(st_ndx, int):
             #print(st_index, st_value, st_size, st_type, st_bind, st_vis, st_ndx, st_name) # dbg
             symtab_func_section_info.append([st_ndx, st_name, st_value, st_size])
     symtab_list = uniq_symtab_list(symtab_func_section_info)
@@ -152,7 +152,7 @@ def fetch_object_arfile(arfile): # for archive file
     return objfiles
 
 def output_dlist(depend_list, depend_list_output_path):
-    with open(depend_list_output_path, 'wt') as f:
+    with open(depend_list_output_path, 'w') as f:
         for i in range(len(depend_list)):
             f.write(' '.join([str(j) for j in depend_list[i]]) + "\n")
 
@@ -161,7 +161,7 @@ def output_alist(depend_list, alias_list_output_path):
     for depend in depend_list:
         if ',' in depend[0] and depend[0] not in alias_list:
             alias_list.append(depend[0])
-    with open(alias_list_output_path, 'wt') as f:
+    with open(alias_list_output_path, 'w') as f:
         for alias in sorted(alias_list):
             #print(alias)
             if ',' in alias:
@@ -203,7 +203,11 @@ def main():
     # format arg
     parser = argparse.ArgumentParser(prog = sys.argv[0])
     parser.add_argument('files', nargs = '+', help = 'File name of archive, object, executable file')
-    parser.add_argument('--output', '-o', choices = ['stdout', 'dot', 'graph', 'no'], default = 'stdout', help = 'output function dependency')
+    # The earlier 'dot' / 'graph' choices referenced helpers
+    # (output_dot_depend, gen_depend_graph) that were never implemented
+    # — running with those values crashed. Drop them from the parser so
+    # the CLI surface advertises only the working output formats.
+    parser.add_argument('--output', '-o', choices = ['stdout', 'no'], default = 'stdout', help = 'output function dependency')
     args = parser.parse_args()
     # make depend_list
     depend_list = {}
@@ -220,15 +224,9 @@ def main():
                 fname = f.header.name.decode('utf-8')
                 depend_list.update(func_depend_analy(f, fname))
     formatted_depend_data = fmt_depend_data(depend_list)
-    # choice output format
     if args.output == 'stdout':
         output_depend(formatted_depend_data)
-    elif args.output == 'dot':
-        output_dot_depend(formatted_depend_data)
-    elif args.output == 'graph':
-        gen_depend_graph(formatted_depend_data)
-    elif args.output == 'no':
-        None
+    # 'no' silently skips printing.
 
 if __name__ == '__main__':
     main()

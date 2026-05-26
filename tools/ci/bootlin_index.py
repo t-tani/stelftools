@@ -21,7 +21,7 @@ import urllib.error
 import urllib.request
 from dataclasses import asdict, dataclass
 from html.parser import HTMLParser
-from typing import Iterable
+from collections.abc import Iterable
 
 BOOTLIN_ROOT = "https://toolchains.bootlin.com/downloads/releases/toolchains/"
 

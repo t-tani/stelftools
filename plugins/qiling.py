@@ -6,9 +6,7 @@
 
 QILING_PATH="/path/to/qiling/"
 
-import os
 import re
-import sys
 import subprocess
 import argparse
 from pathlib import Path
@@ -80,15 +78,15 @@ def get_lief_bin_rootfs(target_path):
     elif _bin_arch == 'ARCH.ARM':
         t_arch_rootfs = "examples/rootfs/arm_linux"
     elif _bin_arch == 'ARCH.MIPS':
-        if _bin_iclass == str('ELF_CLASS.CLASS32'):
-            if _bin_idata == str('ELF_DATA.LSB'):
+        if _bin_iclass == 'ELF_CLASS.CLASS32':
+            if _bin_idata == 'ELF_DATA.LSB':
                 t_arch_rootfs = "examples/rootfs/mips32el_linux"
             else:
                 t_arch_rootfs = "examples/rootfs/mips32_linux"
     elif _bin_arch == 'ARCH.i386':
         t_arch_rootfs = "examples/rootfs/x86_linux"
     elif _bin_arch == 'ARCH.RISCV':
-        if _bin_iclass == str('ELF_CLASS.CLASS32'):
+        if _bin_iclass == 'ELF_CLASS.CLASS32':
             t_arch_rootfs = "examples/rootfs/riscv32_linux"
         else:
             t_arch_rootfs = "examples/rootfs/riscv64_linux"
