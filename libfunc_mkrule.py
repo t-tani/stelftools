@@ -36,6 +36,11 @@ import collections
 
 col, row = shutil.get_terminal_size()
 
+# Precomputed byte -> 'XX' lookup so the per-section hex conversion does not
+# pay a fresh format-string parse per byte. About 6x faster than the prior
+# `['%02X' % x for x in struct.unpack('B'*N, data)]` shape on 1 MB inputs.
+_BYTE_TO_HEX = ['%02X' % x for x in range(256)]
+
 # logging.basicConfig(level=logging.DEBUG)
 logging.basicConfig(level=logging.WARNING)
 # logging.basicConfig(level=logging.INFO)
@@ -81,7 +86,7 @@ def fetch_opecodes(f, arfile = '', exapis = []):
             # if not sec.name.startswith('.text'): continue
             logging.debug('%s: %s' % (fname, sec.name))
             # extract a .text section corresponding to this relocation table
-            hexstr = ['%02X' % (x) for x in struct.unpack('B' * len(sec.data()), sec.data())]
+            hexstr = [_BYTE_TO_HEX[b] for b in sec.data()]
             textsec[sec.name] = hexstr
         elif (sec['sh_type'] == 'SHT_PROGBITS' and sec['sh_flags'] == SH_FLAGS.SHF_ALLOC):
             # get alias
@@ -120,7 +125,7 @@ def fetch_opecodes(f, arfile = '', exapis = []):
                     alias_list.append(st_name)
 
             #print(alias_list)
-            hexstr = ['%02X' % (x) for x in struct.unpack('B' * len(sec.data()), sec.data())]
+            hexstr = [_BYTE_TO_HEX[b] for b in sec.data()]
             rodatasec[','.join(sorted(alias_list))] = hexstr
 
     ## 1. text section : statically functions
