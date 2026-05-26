@@ -55,6 +55,20 @@ DEFAULT_UNSUPPORTED_ARCHES = frozenset({
     # mkrule.py; mark unsupported until that branch is restored.
     "riscv64",
     "riscv64-lp64d",
+    # MIPS R6 introduces relocation types (R_MIPS_PC21_S2,
+    # R_MIPS_PC26_S2, R_MIPS_PCHI16, ...) that mkrule's 32-bit MIPS
+    # dispatch does not enumerate, so the build aborts at exit(-1)
+    # after downloading the toolchain. Re-include once mkrule grows
+    # the R6 reloc list.
+    "mips32r6el",
+    "mips64r6el-n32",
+    # The MIPS64 n32 ABI carries ELFCLASS32 with EF_MIPS_ABI2, so
+    # mkrule routes it through the 32-bit MIPS branch — which lacks
+    # the R_MIPS_GOT_DISP / R_MIPS_GPREL16 / etc. that n32 emits.
+    # Confirmed failing on bl-stable-2025.08-1_glibc_mips64-n32 with
+    # 'unknown relocation type (0x7|0x13)' warnings before exit.
+    "mips64-n32",
+    "mips64el-n32",
 })
 
 
