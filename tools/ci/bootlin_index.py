@@ -83,12 +83,21 @@ def _list_anchors(url: str) -> list[str]:
 
 
 def list_architectures() -> list[str]:
-    """Subdirectory names under the Bootlin toolchains root."""
+    """Subdirectory names under the Bootlin toolchains root.
+
+    The Apache listing emits a "Parent Directory" anchor whose href is an
+    absolute path back up the tree (e.g. ``/downloads/releases/``); we
+    reject anything that is not a single relative directory token to
+    avoid sending requests to non-arch URLs.
+    """
     archs: list[str] = []
     for href in _list_anchors(BOOTLIN_ROOT):
         if href in ("../", "./") or href.startswith("?") or not href.endswith("/"):
             continue
-        archs.append(href.rstrip("/"))
+        name = href.rstrip("/")
+        if "/" in name or name.startswith("."):
+            continue
+        archs.append(name)
     return sorted(archs)
 
 
