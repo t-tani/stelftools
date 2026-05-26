@@ -946,29 +946,38 @@ def fetch_opecodes(f, arfile = '', exapis = []):
                     opecodes[target_flex_offset] = '[' + str(0) + '-' + str(_fix_max_len) + ']'
                     opecodes[target_flex_offset+1] = '??'
             opecodes_str = ' '.join(opecodes)
-            try:
-                if sym.name == cxxfilt.demangle(sym.name):
-                    #print(fname, sym.name)
-                    if sym.name in CRT_INIT_FINI_FUNC_LIST:
-                        continue
-                    if opecode_minimum_length == 0:
-                        if opecodes_str in tab.keys():
-                            tab[opecodes_str].append({'name': sym.name, 'type': 'func', \
-                                    'size': size, 'exports': [], 'imports': [], 'objname': fname.split('/')[-1] + arfile})
-                        else:
-                            tab[opecodes_str] = [{'name': sym.name, 'type': 'func', \
-                                    'size': size, 'exports': [], 'imports': [], 'objname': fname.split('/')[-1] + arfile}]
+            # The original guard ran every symbol through cxxfilt to drop
+            # names that the demangler rewrites (i.e. actual C++ mangled
+            # symbols). Itanium ABI mangled names always start with '_Z',
+            # so calling cxxfilt on the long tail of C symbols is pure
+            # overhead — short-circuit on the prefix and only consult
+            # cxxfilt when it could change the answer.
+            add_func = True
+            if sym.name.startswith('_Z'):
+                try:
+                    if sym.name != cxxfilt.demangle(sym.name):
+                        add_func = False
+                except cxxfilt.InvalidName:
+                    continue
+            if add_func:
+                if sym.name in CRT_INIT_FINI_FUNC_LIST:
+                    continue
+                if opecode_minimum_length == 0:
+                    if opecodes_str in tab.keys():
+                        tab[opecodes_str].append({'name': sym.name, 'type': 'func', \
+                                'size': size, 'exports': [], 'imports': [], 'objname': fname.split('/')[-1] + arfile})
                     else:
-                        if opecodes_str in tab.keys():
-                            tab[opecodes_str].append({'name': sym.name, 'type': 'func', \
-                                    'size': size, 'min_size': opecode_minimum_length, \
-                                    'exports': [], 'imports': [], 'objname': fname.split('/')[-1] + arfile})
-                        else:
-                            tab[opecodes_str] = [{'name': sym.name, 'type': 'func', \
-                                    'size': size, 'min_size': opecode_minimum_length, \
-                                    'exports': [], 'imports': [], 'objname': fname.split('/')[-1] + arfile}]
-            except cxxfilt.InvalidName:
-                continue
+                        tab[opecodes_str] = [{'name': sym.name, 'type': 'func', \
+                                'size': size, 'exports': [], 'imports': [], 'objname': fname.split('/')[-1] + arfile}]
+                else:
+                    if opecodes_str in tab.keys():
+                        tab[opecodes_str].append({'name': sym.name, 'type': 'func', \
+                                'size': size, 'min_size': opecode_minimum_length, \
+                                'exports': [], 'imports': [], 'objname': fname.split('/')[-1] + arfile})
+                    else:
+                        tab[opecodes_str] = [{'name': sym.name, 'type': 'func', \
+                                'size': size, 'min_size': opecode_minimum_length, \
+                                'exports': [], 'imports': [], 'objname': fname.split('/')[-1] + arfile}]
         for opecodes_str in tab.keys():
             for i in range(len(tab[opecodes_str])):
                 for symname, export_or_import in exsymtab.items():
@@ -984,17 +993,20 @@ def fetch_opecodes(f, arfile = '', exapis = []):
                 if size > MAXIMUM_PATTERN_LENGTH:
                     opecodes = opecodes[:MAXIMUM_PATTERN_LENGTH]
                 opecodes_str = ' '.join(opecodes)
-                try:
-                    if func_name == cxxfilt.demangle(func_name):
-                        #print(fname, func_name)
-                        if opecodes_str in tab.keys():
-                            tab[opecodes_str].append({'name': func_name, 'type': 'func', \
-                                    'size': size, 'exports': [], 'imports': [], 'objname': fname.split('/')[-1] + arfile})
-                        else:
-                            tab[opecodes_str] = [{'name': func_name, 'type': 'func', \
-                                    'size': size, 'exports': [], 'imports': [], 'objname': fname.split('/')[-1] + arfile}]
-                except cxxfilt.InvalidName:
-                    continue
+                add_func = True
+                if func_name.startswith('_Z'):
+                    try:
+                        if func_name != cxxfilt.demangle(func_name):
+                            add_func = False
+                    except cxxfilt.InvalidName:
+                        continue
+                if add_func:
+                    if opecodes_str in tab.keys():
+                        tab[opecodes_str].append({'name': func_name, 'type': 'func', \
+                                'size': size, 'exports': [], 'imports': [], 'objname': fname.split('/')[-1] + arfile})
+                    else:
+                        tab[opecodes_str] = [{'name': func_name, 'type': 'func', \
+                                'size': size, 'exports': [], 'imports': [], 'objname': fname.split('/')[-1] + arfile}]
                 opd_func_dict[func_name] = 'checked'
 
     return tab, crt_marge_tab
