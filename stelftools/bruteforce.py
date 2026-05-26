@@ -83,10 +83,68 @@ def _score_cfg(arg):
     return idx, cfg_path, len(names), None
 
 
+# Inverse map from a signatures/<family>/<arch>/ directory name to the
+# set of arch labels that a LIEF-detected ELF should match against. The
+# table is the single source of truth shared with the publish helper
+# (tools/ci/publish_signatures_release.py) so manifest entries' lief
+# match lists stay in lockstep with what the matcher actually selects.
+#
+# Each row is (machine_type predicate, candidate list). For MIPS the
+# bit-width and endianness flow into a four-row expansion below.
+_LIEF_ARCH_GROUPS = [
+    (lambda m, b32, le: m == 'AARCH64',
+        ['arm64', 'AARCH64', 'aarch64']),
+    (lambda m, b32, le: m == 'ARM',
+        ['arm', 'armv4l', 'armv4eb', 'armv4tl', 'armv5l',
+         'armv5-eabi', 'armv6l', 'armv6-eabihf',
+         'armv7l', 'armv7-eabihf', 'armv7m']),
+    (lambda m, b32, le: m in ('M68K', 'ARCH_68K'),
+        ['m68k', 'm68k-q800', 'm68k-mcf', 'm68k-mcf5208', 'm68000']),
+    (lambda m, b32, le: m == 'MIPS' and b32 and le,
+        ['mipsel', 'mips32el']),
+    (lambda m, b32, le: m == 'MIPS' and b32 and not le,
+        ['mips', 'mips32']),
+    (lambda m, b32, le: m == 'MIPS' and not b32 and le,
+        ['mips64el']),
+    (lambda m, b32, le: m == 'MIPS' and not b32 and not le,
+        ['mips64']),
+    (lambda m, b32, le: m == 'PPC',
+        ['powerpc', 'powerpc-440fp', 'powerpc-e300c3',
+         'powerpc-e500mc', 'ppc']),
+    (lambda m, b32, le: m == 'PPC64',
+        ['ppc64', 'powerpc64', 'powerpc64-e6500', 'powerpc64-pwoer8']),
+    (lambda m, b32, le: m == 'SH',
+        ['sh2', 'sh2eb', 'sh2elf', 'sh4']),
+    (lambda m, b32, le: m == 'SPARC',
+        ['sparc']),
+    (lambda m, b32, le: m == 'SPARCV9',
+        ['sparc64']),
+    (lambda m, b32, le: m == 'I386',
+        ['i386', 'i486', 'i586', 'i686', 'x86', 'x86-core2', 'x86-i686']),
+    (lambda m, b32, le: m == 'X86_64',
+        ['x86_64', 'amd64', 'x86-64', 'x86-64-core-i7']),
+    (lambda m, b32, le: m == 'RISCV',
+        ['risc-v', 'riscv', 'risc-v-32', 'risc-v-64']),
+]
+
+
+def lief_arch_group_for(on_disk_arch):
+    """Return the lief candidate list that contains ``on_disk_arch``.
+
+    Used by the publish helper to fill each manifest asset's
+    ``lief_arch_match`` field. Unknown arches return ``[arch]`` so the
+    asset still matches itself but doesn't claim siblings.
+    """
+    for _predicate, candidates in _LIEF_ARCH_GROUPS:
+        if on_disk_arch in candidates:
+            return list(candidates)
+    return [on_disk_arch]
+
+
 def lief_arch_candidates(target_path):
     # Map a LIEF machine_type to the set of arch labels that appear as
-    # signatures/<family>/<arch>/ directory names. Keep parity with the
-    # original mapping so the candidate set does not shrink silently.
+    # signatures/<family>/<arch>/ directory names. See _LIEF_ARCH_GROUPS
+    # for the shared table.
     b = lief.parse(target_path)
     # Strip "ARCH." prefix and normalise to uppercase — LIEF 0.16+
     # uppercased some labels (i386 -> I386, x86_64 -> X86_64,
@@ -99,35 +157,9 @@ def lief_arch_candidates(target_path):
     is_32bit = iclass in ('CLASS32', 'ELF32')
     is_le    = idata == 'LSB'
 
-    if machine == 'AARCH64':
-        return ['arm64', 'AARCH64', 'aarch64']
-    if machine == 'ARM':
-        return ['arm', 'armv4l', 'armv4eb', 'armv4tl', 'armv5l',
-                'armv5-eabi', 'armv6l', 'armv6-eabihf',
-                'armv7l', 'armv7-eabihf', 'armv7m']
-    if machine in ('M68K', 'ARCH_68K'):
-        return ['m68k', 'm68k-q800', 'm68k-mcf', 'm68k-mcf5208', 'm68000']
-    if machine == 'MIPS':
-        if is_32bit:
-            return ['mipsel', 'mips32el'] if is_le else ['mips', 'mips32']
-        return ['mips64el'] if is_le else ['mips64']
-    if machine == 'PPC':
-        return ['powerpc', 'powerpc-440fp', 'powerpc-e300c3',
-                'powerpc-e500mc', 'ppc']
-    if machine == 'PPC64':
-        return ['ppc64', 'powerpc64', 'powerpc64-e6500', 'powerpc64-pwoer8']
-    if machine == 'SH':
-        return ['sh2', 'sh2eb', 'sh2elf', 'sh4']
-    if machine == 'SPARC':
-        return ['sparc']
-    if machine == 'SPARCV9':
-        return ['sparc64']
-    if machine == 'I386':
-        return ['i386', 'i486', 'i586', 'i686', 'x86', 'x86-core2', 'x86-i686']
-    if machine == 'X86_64':
-        return ['x86_64', 'amd64', 'x86-64', 'x86-64-core-i7']
-    if machine == 'RISCV':
-        return ['risc-v', 'riscv', 'risc-v-32', 'risc-v-64']
+    for predicate, candidates in _LIEF_ARCH_GROUPS:
+        if predicate(machine, is_32bit, is_le):
+            return list(candidates)
     raise SystemExit(f'[error] Unknown architecture {machine} : {target_path}')
 
 
