@@ -139,6 +139,60 @@ def _git_remote_url(repo_root: Path) -> str:
     return out.stdout.strip()
 
 
+def recover_manifest_from_staging(
+    repo_root: Path, staging: Path, *, tag: str, base_url: str,
+) -> dict:
+    """Reconstruct a manifest from tarballs left in ``staging``.
+
+    The tarballs themselves are not re-read; only their sha256, size,
+    and filename are consumed. ``covers`` and ``lief_arch_match`` come
+    from the current on-disk state under ``signatures/<family>/<arch>/``
+    via the same helpers that ``build_manifest`` uses, so a recovery
+    only succeeds when that directory has not been disturbed since the
+    original build.
+    """
+    sig_root = repo_root / "signatures"
+    assets: list[dict] = []
+    for archive in sorted(staging.glob("*.tar.zst")):
+        stem = archive.name[: -len(".tar.zst")]
+        # Family names can contain hyphens (firmware-linux, aboriginal-
+        # linux, bootlin-stable, synopsys-arc-gnu, uclibc-pub), so the
+        # split has to consult the known-family registry rather than
+        # rsplit on the first hyphen.
+        family = arch = None
+        for candidate in known_families():
+            if stem.startswith(candidate + "-"):
+                family = candidate
+                arch = stem[len(candidate) + 1:]
+                break
+        if family is None:
+            print(f"[recover] cannot infer family from {archive.name!r}, "
+                  f"skipping", file=sys.stderr)
+            continue
+        arch_dir = sig_root / family / arch
+        if not arch_dir.is_dir():
+            print(f"[recover] {family}/{arch} no longer on disk; can't "
+                  f"recompute covers — skipping", file=sys.stderr)
+            continue
+        sha256, size = _sha256_size(archive)
+        assets.append({
+            "name": archive.name,
+            "family": family,
+            "arch": arch,
+            "lief_arch_match": lief_arch_group_for(arch),
+            "sha256": sha256,
+            "size_bytes": size,
+            "covers": _covers_for(arch_dir),
+        })
+    return {
+        "schema_version": 1,
+        "manifest_version": datetime.date.today().isoformat(),
+        "release_tag": tag,
+        "release_base_url": base_url,
+        "assets": assets,
+    }
+
+
 def build_manifest(
     repo_root: Path,
     staging: Path,
@@ -189,7 +243,18 @@ def _gh_release_create(
     if draft:
         cmd.append("--draft")
     cmd.extend(str(p) for p in archives)
-    subprocess.run(cmd, check=True)
+    # Capture stderr so failures (auth scope, tag conflict, network) are
+    # reported inline instead of swallowed by the parent Bash redirect.
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.stdout:
+        sys.stdout.write(result.stdout)
+    if result.returncode != 0:
+        sys.stderr.write(result.stderr or "")
+        raise SystemExit(
+            f"gh release create failed (exit={result.returncode}); "
+            f"see stderr above. Tarballs preserved in the staging dir "
+            f"for retry via --skip-build."
+        )
 
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -238,6 +303,13 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
               "mktemp. Useful with --dry-run + --keep-staging when the "
               "caller wants a stable path for the file:// URLs."),
     )
+    p.add_argument(
+        "--skip-build", action="store_true",
+        help=("Skip the tar+zstd build phase and reuse the tarballs + "
+              "staging manifest already present under --staging-dir. "
+              "Recovery path when gh release create failed after a "
+              "successful build."),
+    )
     return p.parse_args(argv)
 
 
@@ -266,10 +338,46 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[publish] tag={args.tag}", file=sys.stderr)
         print(f"[publish] release_base_url={base_url}", file=sys.stderr)
 
-        manifest = build_manifest(
-            repo_root, staging,
-            tag=args.tag, base_url=base_url, zstd_level=args.zstd_level,
-        )
+        staging_manifest = staging / "manifest.json"
+        if args.skip_build:
+            if staging_manifest.is_file():
+                manifest = json.loads(
+                    staging_manifest.read_text(encoding="utf-8")
+                )
+                # The cached manifest may have been written when the
+                # caller passed a different --base-url or --tag; honor
+                # the current invocation's values so a retry can target
+                # a different release URL without rebuilding tarballs.
+                manifest["release_tag"] = args.tag
+                manifest["release_base_url"] = base_url
+                print(
+                    f"[publish] reusing {len(manifest['assets'])} tarballs "
+                    f"from staging via cached manifest",
+                    file=sys.stderr,
+                )
+            else:
+                print(
+                    f"[publish] no cached manifest at {staging_manifest}; "
+                    f"recomputing from staged tarballs (sha256 + size + "
+                    f"covers from on-disk signatures/)",
+                    file=sys.stderr,
+                )
+                manifest = recover_manifest_from_staging(
+                    repo_root, staging, tag=args.tag, base_url=base_url,
+                )
+                staging_manifest.write_text(
+                    json.dumps(manifest, indent=2) + "\n", encoding="utf-8",
+                )
+        else:
+            manifest = build_manifest(
+                repo_root, staging,
+                tag=args.tag, base_url=base_url, zstd_level=args.zstd_level,
+            )
+            # Persist the manifest into the staging dir so a failed gh
+            # upload can be retried via --skip-build without rebuilding.
+            staging_manifest.write_text(
+                json.dumps(manifest, indent=2) + "\n", encoding="utf-8",
+            )
         if not manifest["assets"]:
             print("[publish] no (family, arch) pairs to publish", file=sys.stderr)
             return 0
