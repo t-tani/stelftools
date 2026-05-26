@@ -2,6 +2,11 @@ __pycache__/
 *.pyc
 _bootlin_work/
 .cache/
+# Legacy yara-x compile cache location. The current code path writes to
+# .cache/yara/ instead; keep the old name ignored in case an older
+# checkout / pre-refactor func_ident run recreates it.
+cache/
 *.egg-info/
 build/
 dist/
+.ruff_cache/
