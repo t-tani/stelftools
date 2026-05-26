@@ -145,13 +145,31 @@ def _process_one_file(filename):
 
     Returns ``None`` for files the caller skips (libstdc++.a top-level,
     file types neither archive/object/executable, magic failures), or
-    ``('error', mime, path)`` for genuinely unsupported types so the
-    main process can log and exit. Otherwise returns
-    ``(tab, crt_tab, depend)``.
+    ``('error', message, path)`` for files that the matcher could not
+    process (unsupported MIME, or libfunc_mkrule / libfunc_deparse
+    hitting an architecture branch that abruptly raises). Otherwise
+    returns ``(tab, crt_tab, depend)``.
 
     Must stay picklable for multiprocessing.Pool; relies only on
     module-level state.
+
+    The outer ``try`` is the load-bearing piece: libfunc_mkrule's
+    architecture dispatch calls ``exit(-1)`` on unknown relocation
+    types, which raises ``SystemExit``. In a Pool worker that kills
+    the process; the Pool then either replaces the worker (which
+    picks up the next .o and dies on the same reloc) or stalls in
+    ``imap`` forever. Catching here surfaces the failure to the main
+    process as a normal error tuple instead.
     """
+    try:
+        return _process_one_file_inner(filename)
+    except SystemExit as exc:
+        return ('error', f'matcher exited (code={exc.code})', filename)
+    except Exception as exc:
+        return ('error', f'{type(exc).__name__}: {exc}', filename)
+
+
+def _process_one_file_inner(filename):
     leaf = filename.split('/')[-1]
     if leaf in _EXCLUDE_BOTH_TOPLEVEL:
         return None
@@ -280,8 +298,8 @@ def mkrule_and_other(tc_path, tc_name, workers=None):
                 if result is None:
                     continue
                 if isinstance(result, tuple) and result and result[0] == 'error':
-                    _, ftype, fname = result
-                    logging.error('Not supported file type of %s: %s' % (fname, ftype))
+                    _, msg, fname = result
+                    logging.error('aborting on %s: %s', fname, msg)
                     exit(-1)
                 newtab, new_crt_tab, new_depend = result
                 tab = libfunc_mkrule.merge_dicts(tab, newtab)
