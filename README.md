@@ -29,7 +29,7 @@ We can use `stelftools` as a command-line tool or a plugin for a reverse enginee
 ## Features
 `stelftools` is composed of the following three parts: pattern matcher, YARA signatures, and generator. 
 
-- Pattern Match (`func_ident.py`, `plugins/ida.py`, `plugins/ghidra.py`)
+- Pattern Match (`stelftools.ident` + `plugins/ida.py` / `plugins/ghidra.py`)
   - It receives an ELF binary as an input, and then it outputs a list of detected functions' address and name. 
   - It has several heuristics to recude false detection. 
     - Exclude detection on the basis of short rules
@@ -41,7 +41,7 @@ We can use `stelftools` as a command-line tool or a plugin for a reverse enginee
   - We generated YARA signatures for 17 architectures and over 700 toolchains in advanced and published them in the `stelftools` repository. 
   - We can cover almost all toolchain used in current IoT malware dataset with these signatures. 
 
-- Pattern Generation (`libfunc_info_create.py`)
+- Pattern Generation (`stelftools.info_create`)
   - It receives a toolchain path as an input, i.e., a path to a directory containing .a and .o files (static library files), and then it outpus YARA rules for detecting the library functions of the static library files. 
   - It generates a set of flexible rules supporting relocation, optimization and linker relaxation to achieve a high detection accuracy. 
 
@@ -92,7 +92,7 @@ To make a symblic link in the IDA's plugin directory to stelftools.
 ##### Library Function Identification
 
 ```bash
-python3 ./func_ident.py -cfg ./signatures/configs/<family>/{name of toolchain}.json -target {path to target binary}
+stelftools-ident -cfg ./signatures/configs/<family>/{name of toolchain}.json -target {path to target binary}
 ```
 - -cfg: the config file for a toolchain 
   - *Recommendation*
@@ -107,7 +107,7 @@ python3 ./func_ident.py -cfg ./signatures/configs/<family>/{name of toolchain}.j
 
 Example
 ```bash
-$ python3 ./func_ident.py -cfg ./signatures/configs/<family>/ucli-pub-0.9.30.1_i586.json -target ./samples/built/main.i586
+$ stelftools-ident -cfg ./signatures/configs/<family>/ucli-pub-0.9.30.1_i586.json -target ./samples/built/main.i586
 0x8048094 _fini,_init
 0x80480b0 __get_pc_thunk_bx
 0x80480c0 __do_global_dtors_aux
@@ -175,9 +175,9 @@ $ python3 ./func_ident.py -cfg ./signatures/configs/<family>/ucli-pub-0.9.30.1_i
 First of all, you have to prepare a compiled toolchain and then run the following commands. 
 
 ```bash
-python3 ./libfunc_info_create.py -name {toolchain name} -cp {toolchain compiler path} -arch {toolchain archtecture} 
+stelftools-mkrule -name {toolchain name} -cp {toolchain compiler path} -arch {toolchain archtecture} 
   or 
-python3 ./libfunc_info_create.py -name {toolchain name} -tp {toolchain directory path} -cp {toolchain compiler path} -arch {toolchain archtecture} 
+stelftools-mkrule -name {toolchain name} -tp {toolchain directory path} -cp {toolchain compiler path} -arch {toolchain archtecture} 
 ```
 - -name: the name of toolchain
 - -tp: the path of the toolchain directory (additional)
@@ -190,9 +190,9 @@ python3 ./libfunc_info_create.py -name {toolchain name} -tp {toolchain directory
 Even if the toolchain used in the sample build is unknown, it may be possible to identify the toolchain using brute-force. 
 
 ```bash
-python3 _bruteforce-ident.py -target {path to target binary} 
+stelftools-bruteforce -target {path to target binary} 
   or 
-python3 _bruteforce-ident.py -arch AUTO -target {path to target binary} 
+stelftools-bruteforce -arch AUTO -target {path to target binary} 
 ```
 
 

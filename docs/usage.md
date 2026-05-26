@@ -21,9 +21,9 @@ stelftools can be executed in three ways.
 ## Command line mode
 #### Generate YARA rules and other rules used for matching
 ```bash
-python3 ./libfunc_info_create.py -name {toolchain name} -cp {toolchain compiler path} -arch {toolchain archtecture} 
+stelftools-mkrule -name {toolchain name} -cp {toolchain compiler path} -arch {toolchain archtecture} 
   or 
-python3 ./libfunc_info_create.py -name {toolchain name} -tp {toolchain directory path} -cp {toolchain compiler path} -arch {toolchain archtecture} 
+stelftools-mkrule -name {toolchain name} -tp {toolchain directory path} -cp {toolchain compiler path} -arch {toolchain archtecture} 
 ```
 - -name: the name of toolchain
 - -tp: the path of the toolchain directory (additional)
@@ -31,7 +31,7 @@ python3 ./libfunc_info_create.py -name {toolchain name} -tp {toolchain directory
 - -arch: the architecture of a toolchain
 #### Identification of library functions
 ```bash
-python3 ./func_ident.py -cfg ./signatures/configs/<family>/{name of toolchain}.json -target /path/to/target
+stelftools-ident -cfg ./signatures/configs/<family>/{name of toolchain}.json -target /path/to/target
 ```
 - -cfg: the config file for a toolchain 
   - *Recommendation*

@@ -22,14 +22,14 @@ stelftoolsは3つの実行方法がある
 ## Command line mode  
 #### マッチングに使用するYARAルール等の生成
 ```bash
-python3 ./libfunc_info_create.py -name {toolchain name} -cp {toolchain compiler path} -arch {toolchain archtecture} 
+stelftools-mkrule -name {toolchain name} -cp {toolchain compiler path} -arch {toolchain archtecture} 
 ```
 - -name: ツールチェインの名称を指定
 - -cp: ツールチェインのコンパイラのパスを指定
 - -arch: ツールチェインのアーキテクチャを指定
 #### ライブラリ関数の特定
 ```bash
-python3 ./func_ident.py -cfg ./signatures/configs/<family>/{name of toolchain}.json -target /path/to/target
+stelftools-ident -cfg ./signatures/configs/<family>/{name of toolchain}.json -target /path/to/target
 ```
 - -cfg: 生成したツールチェインのファイル類が指定されたコンフィグファイルを指定
 - -target: マッチングを行うバイナリを指定
