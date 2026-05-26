@@ -10,11 +10,13 @@ import json
 import time
 import subprocess
 
-# Ghidra's bundled Python may be Jython 2.7 in older installs, where
-# pathlib is not available; use os.path to stay portable. Both Jython
-# and CPython resolve symlinks (this file is symlinked into Ghidra's
-# script directory by setup/ghidra_setup.sh).
-STELFTOOLS_PATH = os.path.dirname(os.path.realpath(__file__)) + "/"
+# This plugin lives one level below the stelftools root; func_ident.py
+# and libfunc_info_create.py sit at the root. Ghidra's bundled Python
+# may be Jython 2.7 in older installs, where pathlib is not available;
+# os.path stays portable. Both Jython and CPython resolve symlinks
+# (this file is symlinked into Ghidra's script directory by
+# tools/setup/ghidra.sh).
+STELFTOOLS_PATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__))) + "/"
 
 currentProgram = state.getCurrentProgram()
 location = str(currentProgram.getExecutablePath())

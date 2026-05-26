@@ -3,7 +3,9 @@ from pathlib import Path
 from termcolor import colored
 from pyfzf.pyfzf import FzfPrompt
 
-STELFTOOLS_PATH = str(Path(__file__).resolve().parent) + "/"
+# Plugin sits one level below the stelftools root; the signature tree
+# and func_ident.py are anchored at the parent.
+STELFTOOLS_PATH = str(Path(__file__).resolve().parent.parent) + "/"
 STELFTOOLS_TOOLCHAIN_PATH = STELFTOOLS_PATH + 'signatures/configs/'
 
 def createR2Pipe():

@@ -17,7 +17,9 @@ import lief
 from qiling import Qiling
 from qiling.const import QL_VERBOSE
 
-STELFTOOLS_PATH = str(Path(__file__).resolve().parent) + "/"
+# Plugin sits one level below the stelftools root; func_ident.py and
+# the signature tree are anchored at the parent.
+STELFTOOLS_PATH = str(Path(__file__).resolve().parent.parent) + "/"
 
 lfunc_dict = {}
 

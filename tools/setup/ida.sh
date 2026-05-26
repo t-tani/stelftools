@@ -7,12 +7,10 @@ if [ $# != 1 ]; then
   exit 1
 fi
 
-# Create symbolic link for stelftools plugin for IDA Pro
+# Symlink the plugin entry point so IDA finds it; func_ident.py and the
+# libfunc_* modules are imported via sys.path manipulation inside the
+# plugin (the parent of the resolved file is added to sys.path), so we
+# only need to symlink the single entry script.
 pushd $ida_install_path/plugins
-ln -s $stelftools_path/ida_stelftools.py .
-ln -s $stelftools_path/func_ident.py .
-ln -s $stelftools_path/DubMaker.py .
-ln -s $stelftools_path/libfunc_mkrule.py .
-ln -s $stelftools_path/libfunc_deparse.py .
-ln -s $stelftools_path/libfunc_info_create.py .
+ln -s $stelftools_path/plugins/ida.py stelftools.py
 popd

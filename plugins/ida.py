@@ -1,12 +1,21 @@
 #! /usr/bin/env python3
 
+# Plugin scripts live one level below the stelftools root; func_ident and
+# libfunc_info_create sit at the root and depend on family routing /
+# signature-tree paths anchored there. Add the parent of this file to
+# sys.path so 'from <module> import *' resolves whether IDA loaded a
+# direct copy or followed a symlink from its plugins directory.
+import os, sys
+_STELFTOOLS_ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+if _STELFTOOLS_ROOT not in sys.path:
+    sys.path.insert(0, _STELFTOOLS_ROOT)
+
 import idc
 import idaapi
 import idautils
 import ida_nalt
 from shims import ida_shims
 
-import os
 import time
 import json
 

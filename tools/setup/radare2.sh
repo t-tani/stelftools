@@ -7,5 +7,5 @@ pip3 install pyfzf
 
 cat <<EOS >> $HOME/.radare2rc
 # stelftools
-(stelftools; "#!pipe python3 $stelftools_path/r2_stelftools.py")
+(stelftools; "#!pipe python3 $stelftools_path/plugins/radare2.py")
 EOS

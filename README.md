@@ -29,7 +29,7 @@ We can use `stelftools` as a command-line tool or a plugin for a reverse enginee
 ## Features
 `stelftools` is composed of the following three parts: pattern matcher, YARA signatures, and generator. 
 
-- Pattern Match (`func_ident.py`, `ida_stelftools.py`, `ghidra_stelftools.py`)
+- Pattern Match (`func_ident.py`, `plugins/ida.py`, `plugins/ghidra.py`)
   - It receives an ELF binary as an input, and then it outputs a list of detected functions' address and name. 
   - It has several heuristics to recude false detection. 
     - Exclude detection on the basis of short rules
@@ -214,12 +214,12 @@ python3 _bruteforce-ident.py -arch AUTO -target {path to target binary}
 #### Ghidra plugin mode  
 
 ##### Library Function Identification  
-0. **Script Manager** → Scripts/stelftools/python/**ghidra_stelftools.py** → select **func_ident**  
+0. **Script Manager** → Scripts/stelftools/python/**stelftools.py** → select **func_ident**  
 1. select toolchain json file (toolchain_name.json)  
 <img src="docs/images/ghidra_func_ident.gif" width="90%">
 
 ##### YARA Rules Generation  
-0. **Script Manager** → Scripts/stelftools/python/**ghidra_stelftools.py** → select **make_rules**  
+0. **Script Manager** → Scripts/stelftools/python/**stelftools.py** → select **make_rules**  
 1. type toolchain name  
 2. select toolchain directory
 3. select a compiler for the toolchain (additional option)

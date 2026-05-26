@@ -9,5 +9,5 @@ fi
 
 # Create symbolic link for stelftools plugin for ghidra Pro
 pushd $ghidra_install_path/Ghidra/Features/Python/ghidra_scripts/
-ln -s $stelftools_path/ghidra_stelftools.py .
+ln -s $stelftools_path/plugins/ghidra.py stelftools.py
 popd
