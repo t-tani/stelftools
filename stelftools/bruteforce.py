@@ -216,41 +216,50 @@ def _format_eta(elapsed, idx, total):
     return f'{int(remaining // 60):d}m{int(remaining % 60):02d}s'
 
 
-def main():
-    args = set_args()
-    target_path = args.target
+def select_best(target_path, jobs, *, arch=None, libc=None):
+    """Score every candidate cfg against ``target_path`` and rank them.
 
-    # arch shortlist: explicit -arch wins; otherwise lief derives it
-    if args.arch and args.arch != 'AUTO':
-        arch_filter = args.arch.split(',')
-    else:
+    ``arch`` and ``libc`` may be a comma-separated string or a list /
+    set of tokens; the default ``None`` (or the literal string
+    ``'AUTO'``) defers to the lief-driven detection. Returns a list of
+    ``(cfg_path, score)`` tuples sorted by score descending. Empty when
+    no candidate cfg matches or every score lookup errored.
+
+    Logging mirrors the CLI: arch / libc decisions and per-cfg progress
+    land on the module logger so callers that wire a handler see the
+    same trail the CLI prints.
+    """
+    if arch is None or arch == 'AUTO':
         arch_filter = lief_arch_candidates(target_path)
+    elif isinstance(arch, str):
+        arch_filter = arch.split(',')
+    else:
+        arch_filter = list(arch)
     log.info('target=%s', target_path)
     log.info('arch candidates: %s', arch_filter)
 
-    # libc shortlist: explicit -libc wins; otherwise .interp pins it
-    if args.libc and args.libc != 'AUTO':
-        libc_filter = set(args.libc.split(','))
-    else:
+    if libc is None or libc == 'AUTO':
         fam = lief_libc_family(target_path)
         libc_filter = {fam} if fam else None
+    elif isinstance(libc, str):
+        libc_filter = set(libc.split(','))
+    else:
+        libc_filter = set(libc)
     log.info('libc family: %s', libc_filter or 'unknown (no pruning)')
 
     cfgs = candidate_cfgs(target_path, arch_filter, libc_filter)
     log.info('%d cfg(s) after arch+libc filter', len(cfgs))
     if not cfgs:
         log.error('no signatures/configs entry matches the target')
-        return 1
+        return []
 
-    # Compute target-side state (ELF parse + capstone disassembly +
-    # call-site map) once and reuse across every candidate cfg.
     log.info('precomputing target state')
     t_state = time.time()
     target_state = func_ident.compute_target_state(target_path)
     log.info('target state ready in %.2fs (text region %d bytes)',
              time.time() - t_state, target_state['target_size'])
 
-    jobs = max(1, args.jobs)
+    jobs = max(1, jobs)
     tasks = [(idx, cfg_path, cfg_info)
              for idx, (cfg_path, cfg_info) in enumerate(cfgs, 1)]
     match_num_list = []
@@ -302,21 +311,32 @@ def main():
 
     if not match_num_list:
         log.error('every candidate cfg errored out')
-        return 1
+        return []
 
     match_num_list.sort(key=lambda x: x[1], reverse=True)
-    best = match_num_list[0][1]
     log.info('---- final ranking ----')
+    return match_num_list
+
+
+def main():
+    args = set_args()
+    target_path = args.target
+    rankings = select_best(target_path, args.jobs,
+                           arch=args.arch, libc=args.libc)
+    if not rankings:
+        return 1
+    best = rankings[0][1]
     if args.verbose:
         print(f'Number of most matched functions: {best}')
         print('Candidates for toolchain ->')
-        for cfg_path, n in match_num_list:
+        for cfg_path, n in rankings:
             print(f'{target_path} : {cfg_path} : {n}')
     else:
-        for cfg_path, n in match_num_list:
-            if n == best:
-                print(f'{target_path} : {cfg_path} : {n}')
-                return 0
+        # Without -v the CLI only prints the single best-scoring entry,
+        # so callers parsing stdout get one line. select_best() returns
+        # the full ranking for programmatic consumers.
+        cfg_path, n = rankings[0]
+        print(f'{target_path} : {cfg_path} : {n}')
     return 0
 
 
