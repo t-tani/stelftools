@@ -42,24 +42,32 @@ def create_toolchain_cfg_file(tc_name, arch, yara_rule_path, tc_compiler_path, a
         f.write("  \"dependency_list_path\" : \"" + depend_list_path + "\"\n")
         f.write("}\n")
 
+_STATIC_LIB_EXTS = ('.a', '.o', '.os', '.lo')
+
+
 def get_static_lib_file_list(tc_path):
-    static_lib_file_list = \
-            [obj_file for obj_file in glob.glob(tc_path+'/**', recursive=True) \
-            if os.path.isfile(obj_file) and ( \
-            obj_file.endswith('.a') \
-            or obj_file.endswith('.o') \
-            or obj_file.endswith('.os') \
-            or obj_file.endswith('.lo') \
-            )]
-    # exclude symbolic link
-    exclude_file_list = []
-    for static_lib_file in static_lib_file_list:
-        if static_lib_file != os.path.realpath(static_lib_file):
-            exclude_file_list.append(static_lib_file)
-    static_lib_file_list = sorted(set(static_lib_file_list) ^ set(exclude_file_list))
-    #for l in static_lib_file_list:
-    #    print(l)
-    return static_lib_file_list
+    """Static-library files reachable from ``tc_path``, deduplicated by real path.
+
+    The earlier ``path != realpath(path)`` test combined with a
+    symmetric-difference set XOR silently dropped every archive when
+    ``tc_path`` was relative (every relative path differs from its
+    realpath) or when any parent directory was a symlink (Bootlin ships
+    ``lib64 -> lib``). We want to keep one entry per underlying file
+    while folding aliases (``libm.a -> libm-2.39.a``) and directory
+    symlinks (``lib64/foo.a`` vs ``lib/foo.a``) into a single visit.
+    Indexing by :func:`os.path.realpath` does exactly that, and returning
+    the first reachable path keeps the existing sort order stable.
+    """
+    seen = {}
+    for f in glob.glob(tc_path + '/**', recursive=True):
+        if not f.endswith(_STATIC_LIB_EXTS):
+            continue
+        if not os.path.isfile(f):
+            continue
+        real = os.path.realpath(f)
+        if real not in seen:
+            seen[real] = f
+    return sorted(seen.values())
 
 ## mkrule
 def mkrule(tc_path, tc_name):
