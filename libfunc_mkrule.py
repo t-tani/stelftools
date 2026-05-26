@@ -74,67 +74,38 @@ def fetch_opecodes(f, arfile = '', exapis = []):
         arfile = '@' + arfile
     e = ELFFile(f)
 
+    # Materialise the section list once. fetch_opecodes walks it three
+    # times (text discovery, relocation processing, PPC64 .opd probe);
+    # each iter_sections() call re-instantiates the Section objects, and
+    # libc.a had ~80k of those across its 2k object files. The PPC64
+    # opd_flag scan further down also runs against this list.
+    sections = list(e.iter_sections())
+
     # create hex string based text code
     textsec = {}
-    rodatasec = {}
-    for sec in e.iter_sections():
-        #print(sec.name, sec['sh_type'], (sec['sh_flags'] & SH_FLAGS.SHF_EXECINSTR), SH_FLAGS.SHF_EXECINSTR )
-        #if sec.name in ['.opd']:
-        #    print(sec, sec['sh_type'], (sec['sh_flags'] & SH_FLAGS.SHF_EXECINSTR) == SH_FLAGS.SHF_EXECINSTR )
-        #    exit(-1)
+    for sec in sections:
+        # The original code also walked .rodata.* / .rdata.* sections to
+        # collect aliases into a `rodatasec` dict, but that dict was never
+        # read by any other code path (write-only). The per-section
+        # get_section_by_name('.symtab') + iter_symbols() inside the
+        # rodata branch dominated short-archive runtime, so the branch
+        # is dropped here. The text-discovery semantics are unchanged.
         if (sec['sh_type'] == 'SHT_PROGBITS' and (sec['sh_flags'] & SH_FLAGS.SHF_EXECINSTR) == SH_FLAGS.SHF_EXECINSTR):
             # if not sec.name.startswith('.text'): continue
             logging.debug('%s: %s' % (fname, sec.name))
             # extract a .text section corresponding to this relocation table
             hexstr = [_BYTE_TO_HEX[b] for b in sec.data()]
             textsec[sec.name] = hexstr
-        elif (sec['sh_type'] == 'SHT_PROGBITS' and sec['sh_flags'] == SH_FLAGS.SHF_ALLOC):
-            # get alias
-            alias_list = []
-            if sec.name.startswith('.rodata.'):
-                fmt_sec_name = sec.name[8:]
-            elif sec.name.startswith('.rdata.'):
-                fmt_sec_name = sec.name[7:]
-            else:
-                continue
-            # check symtab
-            symtab_info = []
-            symtab_sec = e.get_section_by_name('.symtab')
-            if isinstance(symtab_sec, SymbolTableSection):
-                symbols = e.get_section(symtab_sec.header.sh_link)
-                for st_index, sym in enumerate(symtab_sec.iter_symbols()):
-                    st_value = sym['st_value'] # offset
-                    st_size  = sym['st_size']
-                    st_type  = sym['st_info']['type']
-                    st_bind  = sym['st_info']['bind']
-                    st_vis   =  sym['st_other']['visibility']
-                    st_ndx   =  sym['st_shndx']
-                    st_name  = sym.name
-
-                    symtab_info.append([ \
-                            st_index, st_value, st_size, st_type, st_bind, st_vis, st_ndx, st_name \
-                            ])
-            #for _, _, _, _, _, _, st_ndx, st_name in symtab_info:
-            #    if st_name == fmt_sec_name:
-            #        fmt_ndx = st_ndx
-            #for _, _, _, st_type, _, _, st_ndx, st_name in symtab_info:
-            #    if fmt_ndx == st_ndx and len(st_name) != 0 and st_type == 'STT_OBJECT':
-            #        alias_list.append(st_name)
-            for _, _, _, st_type, _, _, _, st_name in symtab_info:
-                if st_type == 'STT_OBJECT' and len(st_name) != 0:
-                    alias_list.append(st_name)
-
-            #print(alias_list)
-            hexstr = [_BYTE_TO_HEX[b] for b in sec.data()]
-            rodatasec[','.join(sorted(alias_list))] = hexstr
 
     ## 1. text section : statically functions
     # analyze relocation sections
-    relnames = ['.rel' + x for x in textsec.keys()]
-    relnames += ['.rela' + x for x in textsec.keys()]
+    relnames = set()
+    for tname in textsec.keys():
+        relnames.add('.rel' + tname)
+        relnames.add('.rela' + tname)
     #print(relnames)
 
-    for sec in e.iter_sections():
+    for sec in sections:
         if not sec['sh_type'] in ['SHT_REL', 'SHT_RELA']:
             continue
         if not sec.name in relnames:
@@ -688,7 +659,7 @@ def fetch_opecodes(f, arfile = '', exapis = []):
     # check .opd flag
     opd_flag = False
     if e['e_machine'] == 'EM_PPC64':
-        for sec in e.iter_sections():
+        for sec in sections:
             if sec.name == '.opd':
                 opd_flag = True
                 break

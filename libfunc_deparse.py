@@ -22,11 +22,17 @@ def del_alias_funcname(funcname):
     return funcname
 
 def check_reltab(e):
-    availability_of_rel = False # avaliability of relocation table
+    """True if the ELF object holds at least one relocation section.
+
+    The previous version walked every section even after the first hit.
+    On object files with no relocations (about half of glibc's stubs) it
+    is the cheap path; on the rest, returning early skips the rest of
+    the SHT scan.
+    """
     for section in e.iter_sections():
         if isinstance(section, RelocationSection):
-            availability_of_rel = True
-    return availability_of_rel
+            return True
+    return False
 
 def get_symtab(e):
     symtab_list = []
