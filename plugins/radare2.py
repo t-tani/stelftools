@@ -48,12 +48,14 @@ else:
     toolchain = str(matches[0]) if matches else str(STELFTOOLS_TOOLCHAIN_PATH + toolchain)
 
 run_cmd = [ \
-            'python3', str(STELFTOOLS_PATH + 'func_ident.py'), \
+            'python3', '-m', 'stelftools.ident', \
             '-cfg', toolchain, \
             '-target', f'./{target}', \
             '-o', 'ghidra']
 
-cmd_res = subprocess.check_output(run_cmd).split(b'\n')
+# cwd anchors -m at the repo root so the package import resolves
+# without requiring a pip install on the host environment.
+cmd_res = subprocess.check_output(run_cmd, cwd=STELFTOOLS_PATH).split(b'\n')
 res_list = [x.decode('utf-8') for x in cmd_res if x != b'']
 
 for res in res_list:

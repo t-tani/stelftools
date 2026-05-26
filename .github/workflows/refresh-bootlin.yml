@@ -91,7 +91,7 @@ jobs:
       max-parallel: 4
       matrix:
         include: ${{ fromJSON(needs.discover.outputs.matrix) }}
-    # libfunc_info_create.py takes ~50 minutes on a fast local box for the
+    # stelftools.info_create takes ~50 minutes on a fast local box for the
     # glibc/aarch64 toolchain; GitHub-hosted runners are slower. 90 minutes
     # leaves headroom without burning the 6-hour job ceiling.
     timeout-minutes: 90

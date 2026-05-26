@@ -1,10 +1,11 @@
 #! /usr/bin/env python3
 
-# Plugin scripts live one level below the stelftools root; func_ident and
-# libfunc_info_create sit at the root and depend on family routing /
-# signature-tree paths anchored there. Add the parent of this file to
-# sys.path so 'from <module> import *' resolves whether IDA loaded a
-# direct copy or followed a symlink from its plugins directory.
+# The stelftools package lives one directory above this plugin. Add
+# that directory to sys.path so the package is importable whether
+# IDA loads the plugin directly or via a symlink from its plugins/
+# directory — host environments that have run `pip install -e .`
+# already find it on sys.path, but the sys.path bump keeps the plugin
+# usable on hosts where the install has not happened yet.
 import os, sys
 _STELFTOOLS_ROOT = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 if _STELFTOOLS_ROOT not in sys.path:
@@ -19,8 +20,8 @@ from shims import ida_shims
 import time
 import json
 
-from func_ident import *
-from libfunc_info_create import *
+from stelftools.ident import *
+from stelftools.info_create import *
 
 def overwrite_func_label(match_info):
     same_name_idx = 0

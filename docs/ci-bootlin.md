@@ -12,7 +12,7 @@ newer is generated here.
 |---|---|
 | `tools/ci/bootlin_index.py` | Scrape the per-arch `tarballs/` directory listings into a JSON array of `(arch, libc, stability, release, tarball_url, sha256_url, signature_name)` rows |
 | `tools/ci/bootlin_diff.py` | Drop rows whose `signature_name.yara` already lives in `signatures/yara/` |
-| `tools/ci/build_bootlin_signature.sh` | Download + verify + extract + run `libfunc_info_create.py` + validate, for one row |
+| `tools/ci/build_bootlin_signature.sh` | Download + verify + extract + run `stelftools.info_create` + validate, for one row |
 | `tools/ci/validate_signature.py` | Confirm the generated YARA compiles under `yara-x` and the rule count clears a permissive floor |
 | `.github/workflows/refresh-bootlin.yml` | `discover -> build (matrix) -> commit` runner |
 
@@ -33,7 +33,7 @@ artifact, opens a new branch named `ci/bootlin-refresh-<UTC-timestamp>`,
 commits the additions, and pushes. **The workflow never merges to
 `main`.** Open a PR off the pushed branch after manual review.
 
-## Why `libfunc_info_create.py` needs an absolute toolchain path
+## Why `stelftools.info_create` needs an absolute toolchain path
 
 `get_static_lib_file_list()` excludes any archive whose stored path
 differs from its `os.path.realpath()` result. With a relative `-tp`
@@ -41,7 +41,7 @@ argument the comparison flips every file (relative ≠ absolute), so
 every `.a` and `.o` is silently dropped and the generated YARA file
 holds zero rules. `build_bootlin_signature.sh` always resolves the
 extracted tree to its absolute path before invoking
-`libfunc_info_create.py`.
+`stelftools.info_create`.
 
 ## Storage policy
 
@@ -80,7 +80,7 @@ exit (pass `--keep` if you want to inspect it).
   - The runner runs out of disk on a heavy toolchain. Mitigation: the
     builder unpacks one toolchain at a time and removes the extracted
     tree as part of its exit trap.
-  - `libfunc_info_create.py` aborts on an architecture the rule
+  - `stelftools.info_create` aborts on an architecture the rule
     generator does not yet understand (most current Bootlin archs are
     covered, but exotic targets such as `xtensa-lx60` are not).
     Mitigation: matrix `fail-fast` is off so one unsupported arch does

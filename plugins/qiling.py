@@ -34,14 +34,15 @@ def set_args():
     return args
 
 def ident_lfunc(cfg_path, target_path):
-    script_path = STELFTOOLS_PATH + 'func_ident.py'
     tc_cfg_path = STELFTOOLS_PATH + cfg_path
     run_cmd = [ \
-            'python3', script_path, \
+            'python3', '-m', 'stelftools.ident', \
             '-cfg', tc_cfg_path, \
             '-target', target_path \
             ]
-    cmd_res = subprocess.check_output(run_cmd).split(b'\n')
+    # cwd anchors -m at the repo root so the package import resolves
+    # without requiring a pip install on the host environment.
+    cmd_res = subprocess.check_output(run_cmd, cwd=STELFTOOLS_PATH).split(b'\n')
     fmt_list = [x.decode('utf-8') for x in cmd_res if x != b'']
     #print(fmt_list)
     for _fl in fmt_list:

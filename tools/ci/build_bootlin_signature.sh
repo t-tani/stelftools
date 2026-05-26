@@ -2,12 +2,12 @@
 # Build a stelftools YARA signature triple from one Bootlin prebuilt toolchain.
 #
 # Pipeline: download tarball + .sha256 -> verify -> extract -> run
-# libfunc_info_create.py -> validate. The Python entry point writes
+# stelftools.info_create -> validate. The Python entry point writes
 # directly into signatures/{yara,configs,deps/{dlists,aliases}}/<family>/
 # so this wrapper only handles I/O and cleanup; the runner never holds
 # more than one extracted toolchain at a time.
 #
-# Requires libfunc_info_create.py to receive an *absolute* toolchain path:
+# Requires stelftools.info_create to receive an *absolute* toolchain path:
 # its symlink-exclusion logic compares each .a's path against
 # os.path.realpath(), which always differs for relative inputs and silently
 # drops every archive.
@@ -100,12 +100,12 @@ case "$ext" in
     bz2) tar -xjf "$tar_name";;
 esac
 
-# libfunc_info_create.py needs the toolchain path resolved (see header).
+# stelftools.info_create needs the toolchain path resolved (see header).
 tc_abs="$(cd "$extract_dir" && pwd -P)"
 
 printf '[bootlin] generating signature %s\n' "$sig_name" >&2
 cd "$repo_root"
-"$python_bin" libfunc_info_create.py \
+"$python_bin" -m stelftools.info_create \
     -name "$sig_name" \
     -tp "$tc_abs" \
     -cp "" \

@@ -10,12 +10,14 @@ import json
 import time
 import subprocess
 
-# This plugin lives one level below the stelftools root; func_ident.py
-# and libfunc_info_create.py sit at the root. Ghidra's bundled Python
-# may be Jython 2.7 in older installs, where pathlib is not available;
-# os.path stays portable. Both Jython and CPython resolve symlinks
-# (this file is symlinked into Ghidra's script directory by
-# tools/setup/ghidra.sh).
+# This plugin sits one directory below the stelftools package root.
+# We do not import stelftools here because Ghidra's bundled Python may
+# be Jython 2.7 and the package targets CPython 3.10+; instead we
+# spawn a fresh python3 process and address the entry points via
+# 'python3 -m stelftools.<module>', using STELFTOOLS_PATH as the cwd
+# so the package is discoverable without requiring 'pip install -e .'.
+# Both Jython and CPython resolve symlinks here (this file is
+# symlinked into Ghidra's script directory by tools/setup/ghidra.sh).
 STELFTOOLS_PATH = os.path.dirname(os.path.dirname(os.path.realpath(__file__))) + "/"
 
 currentProgram = state.getCurrentProgram()
@@ -30,12 +32,12 @@ def func_ident():
     tc_cfg_path = str(tc_cfg_path)
     # set running command
     run_cmd = [ \
-            "python3", STELFTOOLS_PATH + 'func_ident.py', \
+            "python3", "-m", "stelftools.ident", \
             '-cfg', tc_cfg_path, \
             '-target', location, \
             '-o', 'ghidra']
-    # run stelftools (func_ident.py)
-    cmd_res = subprocess.check_output(run_cmd).split('\n')
+    # run stelftools (stelftools.ident); cwd anchors -m at the repo root
+    cmd_res = subprocess.check_output(run_cmd, cwd=STELFTOOLS_PATH).split('\n')
     res_list = [x for x in cmd_res if x != '']
     for res in res_list:
         addr = int(res.split(':')[0], 16)
@@ -65,13 +67,13 @@ def make_rules():
     tc_arch = str(askString("Arch", "4. Please type a toolchain architecture:"))
     # set running command
     run_cmd = [ \
-            "python3", STELFTOOLS_PATH + 'libfunc_info_create.py', \
+            "python3", "-m", "stelftools.info_create", \
             '-name', tc_name, \
             '-tp', tc_dir_path, \
             '-cp', tc_compiler_path, \
             '-arch', tc_arch]
-    # run stelftools (libfunc_info_create.py)
-    cmd_res = subprocess.check_output(run_cmd).split('\n')
+    # run stelftools (stelftools.info_create); cwd anchors -m at the repo root
+    cmd_res = subprocess.check_output(run_cmd, cwd=STELFTOOLS_PATH).split('\n')
     res_list = [x for x in cmd_res if x != '']
     for res in res_list:
         print(res)

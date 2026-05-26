@@ -2,3 +2,6 @@ __pycache__/
 *.pyc
 _bootlin_work/
 .cache/
+*.egg-info/
+build/
+dist/
