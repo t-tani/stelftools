@@ -55,12 +55,12 @@ def _check_yara_x_compiles(path: Path) -> None:
 
 def validate(repo_root: Path, name: str, min_rules: int) -> list[str]:
     errors: list[str] = []
-    # families.py lives at repo root; import lazily so this module stays
-    # usable when called as a standalone script from CI.
+    # The stelftools package lives at repo root; seed sys.path so this
+    # script can run before a pip install -e . has happened.
     import sys
     if str(repo_root) not in sys.path:
         sys.path.insert(0, str(repo_root))
-    from families import family_for  # type: ignore[import-not-found]
+    from stelftools.families import family_for  # type: ignore[import-not-found]
     family = family_for(name)
     sig_root = repo_root / "signatures"
     yara_path  = sig_root / "yara"    / family / f"{name}.yara"

@@ -23,7 +23,7 @@ from elftools.elf.sections import SymbolTableSection
 
 import libfunc_mkrule # make lib func rule script
 import libfunc_deparse # parse lib func dependency script
-from families import family_for
+from stelftools.families import family_for
 from pathlib import Path
 
 STELFTOOLS_PATH = str(Path(__file__).resolve().parent) + "/"
