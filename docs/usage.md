@@ -31,7 +31,7 @@ python3 ./libfunc_info_create.py -name {toolchain name} -tp {toolchain directory
 - -arch: the architecture of a toolchain
 #### Identification of library functions
 ```bash
-python3 ./func_ident.py -cfg ./toolchain_config/{name of toolchain}.json -target /path/to/target
+python3 ./func_ident.py -cfg ./signatures/configs/<family>/{name of toolchain}.json -target /path/to/target
 ```
 - -cfg: the config file for a toolchain 
   - *Recommendation*

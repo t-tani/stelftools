@@ -1,0 +1,8 @@
+{
+  "name" : "al-1.2.8_x86_64",
+  "arch" : "x86_64",
+  "yara_path" : "signatures/yara/aboriginal-linux/al-1.2.8_x86_64.yara",
+  "compiler_path" : "",
+  "alias_list_path" : "signatures/deps/aliases/aboriginal-linux/al-1.2.8_x86_64.alist",
+  "dependency_list_path" : "signatures/deps/dlists/aboriginal-linux/al-1.2.8_x86_64.dlist"
+}

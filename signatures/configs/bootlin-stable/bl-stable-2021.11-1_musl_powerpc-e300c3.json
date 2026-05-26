@@ -1,0 +1,8 @@
+{
+  "name" : "bl-stable-2021.11-1_musl_powerpc-e300c3",
+  "arch" : "powerpc-e300c3",
+  "yara_path" : "signatures/yara/bootlin-stable/bl-stable-2021.11-1_musl_powerpc-e300c3.yara",
+  "compiler_path" : "",
+  "alias_list_path" : "signatures/deps/aliases/bootlin-stable/bl-stable-2021.11-1_musl_powerpc-e300c3.alist",
+  "dependency_list_path" : "signatures/deps/dlists/bootlin-stable/bl-stable-2021.11-1_musl_powerpc-e300c3.dlist"
+}

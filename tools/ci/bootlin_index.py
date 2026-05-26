@@ -50,8 +50,19 @@ class Entry:
 
     @property
     def signature_name(self) -> str:
-        """Stelftools yara filename stem: bl-stable-<release>_<libc>_<arch>."""
+        """Stelftools yara filename stem: bl-<stability>-<release>_<libc>_<arch>."""
         return f"bl-{self.stability}-{self.release}_{self.libc}_{self.arch}"
+
+    @property
+    def family(self) -> str:
+        """Family subdirectory under signatures/<kind>/ for placement.
+
+        Today every Bootlin entry routes into ``bootlin-<stability>``
+        (only ``bootlin-stable`` exists in the index by default). Computed
+        from the stability token rather than the signature name so the
+        index file is self-describing for the workflow matrix.
+        """
+        return f"bootlin-{self.stability}"
 
 
 class _AnchorCollector(HTMLParser):
@@ -231,7 +242,10 @@ def main(argv: list[str] | None = None) -> int:
         since=args.since,
         until=args.until,
     )
-    payload = [asdict(e) | {"signature_name": e.signature_name} for e in entries]
+    payload = [
+        asdict(e) | {"signature_name": e.signature_name, "family": e.family}
+        for e in entries
+    ]
     if args.out:
         with open(args.out, "w", encoding="utf-8") as f:
             json.dump(payload, f, indent=2, sort_keys=True)

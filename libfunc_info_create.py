@@ -23,6 +23,7 @@ from elftools.elf.sections import SymbolTableSection
 
 import libfunc_mkrule # make lib func rule script
 import libfunc_deparse # parse lib func dependency script
+from families import family_for
 from pathlib import Path
 
 STELFTOOLS_PATH = str(Path(__file__).resolve().parent) + "/"
@@ -34,7 +35,9 @@ def create_toolchain_cfg_file(tc_name, arch, yara_rule_path, tc_compiler_path, a
     yara_rule_path = yara_rule_path[len(STELFTOOLS_PATH):]
     alias_list_path = alias_list_path[len(STELFTOOLS_PATH):]
     depend_list_path = depend_list_path[len(STELFTOOLS_PATH):]
-    with open(STELFTOOLS_PATH + "/toolchain_config/" + tc_name + ".json", "wt") as f:
+    cfg_dir = Path(STELFTOOLS_PATH) / "signatures" / "configs" / family_for(tc_name)
+    cfg_dir.mkdir(parents=True, exist_ok=True)
+    with open(cfg_dir / (tc_name + ".json"), "wt") as f:
         f.write("{\n")
         f.write("  \"name\" : \"" + tc_name + "\",\n")
         f.write("  \"arch\" : \"" + arch + "\",\n")
@@ -252,9 +255,15 @@ def mkrule_and_other(tc_path, tc_name, workers=None):
     output byte-for-byte. ``workers=None`` consults
     :func:`_default_worker_count`.
     """
-    yara_output_path = STELFTOOLS_PATH + "yara-patterns/" + tc_name + ".yara"
-    dlist_output_path = STELFTOOLS_PATH + "_tmpdir/dlists/" + tc_name + ".dlist"
-    alist_output_path = STELFTOOLS_PATH + "_tmpdir/alias_list/" + tc_name + ".alist"
+    family = family_for(tc_name)
+    yara_dir  = Path(STELFTOOLS_PATH) / "signatures" / "yara"           / family
+    dlist_dir = Path(STELFTOOLS_PATH) / "signatures" / "deps" / "dlists" / family
+    alist_dir = Path(STELFTOOLS_PATH) / "signatures" / "deps" / "aliases" / family
+    for d in (yara_dir, dlist_dir, alist_dir):
+        d.mkdir(parents=True, exist_ok=True)
+    yara_output_path  = str(yara_dir  / (tc_name + ".yara"))
+    dlist_output_path = str(dlist_dir / (tc_name + ".dlist"))
+    alist_output_path = str(alist_dir / (tc_name + ".alist"))
 
     static_lib_file_list = get_static_lib_file_list(tc_path)
 

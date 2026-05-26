@@ -1,0 +1,8 @@
+{
+  "name" : "fl-0.9.9_mipsel",
+  "arch" : "mipsel",
+  "yara_path" : "signatures/yara/firmware-linux/fl-0.9.9_mipsel.yara",
+  "compiler_path" : "",
+  "alias_list_path" : "signatures/deps/aliases/firmware-linux/fl-0.9.9_mipsel.alist",
+  "dependency_list_path" : "signatures/deps/dlists/firmware-linux/fl-0.9.9_mipsel.dlist"
+}

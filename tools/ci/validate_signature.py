@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """Sanity-check a freshly generated stelftools signature triple.
 
-Confirms that for ``<repo>/yara-patterns/<name>.yara`` plus its
-``toolchain_config/<name>.json`` and ``_tmpdir/{dlists,alias_list}/<name>.{dlist,alist}``
-companions:
+The four files live under ``<repo>/signatures/`` partitioned by family
+(``signatures/yara/<family>/<name>.yara`` plus the matching
+``signatures/configs/`` / ``signatures/deps/{dlists,aliases}/`` paths).
+The family for a given signature name is derived by ``families.family_for``
+so the validator stays a single-arg entry point.
+
+This confirms that for the four files keyed by ``name``:
 
   - the YARA file compiles under yara-x
   - the rule count is above a minimum threshold (catches the
@@ -51,10 +55,18 @@ def _check_yara_x_compiles(path: Path) -> None:
 
 def validate(repo_root: Path, name: str, min_rules: int) -> list[str]:
     errors: list[str] = []
-    yara_path = repo_root / "yara-patterns" / f"{name}.yara"
-    cfg_path = repo_root / "toolchain_config" / f"{name}.json"
-    dlist_path = repo_root / "_tmpdir" / "dlists" / f"{name}.dlist"
-    alist_path = repo_root / "_tmpdir" / "alias_list" / f"{name}.alist"
+    # families.py lives at repo root; import lazily so this module stays
+    # usable when called as a standalone script from CI.
+    import sys
+    if str(repo_root) not in sys.path:
+        sys.path.insert(0, str(repo_root))
+    from families import family_for  # type: ignore[import-not-found]
+    family = family_for(name)
+    sig_root = repo_root / "signatures"
+    yara_path  = sig_root / "yara"    / family / f"{name}.yara"
+    cfg_path   = sig_root / "configs" / family / f"{name}.json"
+    dlist_path = sig_root / "deps" / "dlists"  / family / f"{name}.dlist"
+    alist_path = sig_root / "deps" / "aliases" / family / f"{name}.alist"
 
     if not yara_path.is_file():
         errors.append(f"missing yara file: {yara_path}")

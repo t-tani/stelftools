@@ -4,7 +4,7 @@ from termcolor import colored
 from pyfzf.pyfzf import FzfPrompt
 
 STELFTOOLS_PATH = str(Path(__file__).resolve().parent) + "/"
-STELFTOOLS_TOOLCHAIN_PATH = STELFTOOLS_PATH + 'toolchain_config/'
+STELFTOOLS_TOOLCHAIN_PATH = STELFTOOLS_PATH + 'signatures/configs/'
 
 def createR2Pipe():
     try:
@@ -23,7 +23,10 @@ if pipe is None:
 
 fzf = FzfPrompt()
 
-known_toolchain_list = [x.name for x in os.scandir(STELFTOOLS_TOOLCHAIN_PATH)]
+# signatures/configs/ is partitioned per family, so recurse to gather every json.
+known_toolchain_list = sorted(
+    p.name for p in Path(STELFTOOLS_TOOLCHAIN_PATH).rglob("*.json")
+)
 
 arch = str(pipe.cmdj('ij')['bin']['arch'])
 target = str(pipe.cmdj('ij')['core']['file'])
@@ -37,7 +40,10 @@ if toolchain not in known_toolchain_list and toolchain + '.json' not in known_to
     print('toolchain json path?')
     toolchain = input('> ')
 else:
-    toolchain = str(STELFTOOLS_TOOLCHAIN_PATH + toolchain)
+    # The signatures/configs/ tree is partitioned per family; locate
+    # the chosen json by walking once instead of guessing the family.
+    matches = list(Path(STELFTOOLS_TOOLCHAIN_PATH).rglob(toolchain))
+    toolchain = str(matches[0]) if matches else str(STELFTOOLS_TOOLCHAIN_PATH + toolchain)
 
 run_cmd = [ \
             'python3', str(STELFTOOLS_PATH + 'func_ident.py'), \

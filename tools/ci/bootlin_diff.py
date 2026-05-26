@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-"""Diff a Bootlin index against the on-disk ``yara-patterns/`` directory.
+"""Diff a Bootlin index against the on-disk ``signatures/yara/`` tree.
 
 Reads the JSON array produced by ``bootlin_index.py`` and emits entries that
-do not yet have a matching ``yara-patterns/<signature_name>.yara`` file.
+do not yet have a matching ``signatures/yara/<family>/<signature_name>.yara``
+file. The yara tree is scanned recursively so any family subdirectory is
+discovered.
 
 The output is JSON suitable for use as a GitHub Actions matrix ``include``
-list: each row carries the ``signature_name`` plus the source URLs and the
-arch/libc/release tokens consumed by ``build_bootlin_signature.sh``.
+list: each row carries the ``signature_name`` and ``family`` plus the
+source URLs and arch/libc/release tokens consumed by
+``build_bootlin_signature.sh``.
 """
 
 from __future__ import annotations
@@ -31,7 +34,9 @@ def _load_index(path: str) -> list[dict]:
 
 
 def _existing_signatures(yara_dir: Path) -> set[str]:
-    return {p.stem for p in yara_dir.glob("*.yara")}
+    # signatures/yara/ is partitioned into per-family subdirectories,
+    # so the scan recurses to catch every committed *.yara stem.
+    return {p.stem for p in yara_dir.rglob("*.yara")}
 
 
 def diff(entries: list[dict], yara_dir: Path) -> list[dict]:
@@ -49,8 +54,8 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     p.add_argument(
         "--yara-dir",
-        default=str(REPO_ROOT / "yara-patterns"),
-        help="Directory whose *.yara stems are treated as already-generated",
+        default=str(REPO_ROOT / "signatures" / "yara"),
+        help="Directory (scanned recursively) whose *.yara stems are treated as already-generated",
     )
     p.add_argument(
         "--out",

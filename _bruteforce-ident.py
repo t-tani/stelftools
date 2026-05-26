@@ -39,7 +39,7 @@ _THIS_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(_THIS_DIR))
 import func_ident  # noqa: E402
 
-TOOLCHAIN_CONFIG_DIR = _THIS_DIR / "toolchain_config"
+TOOLCHAIN_CONFIG_DIR = _THIS_DIR / "signatures" / "configs"
 
 
 def set_args():
@@ -85,7 +85,7 @@ def _score_cfg(arg):
 
 def lief_arch_candidates(target_path):
     # Map a LIEF machine_type to the set of arch labels that appear as
-    # `arch` fields in toolchain_config/*.json. Keep parity with the
+    # `arch` fields in signatures/configs/**/*.json. Keep parity with the
     # original mapping so the candidate set does not shrink silently.
     b = lief.parse(target_path)
     # Strip "ARCH." prefix and normalise to uppercase — LIEF 0.16+
@@ -192,7 +192,9 @@ def _cfg_sort_key(cfg_path):
 
 def candidate_cfgs(target_path, arch_filter, libc_filter):
     cfgs = []
-    for cfg_path in sorted(glob.glob(str(TOOLCHAIN_CONFIG_DIR / "*.json")),
+    # signatures/configs/ is partitioned per family; recurse so all
+    # toolchains contribute candidates regardless of subdirectory.
+    for cfg_path in sorted(glob.glob(str(TOOLCHAIN_CONFIG_DIR / "**" / "*.json"), recursive=True),
                            key=_cfg_sort_key):
         with open(cfg_path) as f:
             info = json.load(f)
@@ -238,7 +240,7 @@ def main():
     cfgs = candidate_cfgs(target_path, arch_filter, libc_filter)
     log.info('%d cfg(s) after arch+libc filter', len(cfgs))
     if not cfgs:
-        log.error('no toolchain_config matches the target')
+        log.error('no signatures/configs entry matches the target')
         return 1
 
     # Compute target-side state (ELF parse + capstone disassembly +

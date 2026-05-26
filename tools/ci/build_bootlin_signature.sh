@@ -2,9 +2,10 @@
 # Build a stelftools YARA signature triple from one Bootlin prebuilt toolchain.
 #
 # Pipeline: download tarball + .sha256 -> verify -> extract -> run
-# libfunc_info_create.py -> validate -> move artifacts into yara-patterns/,
-# toolchain_config/, _tmpdir/{dlists,alias_list}/. Always cleans up the
-# extracted tree on exit; the runner only ever holds one toolchain on disk.
+# libfunc_info_create.py -> validate. The Python entry point writes
+# directly into signatures/{yara,configs,deps/{dlists,aliases}}/<family>/
+# so this wrapper only handles I/O and cleanup; the runner never holds
+# more than one extracted toolchain at a time.
 #
 # Requires libfunc_info_create.py to receive an *absolute* toolchain path:
 # its symlink-exclusion logic compares each .a's path against

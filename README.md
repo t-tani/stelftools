@@ -37,7 +37,7 @@ We can use `stelftools` as a command-line tool or a plugin for a reverse enginee
     - Prioritize based on library function dependencies and link order. 
   - You can also invoke this script from a reverse engineering tools, such as IDA or Ghidra, as well as using as a command-line tool. 
 
-- YARA Signatures (`yara-patterns`)
+- YARA Signatures (`signatures/yara/<family>/`)
   - We generated YARA signatures for 17 architectures and over 700 toolchains in advanced and published them in the `stelftools` repository. 
   - We can cover almost all toolchain used in current IoT malware dataset with these signatures. 
 
@@ -92,7 +92,7 @@ To make a symblic link in the IDA's plugin directory to stelftools.
 ##### Library Function Identification
 
 ```bash
-python3 ./func_ident.py -cfg ./toolchain_config/{name of toolchain}.json -target {path to target binary}
+python3 ./func_ident.py -cfg ./signatures/configs/<family>/{name of toolchain}.json -target {path to target binary}
 ```
 - -cfg: the config file for a toolchain 
   - *Recommendation*
@@ -107,7 +107,7 @@ python3 ./func_ident.py -cfg ./toolchain_config/{name of toolchain}.json -target
 
 Example
 ```bash
-$ python3 ./func_ident.py -cfg ./toolchain_config/ucli-pub-0.9.30.1_i586.json -target ./sample/main.i586
+$ python3 ./func_ident.py -cfg ./signatures/configs/<family>/ucli-pub-0.9.30.1_i586.json -target ./sample/main.i586
 0x8048094 _fini,_init
 0x80480b0 __get_pc_thunk_bx
 0x80480c0 __do_global_dtors_aux
