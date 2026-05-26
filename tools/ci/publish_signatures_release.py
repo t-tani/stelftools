@@ -178,14 +178,17 @@ def build_manifest(
 
 def _gh_release_create(
     tag: str, archives: Iterable[Path], notes: str, target_branch: str,
+    *, draft: bool = False,
 ) -> None:
     cmd = [
         "gh", "release", "create", tag,
         "--target", target_branch,
         "--title", tag,
         "--notes", notes,
-        *[str(p) for p in archives],
     ]
+    if draft:
+        cmd.append("--draft")
+    cmd.extend(str(p) for p in archives)
     subprocess.run(cmd, check=True)
 
 
@@ -209,6 +212,13 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     p.add_argument("--dry-run", action="store_true",
                    help="Stage tarballs and emit manifest, but do not call gh.")
+    p.add_argument(
+        "--draft", action="store_true",
+        help=("Create the release as a draft (--draft passed to gh). "
+              "Recommended for the first release of a manifest version "
+              "so the asset list can be reviewed in the GitHub UI before "
+              "the release is promoted to public."),
+    )
     p.add_argument("--keep-staging", action="store_true",
                    help="Leave the staging directory in place after exit.")
     p.add_argument(
@@ -282,7 +292,10 @@ def main(argv: list[str] | None = None) -> int:
             f"{len(archives)} (family, arch) bundles, "
             f"{sum(a['size_bytes'] for a in manifest['assets']) / (1024 ** 3):.1f} GB total."
         )
-        _gh_release_create(args.tag, archives, notes, args.target_branch)
+        _gh_release_create(
+            args.tag, archives, notes, args.target_branch,
+            draft=args.draft,
+        )
 
         manifest_out = Path(args.manifest_out) if args.manifest_out \
             else repo_root / "stelftools" / "signatures_manifest.json"
