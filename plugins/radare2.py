@@ -6,9 +6,10 @@ from termcolor import colored
 from pyfzf.pyfzf import FzfPrompt
 
 # Plugin sits one level below the stelftools root; the signature tree
-# and func_ident.py are anchored at the parent.
+# and func_ident.py are anchored at the parent. Toolchain cfg JSONs
+# live at signatures/<family>/<arch>/<name>.json.
 STELFTOOLS_PATH = str(Path(__file__).resolve().parent.parent) + "/"
-STELFTOOLS_TOOLCHAIN_PATH = STELFTOOLS_PATH + 'signatures/configs/'
+STELFTOOLS_TOOLCHAIN_PATH = STELFTOOLS_PATH + 'signatures/'
 
 def createR2Pipe():
     try:
@@ -27,7 +28,8 @@ if pipe is None:
 
 fzf = FzfPrompt()
 
-# signatures/configs/ is partitioned per family, so recurse to gather every json.
+# signatures/ is partitioned signatures/<family>/<arch>/, so recurse
+# to gather every cfg JSON regardless of depth.
 known_toolchain_list = sorted(
     p.name for p in Path(STELFTOOLS_TOOLCHAIN_PATH).rglob("*.json")
 )
@@ -44,8 +46,8 @@ if toolchain not in known_toolchain_list and toolchain + '.json' not in known_to
     print('toolchain json path?')
     toolchain = input('> ')
 else:
-    # The signatures/configs/ tree is partitioned per family; locate
-    # the chosen json by walking once instead of guessing the family.
+    # signatures/<family>/<arch>/ is partitioned per family then arch;
+    # locate the chosen json by walking once instead of guessing both.
     matches = list(Path(STELFTOOLS_TOOLCHAIN_PATH).rglob(toolchain))
     toolchain = str(matches[0]) if matches else str(STELFTOOLS_TOOLCHAIN_PATH + toolchain)
 

@@ -64,7 +64,7 @@ jobs:
         run: |
           set -eux
           python tools/ci/bootlin_diff.py index.json \
-            --yara-dir signatures/yara \
+            --signatures-dir signatures \
             --out missing.json
           # Truncate to max_jobs to keep wall time bounded; the remainder
           # is picked up on the next dispatch / monthly cron.
@@ -124,17 +124,29 @@ jobs:
             --stability "${{ matrix.stability }}" \
             --python python
 
+      - name: Bundle signature into a tarball
+        # upload-artifact@v4 strips the longest common path prefix
+        # across all `path:` entries. With four siblings under
+        # signatures/<family>/<arch>/ the LCP would be that directory
+        # and the archive would lose the family/arch path. Tar from the
+        # signatures/ root so the artifact preserves the layout
+        # verbatim and the commit job can extract straight into place.
+        run: |
+          set -eux
+          mkdir -p /tmp/sig-out
+          tar -C signatures -cf "/tmp/sig-out/${{ matrix.signature_name }}.tar" \
+            "${{ matrix.family }}/${{ matrix.arch }}/${{ matrix.signature_name }}.yara" \
+            "${{ matrix.family }}/${{ matrix.arch }}/${{ matrix.signature_name }}.json" \
+            "${{ matrix.family }}/${{ matrix.arch }}/${{ matrix.signature_name }}.dlist" \
+            "${{ matrix.family }}/${{ matrix.arch }}/${{ matrix.signature_name }}.alist"
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: sig-${{ matrix.signature_name }}
           if-no-files-found: error
           retention-days: 7
-          path: |
-            signatures/yara/${{ matrix.family }}/${{ matrix.signature_name }}.yara
-            signatures/configs/${{ matrix.family }}/${{ matrix.signature_name }}.json
-            signatures/deps/dlists/${{ matrix.family }}/${{ matrix.signature_name }}.dlist
-            signatures/deps/aliases/${{ matrix.family }}/${{ matrix.signature_name }}.alist
+          path: /tmp/sig-out/${{ matrix.signature_name }}.tar
 
   commit:
     needs: [discover, build]
@@ -155,22 +167,25 @@ jobs:
           fetch-depth: 0
 
       - name: Download all signature artifacts
-        # upload-artifact@v4 strips the longest common path prefix
-        # (here: 'signatures/') when packaging multiple `path:` entries,
-        # so the archive's internal layout starts at `yara/`, `configs/`,
-        # `deps/`. Set the download destination to `signatures/` so the
-        # files land back at signatures/yara/<family>/... where the
-        # subsequent `git add signatures/yara/...` step expects them.
+        # Each artifact carries a single tarball containing
+        # <family>/<arch>/<signature_name>.{yara,json,dlist,alist}.
         uses: actions/download-artifact@v4
         with:
           pattern: sig-*
           merge-multiple: true
-          path: signatures
+          path: /tmp/sig-archives
+
+      - name: Extract tarballs into signatures tree
+        run: |
+          set -eux
+          for tar in /tmp/sig-archives/*.tar; do
+            tar -C signatures -xf "$tar"
+          done
 
       - name: Inspect new files
         run: |
-          find signatures/yara -name 'bl-*.yara' -newer /etc/hostname | head -20
-          find signatures/configs -name 'bl-*.json' -newer /etc/hostname | head -20
+          find signatures -path 'signatures/bootlin-*/*/bl-*.yara' -newer /etc/hostname | head -20
+          find signatures -path 'signatures/bootlin-*/*/bl-*.json' -newer /etc/hostname | head -20
 
       - name: Commit and push to ci-refresh branch
         run: |
@@ -179,18 +194,19 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git checkout -b "$branch"
-          git add signatures/yara/bootlin-*/bl-*.yara \
-                  signatures/configs/bootlin-*/bl-*.json \
-                  signatures/deps/dlists/bootlin-*/bl-*.dlist \
-                  signatures/deps/aliases/bootlin-*/bl-*.alist
+          git add 'signatures/bootlin-*/**/bl-*.yara' \
+                  'signatures/bootlin-*/**/bl-*.json' \
+                  'signatures/bootlin-*/**/bl-*.dlist' \
+                  'signatures/bootlin-*/**/bl-*.alist'
           if git diff --cached --quiet; then
             echo "no new signatures staged"
             exit 0
           fi
           # Subject lists added signature names so reviewers see scope without
           # opening the diff. Body keeps the per-line breakdown.
-          names=$(git diff --cached --name-only -- 'signatures/yara/**' \
-                    | sed -E 's#^signatures/yara/[^/]+/##; s#\.yara$##' \
+          names=$(git diff --cached --name-only -- 'signatures/**' \
+                    | grep '\.yara$' \
+                    | sed -E 's#^signatures/[^/]+/[^/]+/##; s#\.yara$##' \
                     | sort)
           first=$(echo "$names" | head -1)
           n=$(echo "$names" | wc -l)

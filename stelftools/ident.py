@@ -1641,17 +1641,23 @@ def set_args():
     args = parser.parse_args()
     return args
 
-def run_one_with_state(target_state, cfg_info, relative_paths=True):
+def run_one_with_state(target_state, cfg_info, cfg_path=None):
     # Run a single (target, cfg) ident pass using a pre-computed
     # target_state (see compute_target_state()). The historical
     # multi-pass inner loop is collapsed into one yara-x compile + one
     # scan + length-bucket filtering, which gives byte-identical
     # results to the old N-length loop while cutting per-cfg wall time
     # by 2-7x.
-    if relative_paths:
-        yara_path        = STELFTOOLS_PATH + cfg_info['yara_path']
-        alias_list_path  = STELFTOOLS_PATH + cfg_info['alias_list_path']
-        depend_list_path = STELFTOOLS_PATH + cfg_info['dependency_list_path']
+    #
+    # When ``cfg_path`` is provided, the yara / alias / depend files are
+    # looked up as siblings of the cfg JSON (signatures/<family>/<arch>/
+    # layout). Otherwise the caller must seed absolute paths in
+    # ``cfg_info`` (the ident-without-cfg CLI path does this).
+    if cfg_path is not None:
+        cfg_path = Path(cfg_path)
+        yara_path        = str(cfg_path.with_suffix('.yara'))
+        alias_list_path  = str(cfg_path.with_suffix('.alist'))
+        depend_list_path = str(cfg_path.with_suffix('.dlist'))
     else:
         yara_path        = cfg_info['yara_path']
         alias_list_path  = cfg_info.get('alias_list_path') or ''
@@ -1724,13 +1730,13 @@ def run_one_with_state(target_state, cfg_info, relative_paths=True):
     }
 
 
-def run_one(target_path, cfg_info, relative_paths=True):
+def run_one(target_path, cfg_info, cfg_path=None):
     # Single-shot convenience wrapper. compute_target_state() does the
     # ELF parse + capstone disassembly + call-map extraction; bruteforce
     # drivers should call those two stages separately so target state
     # is shared across every candidate cfg.
     state = compute_target_state(target_path)
-    return run_one_with_state(state, cfg_info, relative_paths=relative_paths)
+    return run_one_with_state(state, cfg_info, cfg_path=cfg_path)
 
 
 def main():
@@ -1739,7 +1745,7 @@ def main():
     if args.cfg and os.path.exists(args.cfg):
         with open(args.cfg) as cfg_fp:
             cfg_info = json.load(cfg_fp)
-        target_info = run_one(args.target, cfg_info, relative_paths=True)
+        target_info = run_one(args.target, cfg_info, cfg_path=args.cfg)
     elif args.yara is not None:
         cfg_info = {
             'arch': args.arch,
@@ -1748,7 +1754,7 @@ def main():
             'alias_list_path': args.alias_list or '',
             'dependency_list_path': args.id_depend or '',
         }
-        target_info = run_one(args.target, cfg_info, relative_paths=False)
+        target_info = run_one(args.target, cfg_info)
     else:
         print("[ERROR] wrong argument")
         exit(-1)

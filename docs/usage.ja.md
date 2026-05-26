@@ -29,7 +29,7 @@ stelftools-mkrule -name {toolchain name} -cp {toolchain compiler path} -arch {to
 - -arch: ツールチェインのアーキテクチャを指定
 #### ライブラリ関数の特定
 ```bash
-stelftools-ident -cfg ./signatures/configs/<family>/{name of toolchain}.json -target /path/to/target
+stelftools-ident -cfg ./signatures/<family>/<arch>/{name of toolchain}.json -target /path/to/target
 ```
 - -cfg: 生成したツールチェインのファイル類が指定されたコンフィグファイルを指定
 - -target: マッチングを行うバイナリを指定

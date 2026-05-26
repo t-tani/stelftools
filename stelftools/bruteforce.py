@@ -10,7 +10,6 @@
 # (~150 ms × ~100 configs = ~15s) on every invocation.
 
 import argparse
-import glob
 import json
 import logging
 import os
@@ -36,9 +35,11 @@ log.setLevel(logging.INFO)
 from . import ident as func_ident  # noqa: E402
 
 # Anchor at the repo root: the package sits one level below it, so the
-# signatures tree lives at parent / "signatures" / "configs".
+# signatures tree lives at parent / "signatures". Each toolchain's
+# cfg JSON, yara rules, dlist, and alist all sit together under
+# signatures/<family>/<arch>/.
 _REPO_ROOT = Path(__file__).resolve().parent.parent
-TOOLCHAIN_CONFIG_DIR = _REPO_ROOT / "signatures" / "configs"
+SIGNATURES_DIR = _REPO_ROOT / "signatures"
 
 
 def set_args():
@@ -72,7 +73,7 @@ def _score_cfg(arg):
     idx, cfg_path, cfg_info = arg
     try:
         target_info = func_ident.run_one_with_state(
-            _WORKER_STATE, cfg_info, relative_paths=True)
+            _WORKER_STATE, cfg_info, cfg_path=cfg_path)
     except Exception as exc:
         return idx, cfg_path, None, repr(exc)
     names = set()
@@ -84,7 +85,7 @@ def _score_cfg(arg):
 
 def lief_arch_candidates(target_path):
     # Map a LIEF machine_type to the set of arch labels that appear as
-    # `arch` fields in signatures/configs/**/*.json. Keep parity with the
+    # signatures/<family>/<arch>/ directory names. Keep parity with the
     # original mapping so the candidate set does not shrink silently.
     b = lief.parse(target_path)
     # Strip "ARCH." prefix and normalise to uppercase — LIEF 0.16+
@@ -175,37 +176,54 @@ def cfg_libc_family(cfg_name):
     return None  # unknown — keep as a candidate
 
 
-# Sort key for the candidate cfg list — preserves the README's
+# Sort key for the candidate family directories — preserves the README's
 # "try these toolchain families first" recommendation so the first cfg
 # returning the best score is found earlier under -v false (default).
-_FAMILY_PRIORITY = {'fl-': 0, 'al-': 1, 'bl-': 2, 'br-': 3, 'ucli-pub-': 4}
+_FAMILY_PRIORITY = {
+    'firmware-linux':  0,
+    'aboriginal-linux': 1,
+    'bootlin-stable':  2,
+    'buildroot':       3,
+    'uclibc-pub':      4,
+}
 
 
-def _cfg_sort_key(cfg_path):
-    name = os.path.basename(cfg_path)
-    for prefix, pri in _FAMILY_PRIORITY.items():
-        if name.startswith(prefix):
-            return (pri, name)
-    return (99, name)
+def _family_sort_key(family_name):
+    return (_FAMILY_PRIORITY.get(family_name, 99), family_name)
 
 
 def candidate_cfgs(target_path, arch_filter, libc_filter):
+    """Return [(cfg_path, cfg_info), ...] for cfgs matching the filters.
+
+    The arch filter is applied at the filesystem level — only the
+    ``signatures/<family>/<arch>/`` directories whose ``<arch>``
+    matches are walked, so the cost scales with the survivor set, not
+    the full catalog. The libc filter is applied per-file by parsing
+    the signature basename.
+    """
+    arch_set = set(arch_filter)
     cfgs = []
-    # signatures/configs/ is partitioned per family; recurse so all
-    # toolchains contribute candidates regardless of subdirectory.
-    for cfg_path in sorted(glob.glob(str(TOOLCHAIN_CONFIG_DIR / "**" / "*.json"), recursive=True),
-                           key=_cfg_sort_key):
-        with open(cfg_path) as f:
-            info = json.load(f)
-        if info['arch'] not in arch_filter:
-            continue
-        if libc_filter is not None:
-            fam = cfg_libc_family(os.path.basename(cfg_path))
-            # Keep cfgs whose libc family is unknown (None) — better to
-            # over-include than to silently drop a viable candidate.
-            if fam is not None and fam not in libc_filter:
+    if not SIGNATURES_DIR.is_dir():
+        return cfgs
+    family_dirs = sorted(
+        (p for p in SIGNATURES_DIR.iterdir() if p.is_dir()),
+        key=lambda p: _family_sort_key(p.name),
+    )
+    for family_dir in family_dirs:
+        for arch_dir in sorted(family_dir.iterdir()):
+            if not arch_dir.is_dir() or arch_dir.name not in arch_set:
                 continue
-        cfgs.append((cfg_path, info))
+            for cfg_path in sorted(arch_dir.glob("*.json")):
+                if libc_filter is not None:
+                    fam = cfg_libc_family(cfg_path.name)
+                    # Keep cfgs whose libc family is unknown (None) —
+                    # better to over-include than silently drop a
+                    # viable candidate.
+                    if fam is not None and fam not in libc_filter:
+                        continue
+                with open(cfg_path) as f:
+                    info = json.load(f)
+                cfgs.append((str(cfg_path), info))
     return cfgs
 
 
@@ -250,7 +268,7 @@ def select_best(target_path, jobs, *, arch=None, libc=None):
     cfgs = candidate_cfgs(target_path, arch_filter, libc_filter)
     log.info('%d cfg(s) after arch+libc filter', len(cfgs))
     if not cfgs:
-        log.error('no signatures/configs entry matches the target')
+        log.error('no signatures/<family>/<arch>/ entry matches the target')
         return []
 
     log.info('precomputing target state')

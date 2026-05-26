@@ -3,9 +3,9 @@
 #
 # Pipeline: download tarball + .sha256 -> verify -> extract -> run
 # stelftools.info_create -> validate. The Python entry point writes
-# directly into signatures/{yara,configs,deps/{dlists,aliases}}/<family>/
-# so this wrapper only handles I/O and cleanup; the runner never holds
-# more than one extracted toolchain at a time.
+# directly into signatures/<family>/<arch>/, so this wrapper only
+# handles I/O and cleanup; the runner never holds more than one
+# extracted toolchain at a time.
 #
 # Requires stelftools.info_create to receive an *absolute* toolchain path:
 # its symlink-exclusion logic compares each .a's path against

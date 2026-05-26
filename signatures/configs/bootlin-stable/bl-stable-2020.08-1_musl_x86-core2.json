@@ -1,8 +1,0 @@
-{
-  "name" : "bl-stable-2020.08-1_musl_x86-core2",
-  "arch" : "x86-core2",
-  "yara_path" : "signatures/yara/bootlin-stable/bl-stable-2020.08-1_musl_x86-core2.yara",
-  "compiler_path" : "",
-  "alias_list_path" : "signatures/deps/aliases/bootlin-stable/bl-stable-2020.08-1_musl_x86-core2.alist",
-  "dependency_list_path" : "signatures/deps/dlists/bootlin-stable/bl-stable-2020.08-1_musl_x86-core2.dlist"
-}

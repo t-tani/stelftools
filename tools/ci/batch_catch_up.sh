@@ -134,7 +134,7 @@ printf '[batch] fetching Bootlin index ...\n' >&2
 
 printf '[batch] computing missing entries ...\n' >&2
 "$python_bin" tools/ci/bootlin_diff.py "$idx_json" \
-    --yara-dir signatures/yara \
+    --signatures-dir signatures \
     --out "$missing_json"
 
 # Filter again at the on-disk level: bootlin_diff already drops anything
@@ -151,7 +151,7 @@ with open(sys.argv[1]) as f:
 
 for r in rows:
     yara_path = os.path.join(
-        "signatures", "yara", r["family"], f"{r['signature_name']}.yara"
+        "signatures", r["family"], r["arch"], f"{r['signature_name']}.yara"
     )
     if os.path.exists(yara_path):
         continue
@@ -209,7 +209,7 @@ build_one() {
 
     # Late check: a parallel sibling may have generated the yara since
     # the TSV was built. Cheap to re-test; saves a full tarball fetch.
-    if [ -f "signatures/yara/$family/$sig_name.yara" ]; then
+    if [ -f "signatures/$family/$arch/$sig_name.yara" ]; then
         printf '[%4d/%4d skip ] %s (already present)\n' \
                "$idx" "$total" "$sig_name" >&2
         printf '%s\n' "$sig_name" >> "$skipped_log"

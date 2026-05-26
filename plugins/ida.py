@@ -76,10 +76,13 @@ def func_ident(tc_cfg_path):
     # load config file
     target_path      = ida_nalt.get_input_file_path()
     target_arch      = tc_cfg_info['arch']
-    yara_path        = STELFTOOLS_PATH + tc_cfg_info['yara_path']
-    compiler_path    = tc_cfg_info['compiler_path']
-    alias_list_path  = STELFTOOLS_PATH + tc_cfg_info['alias_list_path']
-    depend_list_path = STELFTOOLS_PATH + tc_cfg_info['dependency_list_path']
+    # yara / dlist / alist live next to the cfg JSON under
+    # signatures/<family>/<arch>/.
+    cfg_path_obj = Path(tc_cfg_path)
+    yara_path        = str(cfg_path_obj.with_suffix('.yara'))
+    compiler_path    = tc_cfg_info.get('compiler_path', '')
+    alias_list_path  = str(cfg_path_obj.with_suffix('.alist'))
+    depend_list_path = str(cfg_path_obj.with_suffix('.dlist'))
 
     alias_flag = False
     linkorder_flag = False
@@ -171,19 +174,8 @@ def func_ident(tc_cfg_path):
 def stelftools_create(tc_path, tc_name, arch, tc_compiler_path):
     print('start stelftools : create toolchain items -->')
     start = time.time()
-    yara_rule_path, depend_list_path, alias_list_path = mkrule_and_other(tc_path, tc_name)
-    #print(yara_rule_path)
-    #print(depend_list_path)
-    #print(alias_list_path)
-
-    create_toolchain_cfg_file( \
-            tc_name, \
-            arch, \
-            yara_rule_path, \
-            tc_compiler_path, \
-            alias_list_path, \
-            depend_list_path \
-            )
+    yara_rule_path, depend_list_path, alias_list_path = mkrule_and_other(tc_path, tc_name, arch)
+    create_toolchain_cfg_file(tc_name, arch, tc_compiler_path)
 
     end = time.time()
     print("<-- finish stelftools %.2f seconds" % (end-start))

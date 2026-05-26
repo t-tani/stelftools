@@ -1,8 +1,0 @@
-{
-  "name" : "br-2020.08.3_uclibc_ppc",
-  "arch" : "ppc",
-  "yara_path" : "signatures/yara/buildroot/br-2020.08.3_uclibc_ppc.yara",
-  "compiler_path" : "",
-  "alias_list_path" : "signatures/deps/aliases/buildroot/br-2020.08.3_uclibc_ppc.alist",
-  "dependency_list_path" : "signatures/deps/dlists/buildroot/br-2020.08.3_uclibc_ppc.dlist"
-}

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Diff a Bootlin index against the on-disk ``signatures/yara/`` tree.
+"""Diff a Bootlin index against the on-disk signature tree.
 
-Reads the JSON array produced by ``bootlin_index.py`` and emits entries that
-do not yet have a matching ``signatures/yara/<family>/<signature_name>.yara``
-file. The yara tree is scanned recursively so any family subdirectory is
-discovered.
+Reads the JSON array produced by ``bootlin_index.py`` and emits entries
+that do not yet have a matching
+``signatures/<family>/<arch>/<signature_name>.yara`` file. The tree is
+scanned recursively so any arch subdirectory is discovered.
 
 The output is JSON suitable for use as a GitHub Actions matrix ``include``
 list: each row carries the ``signature_name`` and ``family`` plus the
@@ -33,14 +33,14 @@ def _load_index(path: str) -> list[dict]:
     return [json.loads(line) for line in text.splitlines() if line.strip()]
 
 
-def _existing_signatures(yara_dir: Path) -> set[str]:
-    # signatures/yara/ is partitioned into per-family subdirectories,
-    # so the scan recurses to catch every committed *.yara stem.
-    return {p.stem for p in yara_dir.rglob("*.yara")}
+def _existing_signatures(sig_dir: Path) -> set[str]:
+    # signatures/<family>/<arch>/ holds the *.yara files together with
+    # their cfg / dlist / alist siblings; recurse to catch every stem.
+    return {p.stem for p in sig_dir.rglob("*.yara")}
 
 
-def diff(entries: list[dict], yara_dir: Path) -> list[dict]:
-    existing = _existing_signatures(yara_dir)
+def diff(entries: list[dict], sig_dir: Path) -> list[dict]:
+    existing = _existing_signatures(sig_dir)
     return [e for e in entries if e["signature_name"] not in existing]
 
 
@@ -53,9 +53,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Path to JSON index produced by bootlin_index.py (default: stdin)",
     )
     p.add_argument(
+        "--signatures-dir",
         "--yara-dir",
-        default=str(REPO_ROOT / "signatures" / "yara"),
-        help="Directory (scanned recursively) whose *.yara stems are treated as already-generated",
+        dest="signatures_dir",
+        default=str(REPO_ROOT / "signatures"),
+        help="Signature tree root (scanned recursively) whose *.yara stems are treated as already-generated",
     )
     p.add_argument(
         "--out",
@@ -72,7 +74,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
     entries = _load_index(args.index)
-    missing = diff(entries, Path(args.yara_dir))
+    missing = diff(entries, Path(args.signatures_dir))
     payload = json.dumps(missing, sort_keys=True)
     if args.github_matrix:
         line = f"matrix={payload}"

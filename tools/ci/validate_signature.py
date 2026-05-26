@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Sanity-check a freshly generated stelftools signature triple.
 
-The four files live under ``<repo>/signatures/`` partitioned by family
-(``signatures/yara/<family>/<name>.yara`` plus the matching
-``signatures/configs/`` / ``signatures/deps/{dlists,aliases}/`` paths).
+The four files (cfg JSON, YARA rules, dlist, alist) live together under
+``<repo>/signatures/<family>/<arch>/<name>.{json,yara,dlist,alist}``.
 The family for a given signature name is derived by ``families.family_for``
-so the validator stays a single-arg entry point.
+and the arch is read from the cfg JSON, so the validator stays a
+single-arg entry point.
 
 This confirms that for the four files keyed by ``name``:
 
@@ -63,10 +63,21 @@ def validate(repo_root: Path, name: str, min_rules: int) -> list[str]:
     from stelftools.families import family_for  # type: ignore[import-not-found]
     family = family_for(name)
     sig_root = repo_root / "signatures"
-    yara_path  = sig_root / "yara"    / family / f"{name}.yara"
-    cfg_path   = sig_root / "configs" / family / f"{name}.json"
-    dlist_path = sig_root / "deps" / "dlists"  / family / f"{name}.dlist"
-    alist_path = sig_root / "deps" / "aliases" / family / f"{name}.alist"
+
+    # The arch directory holding the cfg is the source of truth; locate
+    # the cfg JSON first, then derive the sibling artifacts from it.
+    cfg_matches = list((sig_root / family).glob(f"*/{name}.json"))
+    if not cfg_matches:
+        errors.append(f"missing config file under {sig_root / family}/<arch>/{name}.json")
+        return errors
+    if len(cfg_matches) > 1:
+        errors.append(f"multiple config files for {name}: {cfg_matches}")
+        return errors
+    cfg_path = cfg_matches[0]
+    arch_dir = cfg_path.parent
+    yara_path  = arch_dir / f"{name}.yara"
+    dlist_path = arch_dir / f"{name}.dlist"
+    alist_path = arch_dir / f"{name}.alist"
 
     if not yara_path.is_file():
         errors.append(f"missing yara file: {yara_path}")
@@ -86,21 +97,24 @@ def validate(repo_root: Path, name: str, min_rules: int) -> list[str]:
     except Exception as exc:  # pragma: no cover - yara_x bubble-up
         errors.append(f"yara-x compile failed: {exc}")
 
-    if not cfg_path.is_file():
-        errors.append(f"missing config file: {cfg_path}")
-    else:
-        try:
-            cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError as exc:
-            errors.append(f"config not valid JSON: {exc}")
-            cfg = None
-        if cfg is not None:
-            required = {"name", "arch", "yara_path", "alias_list_path", "dependency_list_path"}
-            missing = required - set(cfg)
-            if missing:
-                errors.append(f"config missing keys: {sorted(missing)}")
-            elif cfg.get("name") != name:
+    try:
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        errors.append(f"config not valid JSON: {exc}")
+        cfg = None
+    if cfg is not None:
+        required = {"name", "arch"}
+        missing = required - set(cfg)
+        if missing:
+            errors.append(f"config missing keys: {sorted(missing)}")
+        else:
+            if cfg.get("name") != name:
                 errors.append(f"config name mismatch: {cfg.get('name')!r} != {name!r}")
+            if cfg.get("arch") != arch_dir.name:
+                errors.append(
+                    f"config arch mismatch: {cfg.get('arch')!r} != "
+                    f"{arch_dir.name!r} (parent directory)"
+                )
 
     for label, path in (("dlist", dlist_path), ("alist", alist_path)):
         if not path.is_file():

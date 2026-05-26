@@ -1,8 +1,0 @@
-{
-  "name" : "bl-stable-2018.02-1_musl_armv5-eabi",
-  "arch" : "armv5-eabi",
-  "yara_path" : "signatures/yara/bootlin-stable/bl-stable-2018.02-1_musl_armv5-eabi.yara",
-  "compiler_path" : "",
-  "alias_list_path" : "signatures/deps/aliases/bootlin-stable/bl-stable-2018.02-1_musl_armv5-eabi.alist",
-  "dependency_list_path" : "signatures/deps/dlists/bootlin-stable/bl-stable-2018.02-1_musl_armv5-eabi.dlist"
-}

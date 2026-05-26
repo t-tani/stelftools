@@ -1,8 +1,0 @@
-{
-  "name" : "synopsys_arc_gnu_2017.09_prebuilt_uclibc_le_arc700_linux",
-  "arch" : "arc",
-  "yara_path" : "signatures/yara/synopsys-arc-gnu/synopsys_arc_gnu_2017.09_prebuilt_uclibc_le_arc700_linux.yara",
-  "compiler_path" : "",
-  "alias_list_path" : "signatures/deps/aliases/synopsys-arc-gnu/synopsys_arc_gnu_2017.09_prebuilt_uclibc_le_arc700_linux.alist",
-  "dependency_list_path" : "signatures/deps/dlists/synopsys-arc-gnu/synopsys_arc_gnu_2017.09_prebuilt_uclibc_le_arc700_linux.dlist"
-}

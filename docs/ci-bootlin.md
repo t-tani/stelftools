@@ -1,17 +1,16 @@
 # Bootlin signature refresh
 
-This workflow keeps `signatures/yara/bootlin-stable/bl-*.yara` (plus matching toolchain
-config, dependency list, and alias list files) in sync with the prebuilt
-toolchains published at https://toolchains.bootlin.com . Upstream
-stelftools shipped Bootlin coverage through release 2021.11-1; everything
-newer is generated here.
+This workflow keeps `signatures/bootlin-stable/<arch>/bl-*.{yara,json,dlist,alist}`
+in sync with the prebuilt toolchains published at https://toolchains.bootlin.com .
+Upstream stelftools shipped Bootlin coverage through release 2021.11-1;
+everything newer is generated here.
 
 ## Pieces
 
 | Path | Purpose |
 |---|---|
 | `tools/ci/bootlin_index.py` | Scrape the per-arch `tarballs/` directory listings into a JSON array of `(arch, libc, stability, release, tarball_url, sha256_url, signature_name)` rows |
-| `tools/ci/bootlin_diff.py` | Drop rows whose `signature_name.yara` already lives in `signatures/yara/` |
+| `tools/ci/bootlin_diff.py` | Drop rows whose `signature_name.yara` already lives under `signatures/<family>/<arch>/` |
 | `tools/ci/build_bootlin_signature.sh` | Download + verify + extract + run `stelftools.info_create` + validate, for one row |
 | `tools/ci/validate_signature.py` | Confirm the generated YARA compiles under `yara-x` and the rule count clears a permissive floor |
 | `.github/workflows/refresh-bootlin.yml` | `discover -> build (matrix) -> commit` runner |
@@ -47,11 +46,11 @@ extracted tree to its absolute path before invoking
 
 Each new Bootlin release adds roughly forty signature files at
 10–20 MB apiece, so a single full release lands around 500–600 MB
-in the repository. `signatures/yara/` already weighs 3.5 GB.
+in the repository. The whole `signatures/` tree already weighs 3.5 GB.
 
 The current policy is to commit signatures directly to keep parity
 with the historical `bl-stable-*` set. Revisit this once total
-`signatures/yara/` size exceeds 6 GB (close to GitHub's soft-limit
+`signatures/` size exceeds 6 GB (close to GitHub's soft-limit
 warning band at 5 GB), at which point switching to Git LFS or
 GitHub Release attachments becomes the better option.
 

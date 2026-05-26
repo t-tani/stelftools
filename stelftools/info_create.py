@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import io
+import json
 import multiprocessing
 import os
 import sys
@@ -20,28 +21,36 @@ from .families import family_for
 from pathlib import Path
 
 # Anchor at the repository root (the parent of the stelftools/ package
-# directory). Downstream code joins relative paths from the JSON cfg
-# (`signatures/yara/<family>/...` etc.) onto this prefix.
+# directory). Reserved for non-signature caches (.cache/runtime, etc.);
+# signature artifacts live under signatures/<family>/<arch>/.
 STELFTOOLS_PATH = str(Path(__file__).resolve().parent.parent) + "/"
 
 MINIMUM_PATTERN_LENGTH = 0
 MAXIMUM_PATTERN_LENGTH=15000
 
-def create_toolchain_cfg_file(tc_name, arch, yara_rule_path, tc_compiler_path, alias_list_path, depend_list_path):
-    yara_rule_path = yara_rule_path[len(STELFTOOLS_PATH):]
-    alias_list_path = alias_list_path[len(STELFTOOLS_PATH):]
-    depend_list_path = depend_list_path[len(STELFTOOLS_PATH):]
-    cfg_dir = Path(STELFTOOLS_PATH) / "signatures" / "configs" / family_for(tc_name)
-    cfg_dir.mkdir(parents=True, exist_ok=True)
-    with open(cfg_dir / (tc_name + ".json"), "w") as f:
-        f.write("{\n")
-        f.write("  \"name\" : \"" + tc_name + "\",\n")
-        f.write("  \"arch\" : \"" + arch + "\",\n")
-        f.write("  \"yara_path\" : \"" + yara_rule_path + "\",\n")
-        f.write("  \"compiler_path\" : \"" + tc_compiler_path + "\",\n")
-        f.write("  \"alias_list_path\" : \"" + alias_list_path + "\",\n")
-        f.write("  \"dependency_list_path\" : \"" + depend_list_path + "\"\n")
-        f.write("}\n")
+
+def signature_dir(tc_name: str, arch: str) -> Path:
+    """Per-toolchain output directory: signatures/<family>/<arch>/."""
+    return Path(STELFTOOLS_PATH) / "signatures" / family_for(tc_name) / arch
+
+
+def create_toolchain_cfg_file(tc_name, arch, tc_compiler_path):
+    """Write the cfg JSON next to its yara / dlist / alist siblings.
+
+    Paths used by ident.py are derived from the cfg file's location at
+    load time, so the JSON no longer stores yara_path / alias_list_path /
+    dependency_list_path. Only name, arch, and compiler_path remain.
+    """
+    out_dir = signature_dir(tc_name, arch)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    cfg = {
+        "name": tc_name,
+        "arch": arch,
+        "compiler_path": tc_compiler_path,
+    }
+    with open(out_dir / (tc_name + ".json"), "w") as f:
+        json.dump(cfg, f, indent=2)
+        f.write("\n")
 
 _STATIC_LIB_EXTS = ('.a', '.o', '.os', '.lo')
 
@@ -243,7 +252,7 @@ def _default_worker_count():
     return max(1, min(8, cpu // 2))
 
 
-def mkrule_and_other(tc_path, tc_name, workers=None):
+def mkrule_and_other(tc_path, tc_name, arch, workers=None):
     """Build the yara, dlist, and alist outputs in a single (optionally parallel) file walk.
 
     The earlier pipeline ran mkrule() to discover opcodes and write the
@@ -269,15 +278,11 @@ def mkrule_and_other(tc_path, tc_name, workers=None):
     output byte-for-byte. ``workers=None`` consults
     :func:`_default_worker_count`.
     """
-    family = family_for(tc_name)
-    yara_dir  = Path(STELFTOOLS_PATH) / "signatures" / "yara"           / family
-    dlist_dir = Path(STELFTOOLS_PATH) / "signatures" / "deps" / "dlists" / family
-    alist_dir = Path(STELFTOOLS_PATH) / "signatures" / "deps" / "aliases" / family
-    for d in (yara_dir, dlist_dir, alist_dir):
-        d.mkdir(parents=True, exist_ok=True)
-    yara_output_path  = str(yara_dir  / (tc_name + ".yara"))
-    dlist_output_path = str(dlist_dir / (tc_name + ".dlist"))
-    alist_output_path = str(alist_dir / (tc_name + ".alist"))
+    out_dir = signature_dir(tc_name, arch)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    yara_output_path  = str(out_dir / (tc_name + ".yara"))
+    dlist_output_path = str(out_dir / (tc_name + ".dlist"))
+    alist_output_path = str(out_dir / (tc_name + ".alist"))
 
     static_lib_file_list = get_static_lib_file_list(tc_path)
 
@@ -402,7 +407,7 @@ def main():
     arch = args.arch
 
     workers = None if args.workers <= 0 else args.workers
-    yara_rule_path, depend_list_path, alias_list_path = mkrule_and_other(tc_path, tc_name, workers=workers)
+    yara_rule_path, depend_list_path, alias_list_path = mkrule_and_other(tc_path, tc_name, arch, workers=workers)
     if os.path.exists(yara_rule_path):
         print('[successfully created] yara rule : %s' % yara_rule_path)
     if os.path.exists(tc_compiler_path):
@@ -412,14 +417,7 @@ def main():
     if os.path.exists(alias_list_path):
         print('[successfully created] alias list : %s' % alias_list_path)
 
-    create_toolchain_cfg_file( \
-            tc_name, \
-            arch, \
-            yara_rule_path, \
-            tc_compiler_path, \
-            alias_list_path, \
-            depend_list_path \
-            )
+    create_toolchain_cfg_file(tc_name, arch, tc_compiler_path)
 
 
 if __name__ == '__main__':

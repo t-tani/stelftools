@@ -31,7 +31,7 @@ stelftools-mkrule -name {toolchain name} -tp {toolchain directory path} -cp {too
 - -arch: the architecture of a toolchain
 #### Identification of library functions
 ```bash
-stelftools-ident -cfg ./signatures/configs/<family>/{name of toolchain}.json -target /path/to/target
+stelftools-ident -cfg ./signatures/<family>/<arch>/{name of toolchain}.json -target /path/to/target
 ```
 - -cfg: the config file for a toolchain 
   - *Recommendation*
