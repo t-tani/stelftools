@@ -35,6 +35,9 @@ dependencies = [
     "pyelftools>=0.30",
     "python-magic>=0.4.27",
     "yara-x>=0.10",
+    # Used by stelftools.sigfetch to decompress per-(family,arch) tar
+    # archives published as GitHub Release attachments.
+    "zstandard>=0.22",
 ]
 
 [project.optional-dependencies]
@@ -50,6 +53,7 @@ stelftools-ident = "stelftools.ident:main"
 stelftools-mkrule = "stelftools.info_create:main"
 stelftools-bruteforce = "stelftools.bruteforce:main"
 stelftools-symbolize = "stelftools.symbolize:main"
+stelftools-fetch-signatures = "stelftools.sigfetch:main"
 
 [project.urls]
 Homepage = "https://github.com/t-tani/stelftools"
@@ -58,6 +62,13 @@ Upstream = "https://github.com/shuakabane/stelftools"
 [tool.setuptools.packages.find]
 include = ["stelftools*"]
 exclude = ["plugins*", "tools*", "samples*", "signatures*", "research*", "docs*"]
+
+[tool.setuptools.package-data]
+# Ship the signatures manifest inside the wheel so a `pip install`
+# carries the pointer set even when the user has no checkout. The file
+# is updated by tools/ci/publish_signatures_release.sh whenever a new
+# Release attachment set is published.
+stelftools = ["signatures_manifest.json"]
 
 [tool.ruff]
 target-version = "py310"
