@@ -45,18 +45,36 @@ def create_toolchain_cfg_file(tc_name, arch, yara_rule_path, tc_compiler_path, a
 _STATIC_LIB_EXTS = ('.a', '.o', '.os', '.lo')
 
 
+def _file_sha256(path, chunk=1 << 16):
+    h = hashlib.sha256()
+    with open(path, 'rb') as f:
+        while True:
+            buf = f.read(chunk)
+            if not buf:
+                break
+            h.update(buf)
+    return h.digest()
+
+
 def get_static_lib_file_list(tc_path):
-    """Static-library files reachable from ``tc_path``, deduplicated by real path.
+    """Static-library files reachable from ``tc_path``, deduplicated to one visit per content.
 
     The earlier ``path != realpath(path)`` test combined with a
     symmetric-difference set XOR silently dropped every archive when
     ``tc_path`` was relative (every relative path differs from its
     realpath) or when any parent directory was a symlink (Bootlin ships
-    ``lib64 -> lib``). We want to keep one entry per underlying file
-    while folding aliases (``libm.a -> libm-2.39.a``) and directory
-    symlinks (``lib64/foo.a`` vs ``lib/foo.a``) into a single visit.
-    Indexing by :func:`os.path.realpath` does exactly that, and returning
-    the first reachable path keeps the existing sort order stable.
+    ``lib64 -> lib``). The first dedup pass here indexes by
+    :func:`os.path.realpath` so file-symlink aliases (``libm.a ->
+    libm-2.39.a``) and directory-symlink aliases (``lib64/foo.a`` vs
+    ``lib/foo.a``) collapse to a single entry.
+
+    Bootlin additionally publishes byte-identical copies of several
+    archives under separate inodes — for the aarch64/glibc tarball the
+    overlap covers libgomp, libstdc++, libstdc++fs, libstdc++exp,
+    libsupc++ — and processing each twice ate roughly five minutes of
+    the prior run. A second pass groups survivors by file size (free)
+    and only hashes within size-collision buckets, so the dedup cost is
+    dominated by hashing libstdc++.a once instead of twice.
     """
     seen = {}
     for f in glob.glob(tc_path + '/**', recursive=True):
@@ -67,7 +85,23 @@ def get_static_lib_file_list(tc_path):
         real = os.path.realpath(f)
         if real not in seen:
             seen[real] = f
-    return sorted(seen.values())
+
+    by_size = collections.defaultdict(list)
+    for path in seen.values():
+        by_size[os.path.getsize(path)].append(path)
+
+    final = []
+    for paths in by_size.values():
+        if len(paths) == 1:
+            final.append(paths[0])
+            continue
+        by_hash = {}
+        for path in paths:
+            digest = _file_sha256(path)
+            if digest not in by_hash:
+                by_hash[digest] = path
+        final.extend(by_hash.values())
+    return sorted(final)
 
 ## mkrule
 def mkrule(tc_path, tc_name):
