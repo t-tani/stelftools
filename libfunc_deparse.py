@@ -88,6 +88,19 @@ def analy_symtab(e, fname, symtab_list, reltab_dict):
             #print(st_index, st_value, st_size, st_type, st_bind, st_vis, st_ndx, st_name) # dbg
             symtab_func_section_info.append([st_ndx, st_name, st_value, st_size])
     symtab_list = uniq_symtab_list(symtab_func_section_info)
+    # Materialise the linked symbol tables eagerly so each relocation does
+    # not re-parse a single entry from the ELF stream. pyelftools'
+    # get_symbol(idx) reseeks the file per call; on libc.a that produced
+    # ~300k seeks and dominated mkother's runtime.
+    sym_name_cache = {}
+
+    def _sym_names(sh_link):
+        cached = sym_name_cache.get(sh_link)
+        if cached is None:
+            cached = [s.name for s in e.get_section(sh_link).iter_symbols()]
+            sym_name_cache[sh_link] = cached
+        return cached
+
     #debugprint_list(symtab_list) # dbg
     for st_ndx, st_name, st_value, st_size in symtab_list:
         _object_rel_info_list = []
@@ -101,13 +114,12 @@ def analy_symtab(e, fname, symtab_list, reltab_dict):
             #print(fname)
             #print("not find the section to the section number in the object file : %s" % (fname), file=sys.stderr)
             continue
-        symbols = e.get_section(section.header.sh_link)
+        names = _sym_names(section.header.sh_link)
         #print("%s : 0x%x ~ 0x%x" % (caller, start, end))
         for rel in section.iter_relocations():
             if rel['r_info_type'] == 16: # R_386_TLS_GOTIE
                 continue
-            callee = del_alias_funcname(symbols.get_symbol(rel.entry['r_info_sym']).name)
-            #callee = symbols.get_symbol(rel.entry['r_info_sym']).name
+            callee = del_alias_funcname(names[rel.entry['r_info_sym']])
             if start <= rel['r_offset'] <= end and len(callee):
                 r_offset = rel['r_offset'] - start
                 _object_rel_info_list.append([callee, r_offset])
