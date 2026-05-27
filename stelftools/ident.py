@@ -42,6 +42,14 @@ TOP_LIBC_FUNC_LIST = set(['puts', 'fcntl', 'fcntl64', 'close', 'fork', 'vfork', 
 GLIBC_BOT_LIBC_FUNC_LIST = ['free_mem']
 MAX_PATTERN_LENGTH = 15000
 
+
+# ---------------------------------------------------------------------------
+# Output formatting -- libc-area heuristics that classify which matched
+# addresses belong to the linked-in library code and the four output
+# styles the CLI exposes (default, compare, ida/ghidra, count).
+# ---------------------------------------------------------------------------
+
+
 def get_top_addr(functions, skip_libc_func):
     top_addr = 0
     for _addr in sorted(functions.keys()):
@@ -178,6 +186,16 @@ def output(target_info, target_path, output_mode):
     else:
         print("[error] does not support output style : %s" % output_mode)
         exit(-1)
+
+
+# ---------------------------------------------------------------------------
+# Target inspection -- ELF header read, executable region bounds, the
+# capstone / objdump disassembly fan-out, and the per-arch call-site
+# parser that turns the disassembled instructions into a call_map.
+# MIPS GOT resolution and the symtab-info loaders also live here so
+# every read-the-binary routine stays adjacent.
+# ---------------------------------------------------------------------------
+
 
 def get_bin_arch(target):
     try:
@@ -674,6 +692,15 @@ def _mips_got_map_from_segments(target_path, endian, word):
     return _mips_got_map_from_data(
         endian, word, got_base, got_data, reginfo_data)
 
+# ---------------------------------------------------------------------------
+# YARA pipeline -- compile the .yara file (with .yarc disk cache), scan
+# the target, fold matches into a function table, and merge in unmatched
+# call sites. ``format_match_res`` is the bridge from yara-x match
+# objects to the canonical {addr: {names, size, detected, category}}
+# shape every downstream pass consumes.
+# ---------------------------------------------------------------------------
+
+
 def format_match_res(match_res, symtab_info, risc_v_flag):
     # match_res: iterable of yara_x.Rule (ScanResults.matching_rules).
     # The yara-x API replaces yara-python's m.strings[*].instances[*]
@@ -899,6 +926,14 @@ def compile_yara_file(yara_rule_path):
     return rules, lengths
 
 
+# ---------------------------------------------------------------------------
+# Target state + mismatch / alias cleanup -- compute_target_state caches
+# the cfg-independent per-binary state for the bruteforce driver;
+# del_mismatch drops nested / overlapping rule hits; the alias passes
+# strip duplicate names recorded in the per-toolchain ``.alist``.
+# ---------------------------------------------------------------------------
+
+
 def compute_target_state(target_path):
     # Compute the target-side state used by run_one_with_state():
     # the executable-segment table, callsite map, instruction bounds,
@@ -1089,6 +1124,19 @@ def _match_array_index_list(_list, func_name_list):
     return sorted(set(index_list))
 def _match_array_index(_list, func_name):
     return sorted(set([index for index, _func_name in enumerate(_list) if _func_name == func_name]))
+
+# ---------------------------------------------------------------------------
+# Identification strategies -- link-order, dependency, and consecutive-
+# candidate refinement passes. ``run_one_with_state`` loops over the
+# linkorder + depend pair until both report zero new identifications;
+# the consecutive-candidate filter then runs once at the end. Each
+# pass narrows the alias multiset on a matched address using a
+# different external signal: gcc-driven dummy-binary link order
+# (linkorder), recorded caller-callee dependencies from the corpus
+# build (depend), or runs of consecutive single-candidate addresses
+# (consecutive).
+# ---------------------------------------------------------------------------
+
 
 def link_order_base_identificate(functions, alias_list, func_link_order_list):
     #SEARCH_DEPTH = 10
@@ -1577,6 +1625,14 @@ def multiple_consecutive_candidate_filt(functions, link_order_list, alias_list):
                             #        detect_fname))
                             functions[libfunc_addr_list[i+count_i]]['names'] = [detect_fname]
     return functions
+
+
+# ---------------------------------------------------------------------------
+# CLI driver + orchestrator -- ``arch_pattern_length`` is the per-arch
+# starting bucket size the multi-pass YARA match loop counts down from;
+# ``run_one_with_state`` is the library entry point bruteforce drivers
+# call; ``main`` is the legacy ``python -m stelftools.ident`` route.
+# ---------------------------------------------------------------------------
 
 
 def arch_pattern_length(arch):
