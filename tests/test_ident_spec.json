@@ -1,0 +1,39 @@
+{
+  "schema_version": 2,
+  "_comment": "Regression spec for stelftools.ident.run_one + ident.output. Each entry pairs a Bootlin toolchain with the matching cross-gcc, a target binary compiled from samples/src/main.c with that gcc, and the (yara, alist, dlist) signature triple generated from the same toolchain's static libraries. The builder lives in tests/build_ident_goldens.py; the heavy intermediate state (full toolchain extract, signature triple, target binary) lives in .cache/_bootlin_work/ and is gitignored. Only the small text goldens under tests/golden_ident/ are committed. Schema v2 supersedes v1 (yara-only against Bootlin libc.a leaves); v1 exercised the basic ident pipeline but matched cross-toolchain noise. v2 builds the target with the same toolchain that supplied the signatures, so YARA match + alias delete + depend-ID is exercised against a realistic match rate. The link-order identification path is *not* yet covered -- DubMaker's gcc-driven dummy build converges only on the very first clean-cache invocation and reliably hits its loop_limit on every subsequent run; coverage there is blocked on making that path reproducible across Python invocations.",
+  "entries": [
+    {
+      "id": "x86-64",
+      "arch": "x86-64",
+      "libc": "glibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "760acd5c3159448b618e237b61935335baada74fe0cdc0d7611826cb49b41c8c",
+      "gcc_relpath": "bin/x86_64-linux-gcc",
+      "cfg_arch": "x86-64"
+    },
+    {
+      "id": "aarch64",
+      "arch": "aarch64",
+      "libc": "glibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "dfb47eee874eef9e8a7fc042eee4e0a183f444b6bcde6a82fef8f009918389c9",
+      "gcc_relpath": "bin/aarch64-linux-gcc",
+      "cfg_arch": "aarch64"
+    },
+    {
+      "id": "mips32el",
+      "arch": "mips32el",
+      "libc": "glibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "1085fe6b13d74205ef6e92d1d40fb3960bf6e4bad50555c723fa07416cb53c1c",
+      "gcc_relpath": "bin/mipsel-linux-gcc",
+      "cfg_arch": "mips32el"
+    }
+  ]
+}

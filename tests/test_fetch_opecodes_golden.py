@@ -20,8 +20,6 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from stelftools import mkrule  # noqa: E402
-
 # Re-use the canonicalisation + driver from the golden builder so any
 # normalisation tweak lands in one place.
 from tests.build_goldens import (  # noqa: E402
