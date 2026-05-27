@@ -30,15 +30,17 @@ from stelftools.elf import (
 from stelftools.ident import (
     del_alias,
     del_mismatch,
-    format_match_res,
     get_alias_list,
-    get_target_fp,
-    get_yara_rule,
     id_func_name_for_depend,
     id_func_name_for_linkorder,
+    output,
+)
+from stelftools.ident.yara import (
+    format_match_res,
+    get_target_fp,
+    get_yara_rule,
     marge_functions,
     marge_nomatch_functions,
-    output,
     yara_matching,
 )
 from stelftools.info_create import (
