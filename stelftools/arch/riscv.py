@@ -9,6 +9,9 @@ window by walking forward over consecutive RELAX entries (4 bytes
 each), emits a single ``[0-N]`` marker for the whole span, and records
 the covered offsets in ``checked_offsets`` so the per-offset loop does
 not double-process them.
+
+Reloc type values cross-checked against mold's elf.h (commit b7102d2).
+Reference: https://github.com/rui314/mold/blob/b7102d26ca42c7d72838f64c82835cb6d7ccdd7b/src/elf.h
 """
 
 import logging
@@ -38,12 +41,21 @@ R_RISCV_SUB8           = 0x25
 R_RISCV_SUB16          = 0x26
 R_RISCV_SUB32          = 0x27
 R_RISCV_SUB64          = 0x28
-R_RISCV_GNU_VTINHERIT  = 0x29
-R_RISCV_GNU_VTENTRY    = 0x2a
+# 0x29 / 0x2a were R_RISCV_GNU_VTINHERIT / R_RISCV_GNU_VTENTRY in
+# pre-2.30 binutils. The slots were reassigned in the current psABI:
+# 0x29 is R_RISCV_GOT32_PCREL in mold; 0x2a has no modern reassignment.
+# Both legacy aliases are kept so a corpus produced by an older toolchain
+# remains readable; the handler treats every non-BRANCH / non-RELAX value
+# the same way regardless of name.
+R_RISCV_GOT32_PCREL    = 0x29
+R_RISCV_GNU_VTINHERIT  = 0x29  # legacy alias
+R_RISCV_GNU_VTENTRY    = 0x2a  # legacy, no modern reassignment
 R_RISCV_ALIGN          = 0x2b
 R_RISCV_RVC_BRANCH     = 0x2c
 R_RISCV_RVC_JUMP       = 0x2d
-R_RISCV_LUI            = 0x2e
+# 0x2e was R_RISCV_LUI in pre-2.32 binutils; the current name is RVC_LUI.
+R_RISCV_RVC_LUI        = 0x2e
+R_RISCV_LUI            = 0x2e  # legacy alias
 R_RISCV_GPREL_I        = 0x2f
 R_RISCV_GPREL_S        = 0x30
 R_RISCV_TPREL_I        = 0x31
@@ -73,7 +85,6 @@ def apply_relocation(textsec, name, offset, rtype,
         if textsec[name][offset+4:offset+relax_size+4] == ['67', '00', '03', '00']:
             textsec[name][offset+4:offset+8] = ['', '', '', '']
             textsec[name][offset] = '[0-' + str(relax_size) + ']'
-            # textsec[name][offset] = '[0-' + str(relax_size-1) + ']'
         else:
             textsec[name][offset] = '[0-' + str(relax_size) + ']'
         for _i in range(1, relax_size):
@@ -82,15 +93,13 @@ def apply_relocation(textsec, name, offset, rtype,
         for _c_offset in range(0, relax_size, 4):
             checked_offsets.append(offset+_c_offset)
 
-    # if False: # ToDo
     if offset in checked_offsets:
         return
     elif rtype in [R_RISCV_BRANCH]:
         return
-    elif not rtype in [R_RISCV_RELAX]:  # ToDo
+    elif not rtype in [R_RISCV_RELAX]:
         textsec[name][offset:offset + 4] = ['??', '??', '??', '??']
     else:
-        # logging.warning('Not implemented: unknown relocation type (0x%X) at 0x%X in %s', rtype, offset, fname)
         logging.warning('Not implemented: unknown relocation type %d - 0x%X at 0x%X in %s', rtype, rtype, offset, fname)
         return
         exit(-1)
