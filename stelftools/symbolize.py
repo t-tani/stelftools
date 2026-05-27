@@ -28,7 +28,7 @@ import time
 from pathlib import Path
 
 from . import bruteforce, ident
-from .elf_symtab import append_symtab, section_index_for_addr
+from .elf.symtab_write import append_symtab, section_index_for_addr
 
 log = logging.getLogger("stelftools.symbolize")
 
