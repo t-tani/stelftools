@@ -59,60 +59,50 @@ MAXIMUM_PATTERN_LENGTH = 15000 # 600  # TODO: risc-v
 
 CRT_INIT_FINI_FUNC_LIST = ['.init', '_init', '__init', '.fini', '_fini', '__fini']
 
-def fetch_opecodes(f, arfile = '', exapis = []):
-    global MAXIMUM_PATTERN_LENGTH
-    tab = {}
-    crt_marge_tab = {}
+def _resolve_name(f):
+    """Recover the file name from either an arpy member or a raw file object."""
     if hasattr(f, 'header'):
-        fname = f.header.name.decode('utf-8')
-    elif hasattr(f, 'name'):
-        fname = f.name
-    else:
-        logging.error('Could not identify the file name')
-        exit(-1)
-    if len(arfile) > 0:
-        arfile = '@' + arfile
-    e = ELFFile(f)
+        return f.header.name.decode('utf-8')
+    if hasattr(f, 'name'):
+        return f.name
+    logging.error('Could not identify the file name')
+    exit(-1)
 
-    # Materialise the section list once. fetch_opecodes walks it three
-    # times (text discovery, relocation processing, PPC64 .opd probe);
-    # each iter_sections() call re-instantiates the Section objects, and
-    # libc.a had ~80k of those across its 2k object files. The PPC64
-    # opd_flag scan further down also runs against this list.
-    sections = list(e.iter_sections())
 
-    # Resolved lazily inside the per-relocation-section loop because a
-    # binary without relocations should not fail for an unsupported
-    # architecture -- the pre-split implementation held the unsupported
-    # check inside the per-relocation entry loop, never reached when no
-    # relocations were processed.
-    handler = None
-    ei_data = e['e_ident']['EI_DATA']
+def _harvest_text_sections(sections, fname):
+    """Materialise every executable SHT_PROGBITS section into a {name: hex-list} map.
 
-    # create hex string based text code
+    The original implementation also walked .rodata.* / .rdata.* into a
+    side dict that was never read, so the rodata branch is omitted here;
+    the text-discovery semantics are unchanged.
+    """
     textsec = {}
     for sec in sections:
-        # The original code also walked .rodata.* / .rdata.* sections to
-        # collect aliases into a `rodatasec` dict, but that dict was never
-        # read by any other code path (write-only). The per-section
-        # get_section_by_name('.symtab') + iter_symbols() inside the
-        # rodata branch dominated short-archive runtime, so the branch
-        # is dropped here. The text-discovery semantics are unchanged.
-        if (sec['sh_type'] == 'SHT_PROGBITS' and (sec['sh_flags'] & SH_FLAGS.SHF_EXECINSTR) == SH_FLAGS.SHF_EXECINSTR):
-            # if not sec.name.startswith('.text'): continue
+        if (sec['sh_type'] == 'SHT_PROGBITS'
+                and (sec['sh_flags'] & SH_FLAGS.SHF_EXECINSTR) == SH_FLAGS.SHF_EXECINSTR):
             logging.debug('%s: %s' % (fname, sec.name))
-            # extract a .text section corresponding to this relocation table
-            hexstr = [_BYTE_TO_HEX[b] for b in sec.data()]
-            textsec[sec.name] = hexstr
+            textsec[sec.name] = [_BYTE_TO_HEX[b] for b in sec.data()]
+    return textsec
 
-    ## 1. text section : statically functions
-    # analyze relocation sections
+
+def _build_relnames(textsec):
+    """For each text section, the names of the .rel / .rela sections that patch it."""
     relnames = set()
     for tname in textsec.keys():
         relnames.add('.rel' + tname)
         relnames.add('.rela' + tname)
-    #print(relnames)
+    return relnames
 
+
+def _apply_all_relocations(e, sections, relnames, textsec, ei_data, fname):
+    """Walk every relocation section that patches a known text section.
+
+    The per-arch ``apply_relocation`` is dispatched lazily: a binary
+    that has no relocations does not trigger an UnsupportedArch exit,
+    matching the pre-split semantic where the unsupported check lived
+    inside the per-relocation entry loop.
+    """
+    handler = None
     for sec in sections:
         if not sec['sh_type'] in ['SHT_REL', 'SHT_RELA']:
             continue
@@ -120,7 +110,6 @@ def fetch_opecodes(f, arfile = '', exapis = []):
             continue
         logging.debug('%s: %s' % (fname, sec.name))
 
-        # extract a .text section corresponding to this relocation table
         if sec.name.startswith('.rela'):
             name = sec.name[5:]
         elif sec.name.startswith('.rel'):
@@ -129,19 +118,17 @@ def fetch_opecodes(f, arfile = '', exapis = []):
             logging.error('Unsupported section name: %s' % sec.name)
             exit(-1)
 
-        # test: RISCV : prefetch reloc info
-        # save relocation info
+        # RISC-V RELAX windows need to know every relocation at the same
+        # offset; build the lookup once per section.
         _reloc_info = {}
-        # checked r_offset
         _checked_r_offset = []
         for r in sec.iter_relocations():
             offset = r['r_offset']
             rtype = r['r_info_type']
             if not offset in _reloc_info.keys():
-                _reloc_info[offset] = { 'rtype' : [rtype] }
+                _reloc_info[offset] = {'rtype': [rtype]}
             else:
-                _marge_rtype = _reloc_info[offset]['rtype'] + [rtype]
-                _reloc_info[offset]['rtype'] = _marge_rtype
+                _reloc_info[offset]['rtype'] = _reloc_info[offset]['rtype'] + [rtype]
 
         if handler is None:
             try:
@@ -157,215 +144,270 @@ def fetch_opecodes(f, arfile = '', exapis = []):
                 textsec, name, offset, rtype,
                 _reloc_info, _checked_r_offset, ei_data, fname,
             )
+    return handler
 
-    #print(textsec)
-    #print(textsec.keys())
+
+def _collect_crt_funcs(textsec, fname):
+    """Pick up the ``_init`` / ``_fini`` entries from crti.o / crtn.o.
+
+    The trailing pass in ``main`` knits the two halves together into a
+    single ``[0-12]``-spanning rule that matches the linked ``crt`` glue
+    regardless of how the loader concatenates them.
+    """
+    crt_marge_tab = {}
+    leaf = fname.split('/')[-1]
+    if leaf not in ['crti.o', 'crtn.o']:
+        return crt_marge_tab
     for _sym_name in textsec.keys():
-        if _sym_name in CRT_INIT_FINI_FUNC_LIST:
-            if fname.split('/')[-1] in ['crti.o', 'crtn.o']:
-                opecodes_str = ' '.join(textsec[_sym_name])
-                t_fname = fname.split('/')[-1]
-                if t_fname in crt_marge_tab.keys():
-                    crt_marge_tab[t_fname] = crt_marge_tab[t_fname] + [{'name': _sym_name, 'type': 'func', \
-                            'size': len(textsec[_sym_name]), 'exports': [], 'imports': [], 'opecodes': opecodes_str}]
-                else:
-                    crt_marge_tab[t_fname] = [{'name': _sym_name, 'type': 'func', \
-                            'size': len(textsec[_sym_name]), 'exports': [], 'imports': [], 'opecodes': opecodes_str}]
+        if _sym_name not in CRT_INIT_FINI_FUNC_LIST:
+            continue
+        opecodes_str = ' '.join(textsec[_sym_name])
+        entry = {
+            'name': _sym_name, 'type': 'func',
+            'size': len(textsec[_sym_name]),
+            'exports': [], 'imports': [],
+            'opecodes': opecodes_str,
+        }
+        crt_marge_tab.setdefault(leaf, []).append(entry)
+    return crt_marge_tab
 
+
+def _select_symtab(e):
+    """Pick ``.dynsym`` for ET_DYN inputs, otherwise ``.symtab``."""
     if e['e_type'] == 'ET_DYN':
-        symtab = e.get_section_by_name('.dynsym')
-    else:
-        symtab = e.get_section_by_name('.symtab')
-    if symtab is None:
-        return tab, crt_marge_tab
-    exsymtab = {}
+        return e.get_section_by_name('.dynsym')
+    return e.get_section_by_name('.symtab')
 
-    # RISC-V post-relocation text rewrite (bnez / bgeu / call thunks).
+
+def _build_alias_index(symtab):
+    """Index STT_FUNC symbols so the main loop can drop alias siblings.
+
+    Returns ``(exclude_alias_list, offset_list)``. ``exclude_alias_list``
+    holds the longer of each (value, size, st_shndx)-tied symbol pair so
+    the shorter (canonical) name reaches the tab. ``offset_list`` is the
+    sorted set of distinct st_value entries; the size-zero recovery path
+    walks it to guess the next function boundary.
+    """
+    exclude_alias_list = []
+    f_info_dict = {}
+    offset_list = []
+    for sym in symtab.iter_symbols():
+        if sym.name == '':
+            continue
+        if sym['st_info']['type'] != "STT_FUNC":
+            continue
+        offset_list.append(sym['st_value'])
+        signature = {
+            'value': sym['st_value'],
+            'size': sym['st_size'],
+            'st_shndx': sym['st_shndx'],
+        }
+        for _f_key, _f_value in f_info_dict.items():
+            if _f_value == signature:
+                exclude_alias_list.append(max([_f_key, sym.name], key=len))
+        f_info_dict[sym.name] = signature
+    return exclude_alias_list, sorted(set(offset_list))
+
+
+def _opecodes_for_symbol(sym, target_sec, textsec, baseaddr,
+                        offset_list, offset_state, fix_sec_flag):
+    """Slice the function's bytes out of textsec[target_sec.name].
+
+    ``offset_state`` is a ``[int]`` container the size-zero recovery
+    path advances; this carries the running index into ``offset_list``
+    across the main loop's iterations.
+    """
+    if sym['st_size'] == 0:
+        offset_state[0] += 1
+        try:
+            _top = sym['st_value'] - baseaddr
+            _bot = offset_list[offset_state[0]]
+        except IndexError:
+            _top = sym['st_value'] - baseaddr
+            _bot = _top + len(textsec[target_sec.name][sym['st_value'] - baseaddr:])
+        opecodes = textsec[target_sec.name][_top:_bot]
+        return opecodes, len(opecodes)
+    if fix_sec_flag:
+        opecodes = textsec[target_sec.name][baseaddr:sym['st_size'] - baseaddr]
+    else:
+        opecodes = textsec[target_sec.name][sym['st_value'] - baseaddr:sym['st_value'] + sym['st_size'] - baseaddr]
+    return opecodes, sym['st_size']
+
+
+def _insert_tab_entry(tab, opecodes_str, name, size, fname, arfile, *, min_size=0):
+    """Append one function entry to ``tab[opecodes_str]``, creating the
+    bucket on demand. ``min_size`` is only recorded when non-zero so
+    arches that do not compute it keep their entries dict-equal to the
+    pre-split form.
+    """
+    entry = {
+        'name': name, 'type': 'func', 'size': size,
+        'exports': [], 'imports': [],
+        'objname': fname.split('/')[-1] + arfile,
+    }
+    if min_size:
+        entry['min_size'] = min_size
+    tab.setdefault(opecodes_str, []).append(entry)
+
+
+def _populate_tab_from_symbols(tab, exsymtab, e, symtab, textsec,
+                               exclude_alias_list, offset_list,
+                               exapis, fname, arfile):
+    """Walk ``symtab`` and insert per-function opecode patterns into
+    ``tab``. ``exsymtab`` is filled with ``imports`` / ``exports`` and
+    merged into every tab entry at the end so each rule carries the
+    full import / export view of the object it came from.
+    """
+    offset_state = [0]
+    for sym in symtab.iter_symbols():
+        if sym.name in exclude_alias_list:
+            continue
+        if sym.name in exapis:
+            continue
+        if e['e_machine'] == 'EM_RISCV' and _arch_riscv.should_skip_symbol(sym):
+            continue
+        if sym['st_info']['bind'] == 'STB_LOCAL':
+            pass  # left as a documentation marker for STB_LOCAL handling
+        if sym['st_info']['type'] == 'STT_NOTYPE' and sym['st_shndx'] == 'SHN_UNDEF' and len(sym.name) != 0:
+            exsymtab[sym.name] = 'imports'
+            continue
+        if sym['st_info']['type'] != 'STT_FUNC':
+            continue
+        if sym['st_shndx'] == 'SHN_UNDEF':
+            exsymtab[sym.name] = 'imports'
+            continue
+        exsymtab[sym.name] = 'exports'
+        logging.debug('\t%s: offset = %d, size = %d' % (sym.name, sym['st_value'], sym['st_size']))
+
+        # Arm glibc occasionally leaves a symbol pointing at a section
+        # the file does not actually carry; treat that as an opaque drop.
+        try:
+            e.get_section(sym['st_shndx']).name
+        except TypeError:
+            continue
+        target_sec = e.get_section(sym['st_shndx'])
+        fix_sec_flag = False
+        if e['e_machine'] == 'EM_PPC64':
+            target_sec, fix_sec_flag = _arch_ppc64.retarget_section(e, sym, target_sec, textsec)
+
+        if not target_sec.name in textsec.keys():
+            logging.error('error: %s was not found (%s)' % (target_sec.name, sym.name))
+            exit(-1)
+        baseaddr = target_sec.header['sh_addr']
+
+        opecodes, size = _opecodes_for_symbol(
+            sym, target_sec, textsec, baseaddr,
+            offset_list, offset_state, fix_sec_flag,
+        )
+
+        # ET_EXEC: capstone-driven branch wildcarding. The pre-split
+        # code only handled EM_386 here; any other ET_EXEC arch falls
+        # through the trailing ``continue``.
+        if e.header['e_type'] == 'ET_EXEC':
+            if e['e_machine'] == 'EM_386' and e['e_ident']['EI_CLASS'] == 'ELFCLASS32':
+                _arch_i386.apply_exec_capstone(target_sec, sym, opecodes, baseaddr)
+            else:
+                continue
+
+        opecode_minimum_length = 0
+        if e['e_machine'] == 'EM_RISCV':
+            opecode_minimum_length = _arch_riscv.compute_min_length(opecodes)
+
+        if size > MAXIMUM_PATTERN_LENGTH:
+            opecodes = opecodes[:MAXIMUM_PATTERN_LENGTH]
+
+        if e['e_machine'] == 'EM_RISCV':
+            _arch_riscv.finalize_opecodes(opecodes)
+        opecodes_str = ' '.join(opecodes)
+
+        # cxxfilt drops mangled C++ symbols (their demangled form differs
+        # from the raw name). The Itanium ABI prefix ``_Z`` short-circuits
+        # the long tail of C symbols.
+        if sym.name.startswith('_Z'):
+            try:
+                if sym.name != cxxfilt.demangle(sym.name):
+                    continue
+            except cxxfilt.InvalidName:
+                continue
+        if sym.name in CRT_INIT_FINI_FUNC_LIST:
+            continue
+        _insert_tab_entry(
+            tab, opecodes_str, sym.name, size, fname, arfile,
+            min_size=opecode_minimum_length,
+        )
+
+    # Stamp every tab entry with the object's full import / export view.
+    for opecodes_str in tab.keys():
+        for i in range(len(tab[opecodes_str])):
+            for symname, export_or_import in exsymtab.items():
+                tab[opecodes_str][i][export_or_import].append(symname)
+
+
+def _populate_tab_from_opd(tab, opd_func_dict, fname, arfile):
+    """PPC64-only: insert opecode slices the ``.opd`` walker produced.
+    Iterates the dict produced by ``_arch_ppc64.build_opd_dict``;
+    other arches keep the dict empty so this is a no-op for them.
+    """
+    for func_name, func_info in opd_func_dict.items():
+        if func_info == 'checked':
+            continue
+        opecodes = func_info['func_opecode']
+        size = func_info['func_size']
+        if size > MAXIMUM_PATTERN_LENGTH:
+            opecodes = opecodes[:MAXIMUM_PATTERN_LENGTH]
+        if func_name.startswith('_Z'):
+            try:
+                if func_name != cxxfilt.demangle(func_name):
+                    opd_func_dict[func_name] = 'checked'
+                    continue
+            except cxxfilt.InvalidName:
+                continue
+        opecodes_str = ' '.join(opecodes)
+        _insert_tab_entry(tab, opecodes_str, func_name, size, fname, arfile)
+        opd_func_dict[func_name] = 'checked'
+
+
+def fetch_opecodes(f, arfile='', exapis=()):
+    """Top-level driver: read one ELF object and return its
+    ``(tab, crt_marge_tab)`` pair. Walks the input as a fixed pipeline
+    of phases; each phase is a free function above. info_create.py
+    treats the return shape as ``(tab, crt_marge_tab)`` so the function
+    signature is the load-bearing API of this module.
+    """
+    fname = _resolve_name(f)
+    arfile = '@' + arfile if arfile else ''
+    e = ELFFile(f)
+    sections = list(e.iter_sections())
+    ei_data = e['e_ident']['EI_DATA']
+
+    textsec = _harvest_text_sections(sections, fname)
+    relnames = _build_relnames(textsec)
+    _apply_all_relocations(e, sections, relnames, textsec, ei_data, fname)
+
     if e['e_machine'] == 'EM_RISCV':
         _arch_riscv.postprocess_text(textsec)
 
-    # PPC64 .opd path: build a parallel {name: opecode-slice} dict; when
-    # it is non-empty the main symbol loop below is skipped and the
-    # entries land directly in `tab` via the trailing PPC64 block.
+    crt_marge_tab = _collect_crt_funcs(textsec, fname)
+    symtab = _select_symtab(e)
+    if symtab is None:
+        return {}, crt_marge_tab
+
     opd_func_dict = {}
     if e['e_machine'] == 'EM_PPC64':
         opd_func_dict = _arch_ppc64.build_opd_dict(e, sections, symtab, textsec)
 
-    # dbg
-    exclude_alias_list = []
-    f_info_dict = {}
-    _offset_list = []
-    _offset_idx = 0
-    for sym in symtab.iter_symbols():
-        if sym.name == '':
-            continue
-        #print('-')
-        if sym['st_info']['type'] == "STT_FUNC":
-            #print("%s: 0x%X %d %s " % ( sym.name, sym['st_value'], sym['st_size'], sym['st_shndx']) )
-            _offset_list.append(sym['st_value'])
-            for _f_key, _f_value in f_info_dict.items():
-                if _f_value == {'value':sym['st_value'], 'size':sym['st_size'], 'st_shndx':sym['st_shndx']}:
-                    exclude_alias_list.append(max([_f_key, sym.name], key=len))
-            f_info_dict[sym.name] = {'value':sym['st_value'], 'size':sym['st_size'], 'st_shndx':sym['st_shndx']}
-    _offset_list = sorted(set(_offset_list))
+    exclude_alias_list, offset_list = _build_alias_index(symtab)
+    tab = {}
+    exsymtab = {}
 
-    # The PPC64 .opd path bypasses the symbol loop and inserts straight
-    # from opd_func_dict (see the trailing block); every other arch runs
-    # the loop here.
     if not opd_func_dict:
-        for sym in symtab.iter_symbols():
-            if sym.name in exclude_alias_list: # exclude long alias
-                #print(sym.name)
-                continue
-            if sym.name in exapis:
-                continue
-            if e['e_machine'] == 'EM_RISCV' and _arch_riscv.should_skip_symbol(sym):
-                continue
-            if sym['st_info']['bind'] == 'STB_LOCAL':
-                pass #continu
-            if sym['st_info']['type'] == 'STT_NOTYPE' and sym['st_shndx'] == 'SHN_UNDEF' and len(sym.name) != 0:
-                exsymtab[sym.name] = 'imports'
-                continue
-            if sym['st_info']['type'] != 'STT_FUNC':
-                continue
-            if sym['st_shndx'] == 'SHN_UNDEF':
-                exsymtab[sym.name] = 'imports'
-                continue
-            else:
-                exsymtab[sym.name] = 'exports'
-            # if sym['st_other']['visibility'] == 'STV_HIDDEN': continue
-            logging.debug('\t%s: offset = %d, size = %d' % (sym.name, sym['st_value'], sym['st_size']))
-
-            # ToDo fix bug
-            # arm glibc
-            try:
-                e.get_section(sym['st_shndx']).name
-            except TypeError:
-                continue
-            target_sec = e.get_section(sym['st_shndx'])
-            fix_sec_flag = False
-            if e['e_machine'] == 'EM_PPC64':
-                target_sec, fix_sec_flag = _arch_ppc64.retarget_section(e, sym, target_sec, textsec)
-
-            # check sec
-            if not target_sec.name in textsec.keys():
-                logging.error('error: %s was not found (%s)' % (target_sec.name, sym.name))
-                exit(-1)  # continue #exit(-1)
-            baseaddr = target_sec.header['sh_addr']
-
-            # because there are functions whose size is set to zero, but its size is not zero.
-            #print(target_sec.name, sym.name, sym['st_value'], textsec[target_sec.name])
-            if sym['st_size'] == 0:
-                # TODO: check valid length of the function
-                _offset_idx += 1
-                try:
-                    _top = sym['st_value'] - baseaddr
-                    _bot = _offset_list[_offset_idx]
-                    #print('a', _top, _bot)
-                except IndexError:
-                    _top = sym['st_value'] - baseaddr
-                    _bot = _top + len(textsec[target_sec.name][sym['st_value'] - baseaddr: ])
-                    #print('b', _top, _bot)
-                opecodes = textsec[target_sec.name][_top:_bot]
-                size = len(opecodes)
-            else:
-                #print(sym['st_value'], baseaddr)
-                #print('fix_sec_flag :', fix_sec_flag)
-                if fix_sec_flag == False:
-                    opecodes = textsec[target_sec.name][sym['st_value'] - baseaddr:sym['st_value'] + sym['st_size'] - baseaddr]
-                    size = sym['st_size']
-                else:
-                    opecodes = textsec[target_sec.name][baseaddr:sym['st_size'] - baseaddr]
-                    size = sym['st_size']
-            #if e['e_machine'] in ['EM_386', 'EM_X86_64']:
-            #    opecodes[0] = '( CC | %s )' % opecodes[0] # matches INT3 prologue for api hooking # TODO: sohuld modify functions code of crt*.o?
-
-            # ET_EXEC: capstone-driven branch wildcarding. The pre-split
-            # code only handled EM_386 here; any other ET_EXEC arch is
-            # dropped via the trailing ``continue``.
-            if e.header['e_type'] == 'ET_EXEC':
-                if e['e_machine'] == 'EM_386' and e['e_ident']['EI_CLASS'] == 'ELFCLASS32':
-                    _arch_i386.apply_exec_capstone(target_sec, sym, opecodes, baseaddr)
-                else:
-                    continue
-
-            # RISC-V records a ``min_size`` annotation alongside the
-            # pattern; every other arch leaves it at 0 (field omitted).
-            opecode_minimum_length = 0
-            if e['e_machine'] == 'EM_RISCV':
-                opecode_minimum_length = _arch_riscv.compute_min_length(opecodes)
-
-            if size > MAXIMUM_PATTERN_LENGTH:
-                opecodes = opecodes[:MAXIMUM_PATTERN_LENGTH]
-
-            # Normalise RELAX-window markers at the slice edges (RISC-V).
-            if e['e_machine'] == 'EM_RISCV':
-                _arch_riscv.finalize_opecodes(opecodes)
-            opecodes_str = ' '.join(opecodes)
-            # The original guard ran every symbol through cxxfilt to drop
-            # names that the demangler rewrites (i.e. actual C++ mangled
-            # symbols). Itanium ABI mangled names always start with '_Z',
-            # so calling cxxfilt on the long tail of C symbols is pure
-            # overhead — short-circuit on the prefix and only consult
-            # cxxfilt when it could change the answer.
-            add_func = True
-            if sym.name.startswith('_Z'):
-                try:
-                    if sym.name != cxxfilt.demangle(sym.name):
-                        add_func = False
-                except cxxfilt.InvalidName:
-                    continue
-            if add_func:
-                if sym.name in CRT_INIT_FINI_FUNC_LIST:
-                    continue
-                if opecode_minimum_length == 0:
-                    if opecodes_str in tab.keys():
-                        tab[opecodes_str].append({'name': sym.name, 'type': 'func', \
-                                'size': size, 'exports': [], 'imports': [], 'objname': fname.split('/')[-1] + arfile})
-                    else:
-                        tab[opecodes_str] = [{'name': sym.name, 'type': 'func', \
-                                'size': size, 'exports': [], 'imports': [], 'objname': fname.split('/')[-1] + arfile}]
-                else:
-                    if opecodes_str in tab.keys():
-                        tab[opecodes_str].append({'name': sym.name, 'type': 'func', \
-                                'size': size, 'min_size': opecode_minimum_length, \
-                                'exports': [], 'imports': [], 'objname': fname.split('/')[-1] + arfile})
-                    else:
-                        tab[opecodes_str] = [{'name': sym.name, 'type': 'func', \
-                                'size': size, 'min_size': opecode_minimum_length, \
-                                'exports': [], 'imports': [], 'objname': fname.split('/')[-1] + arfile}]
-        for opecodes_str in tab.keys():
-            for i in range(len(tab[opecodes_str])):
-                for symname, export_or_import in exsymtab.items():
-                    tab[opecodes_str][i][export_or_import].append(symname)
-    # PPC64 .opd: insert the parallel dict's entries directly into tab.
-    # Other arches produced an empty opd_func_dict above so this block
-    # is a no-op for them.
-    if opd_func_dict:
-        for func_name, func_info in opd_func_dict.items():
-            #print(func_name, func_info)
-            if func_info != 'checked':
-                opecodes = func_info['func_opecode']
-                size = func_info['func_size']
-                # LIMIT LENGTH
-                if size > MAXIMUM_PATTERN_LENGTH:
-                    opecodes = opecodes[:MAXIMUM_PATTERN_LENGTH]
-                opecodes_str = ' '.join(opecodes)
-                add_func = True
-                if func_name.startswith('_Z'):
-                    try:
-                        if func_name != cxxfilt.demangle(func_name):
-                            add_func = False
-                    except cxxfilt.InvalidName:
-                        continue
-                if add_func:
-                    if opecodes_str in tab.keys():
-                        tab[opecodes_str].append({'name': func_name, 'type': 'func', \
-                                'size': size, 'exports': [], 'imports': [], 'objname': fname.split('/')[-1] + arfile})
-                    else:
-                        tab[opecodes_str] = [{'name': func_name, 'type': 'func', \
-                                'size': size, 'exports': [], 'imports': [], 'objname': fname.split('/')[-1] + arfile}]
-                opd_func_dict[func_name] = 'checked'
+        _populate_tab_from_symbols(
+            tab, exsymtab, e, symtab, textsec,
+            exclude_alias_list, offset_list,
+            exapis, fname, arfile,
+        )
+    else:
+        _populate_tab_from_opd(tab, opd_func_dict, fname, arfile)
 
     return tab, crt_marge_tab
 
