@@ -32,9 +32,9 @@ from stelftools.ident import (
     del_mismatch,
     get_alias_list,
     id_func_name_for_depend,
-    id_func_name_for_linkorder,
     output,
 )
+from stelftools.ident.linkorder import id_func_name_for_linkorder
 from stelftools.ident.yara import (
     format_match_res,
     get_target_fp,
