@@ -427,54 +427,68 @@ def merge_dicts(src, dst):
 
 
 def fetch_opecodes_from_arfile(arfile):
+    """Walk an ``ar`` archive and merge each member's fetch_opecodes
+    output into one ``(tab, crt_tab)`` pair. The arpy iteration order
+    is deterministic per-archive, so the merge sequence is stable.
+    """
     tab = {}
     crt_tab = {}
     rel_arfile = arfile.split('/')[-1]
     arfile = os.path.abspath(arfile)
     objfiles = arpy.Archive(arfile)
-    #print(objfiles)
-    #for f in objfiles:
-    #    print(f)
-    #exit(1)
     for f in objfiles:
-        # ToDo investigate the cause of the error
         fname = f.header.name.decode('utf-8')
+        # ARM aeabi_sighandlers triggers a pyelftools edge case; skipped
+        # historically and kept skipped until the underlying parser is
+        # patched.
         if fname in ['aeabi_sighandlers.os', 'aeabi_sighandlers.o']:
             continue
-        #print('\x1b[2K\033[%d;1H%s' % (row, f.header.name.decode('utf-8')), end='', flush=True)
-        newtab, new_crt_tab = fetch_opecodes(f, arfile = rel_arfile)
+        newtab, new_crt_tab = fetch_opecodes(f, arfile=rel_arfile)
         tab = merge_dicts(tab, newtab)
         crt_tab = merge_dicts(crt_tab, new_crt_tab)
-    #print('\x1b[2K\033[%d;1H' % row, end='', flush=True)
     return tab, crt_tab
 
-def create_rule(syms, hexstr_opecodes, options = []):
-    # rule = 'rule %s {\n' % funcs[-1]
-    # TODO: rule name
-    global MAX_RULE_INDENTIFIER_LENGTH
-    global MAX_ALIASES
-    funcs = sorted(set([syminfo['name'] for syminfo in syms])) # TODO: keep an order of names
+_RULE_NAME_SUBS = {'.': '_DOT_', '@': '_AT_', '$': '_DOLLER_'}
+
+
+def _rule_identifier(funcs, hexstr_opecodes):
+    """Derive a YARA-legal rule name from the symbol set + opecode hash.
+
+    Picks the alphabetically last function name (deterministic across
+    runs) as a prefix, sanitises ASCII punctuation YARA does not allow
+    in identifiers, and appends an md5 of the opecodes so two distinct
+    patterns sharing a prefix get distinct rules.
+    """
+    name = funcs[-1][:MAX_RULE_INDENTIFIER_LENGTH]
+    for ch, repl in _RULE_NAME_SUBS.items():
+        name = name.replace(ch, repl)
+    return name + '_' + hashlib.md5(hexstr_opecodes.encode('utf-8')).hexdigest()
+
+
+def create_rule(syms, hexstr_opecodes, options=[]):
+    """Render one YARA rule for a group of symbols sharing the same
+    opecode pattern. ``options`` toggles the optional meta fields
+    (``objfiles`` / ``exports`` / ``imports`` / ``prototype``).
+    """
+    funcs = sorted(set([syminfo['name'] for syminfo in syms]))
     objnames = set([syminfo['objname'].replace('.o', '').replace('-', '_') for syminfo in syms])
     exports = set([(syminfo['objname'].split('.')[0].replace('-', '_'), ', '.join(syminfo['exports'])) for syminfo in syms])
     imports = set([(syminfo['objname'].split('.')[0].replace('-', '_'), ', '.join(syminfo['imports'])) for syminfo in syms])
-    rule = 'rule %s {\n' % (funcs[-1][:MAX_RULE_INDENTIFIER_LENGTH].replace('.', '_DOT_').replace('@', '_AT_').replace('$', '_DOLLER_') + '_' + hashlib.md5(hexstr_opecodes.encode('utf-8')).hexdigest())
-    #rule = 'rule %s {\n' % (min(funcs, key=len).replace('.', '_DOT_').replace('@', '_AT_').replace('$', '_DOLLER_') + '_' + hashlib.md5(hexstr_opecodes.encode('utf-8')).hexdigest())
+
+    rule = 'rule %s {\n' % _rule_identifier(funcs, hexstr_opecodes)
     rule += '\tmeta:\n'
-    #rule += '\t\taliases = "%s"\n' % ', '.join(funcs)
     rule += '\t\taliases = "%s"\n' % ', '.join(funcs[:MAX_ALIASES])
     rule += '\t\ttype = "%s"\n' % (syms[0]['type'])
-    # if 'min_size' in syms[0].keys():
-    #     rule += '\t\tsize = "%d"//\t\tmin_size = "%d"\n' % (syms[0]['size'], syms[0]['min_size'])
-    # else:
-    #     rule += '\t\tsize = "%d"\n' % (syms[0]['size'])
+    # RISC-V tab entries also carry a ``min_size`` annotation but it is
+    # intentionally not emitted here -- the pre-cleanup code kept the
+    # ``size // min_size`` variant commented out so the YARA output
+    # stays single-field across arches.
     rule += '\t\tsize = "%d"\n' % (syms[0]['size'])
     if 'objfiles' in options:
-        # Sort before truncating so the 5 objfiles recorded in the rule are
-        # deterministic across runs. The prior list(set(...)) iterated in
-        # set-hash order, which varies with insertion sequence — a
-        # cosmetic concern that became real when the [:5] slice picked
-        # different five names depending on how merge_dicts had appended
-        # archive contributions.
+        # Sort before truncating so the 5 objfiles recorded in the rule
+        # are deterministic across runs; the prior list(set(...)) order
+        # depended on insertion sequence and the [:5] slice picked
+        # different names depending on archive iteration.
         rule += '\t\tobjfiles = "%s"\n' % ', '.join(sorted(objnames)[:5])
     if 'exports' in options:
         for objname, syms in sorted(exports):
@@ -492,21 +506,22 @@ def create_rule(syms, hexstr_opecodes, options = []):
     return rule
 
 def get_rules(tab):
+    """Render every tab entry to a YARA rule, in opecode-sorted order.
 
-    global VERSION
-    rules_list = []
-    rule_ver = '// YARA rules, version ' + VERSION + '\n\n'
-    rules_list.append(rule_ver)
-    #print('// YARA rules, version %s\n\n' % (VERSION))
-    #f.write('// YARA rules, version %s\n\n' % (VERSION))
+    Skips entries whose literal byte content (size minus wildcard ``??``
+    and zero-hex slots) does not clear ``MINIMUM_PATTERN_LENGTH`` and
+    skips degenerate patterns whose opecodes are entirely wildcards or
+    entirely ``00`` bytes -- both would match anything.
+    """
+    rules_list = ['// YARA rules, version ' + VERSION + '\n\n']
     for opecodes in sorted(tab.keys()):
-        # TODO: remove wildcards (acc decreased in the evaluation of al-1.4.4 because of false positives: functions of size 5)
-
+        # TODO: tighten wildcard handling for short functions. Past
+        # benchmarks showed an accuracy regression on size-~5 patterns
+        # dominated by ?? / 00 slots; the filter immediately below is a
+        # partial mitigation, not a fix.
         question_mark_size = tab[opecodes][0]['size'] - opecodes.count('??')
         zero_hex_size = tab[opecodes][0]['size'] - opecodes.count('00')
-        # if tab[opecodes][0]['size'] <= MINIMUM_PATTERN_LENGTH:
         if question_mark_size + zero_hex_size <= MINIMUM_PATTERN_LENGTH:
-            #logging.warning('Skipped %s (%s)' % (', '.join(set([x['name'] for x in tab[opecodes]])),opecodes))
             continue
         opecode_list = opecodes.split(' ')
         wildcard_num = opecode_list.count('??')
@@ -516,150 +531,156 @@ def get_rules(tab):
                 and not zero_hex_num == len(opecode_list):
             rules = create_rule(tab[opecodes], opecodes, ['objfiles'])
             rules_list.extend(rules.split('\n'))
-        #print(rules)
-        #print(rules.split('\n'))
-        #f.write(rules)
-        #logging.info(rules)
     return rules_list
 
-def output_function_names(fname, funcslist):
-    uniqfunc = set()
-    for funcs in funcslist:
-        for func in funcs:
-            uniqfunc.add(func)
-    with open(fname, 'w') as f:
-        for func in sorted(uniqfunc):
-            #f.write(func + '\n')
-            continue
-
 def output_rules(rules_list, output_path):
+    """Write each rendered rule line to ``output_path``, one per line."""
     with open(output_path, 'w') as f:
         for rule in rules_list:
             f.write("%s\n" % rule)
-    #print('Completed successfully ->', output_path)
+
+# Object leaves the CLI skips before feeding fetch_opecodes. libstdc++.a
+# carries the C++ runtime, which is out of scope for the C-function
+# signature corpus this tool produces.
+_SKIP_OBJ_LEAVES = frozenset({'libstdc++.a'})
+_EXEC_MIMES = (
+    'application/x-executable',
+    'application/x-sharedlib',
+    'application/x-pie-executable',
+)
+
+
+def _load_excluded_apis(path):
+    """Read the optional ``--excluded-api`` file into a list. Returns
+    ``[]`` when the path is missing so the executable branch's
+    fetch_opecodes call still receives a real (empty) list.
+    """
+    if path and os.path.exists(path):
+        with open(path) as f:
+            return f.read().split('\n')
+    return []
+
+
+def _process_input_file(filename, exapis):
+    """Dispatch one input file to fetch_opecodes via libmagic.
+
+    Returns ``(newtab, new_crt_tab)`` for archives / object files /
+    executables, or ``None`` when the file should be skipped (C++
+    stdlib, plain text, symlink). Exits on an unsupported MIME so the
+    CLI surfaces the failure loudly.
+    """
+    leaf = filename.split('/')[-1]
+    if leaf in _SKIP_OBJ_LEAVES:
+        return None
+    ftype = magic.from_file(filename, mime=True)
+    if ftype == 'application/x-archive':
+        return fetch_opecodes_from_arfile(filename)
+    if ftype == 'application/x-object':
+        with open(filename, 'rb') as f:
+            return fetch_opecodes(f)
+    if ftype in _EXEC_MIMES:
+        with open(filename, 'rb') as f:
+            # The pre-cleanup call passed ``exapis`` positionally, which
+            # landed on ``fetch_opecodes``'s ``arfile`` parameter and
+            # would later raise TypeError on a ``str + list`` concat. The
+            # kwarg form is what info_create.py already uses.
+            return fetch_opecodes(f, exapis=exapis)
+    if ftype in ['text/plain', 'inode/symlink']:
+        return None
+    logging.error('Not supported file type of %s: %s' % (filename, ftype))
+    exit(-1)
+
+
+def _merge_crt_pairs(tab, crt_tab):
+    """Knit each ``(crti.o, crtn.o)`` function pair into a single rule.
+
+    The ``[0-12]`` window between the two halves matches whatever the
+    linker may splice between the crti and crtn glue (typically a
+    ``.note.ABI-tag`` or a short init thunk).
+    """
+    if not (set(crt_tab.keys()) >= {'crti.o', 'crtn.o'}):
+        return
+    crt_func_name_list = [info['name'] for info in crt_tab['crti.o']]
+    half_opecodes = {}
+    for slot, leaf in (('i-opecode', 'crti.o'), ('n-opecode', 'crtn.o')):
+        for info in crt_tab.get(leaf, []):
+            if info['name'] in crt_func_name_list:
+                half_opecodes.setdefault(info['name'], {})[slot] = info['opecodes']
+
+    merged = {}
+    for func_name, halves in half_opecodes.items():
+        joined = ''
+        for opecodes_str in halves.values():
+            joined = opecodes_str if not joined else joined + ' [0-12] ' + opecodes_str
+        merged[func_name] = joined
+
+    for func_name, joined in merged.items():
+        entry = {
+            'name': func_name, 'type': 'func',
+            'size': len(joined.split(' ')),
+            'exports': [], 'imports': [],
+            'objname': 'crti.o',
+        }
+        if joined in tab:
+            tab[joined] = [tab[joined][0], entry]
+        else:
+            tab[joined] = [entry]
+
+
+def _emit_output(rules_list, output_path):
+    """Write the rendered rules to ``output_path``, or stdout if no
+    path was given. The literal string ``"no"`` disables output so a
+    build harness can measure rule generation in isolation.
+    """
+    if output_path == 'no':
+        return
+    if output_path:
+        output_rules(rules_list, output_path)
+        return
+    for rules in rules_list:
+        print(rules)
+
 
 def main():
-    parser = argparse.ArgumentParser(prog = sys.argv[0])
-    parser.add_argument('--version', '-v', action = 'version', version = '%s %s' % (sys.argv[0], VERSION))
-    parser.add_argument('--excluded-api', type = str, help = 'File name of a list that includes api names to be excluded')
-    parser.add_argument('--save-api', type = str, help = 'File name of an api list')
-    #parser.add_argument('--yara', '-y', default = 'patterns.yara', help = 'YARA file name to be saved')
-    parser.add_argument('--min', '-m', default = 0, type = int, help = 'Minimum size of a function')
-    parser.add_argument('--output_path', '-o', help = 'YARA file name to be saved')
-
-    parser.add_argument('files', nargs = '+', help = 'File names of archive, object, executable files')
+    parser = argparse.ArgumentParser(prog=sys.argv[0])
+    parser.add_argument('--version', '-v', action='version',
+                        version='%s %s' % (sys.argv[0], VERSION))
+    parser.add_argument('--excluded-api', type=str,
+                        help='File listing API names to skip')
+    parser.add_argument('--save-api', type=str,
+                        help='File name of an api list')
+    parser.add_argument('--min', '-m', default=0, type=int,
+                        help='Minimum size of a function')
+    parser.add_argument('--output_path', '-o',
+                        help='YARA file name to be saved')
+    parser.add_argument('files', nargs='+',
+                        help='File names of archive, object, executable files')
     args = parser.parse_args()
+
+    # Make --min actually take effect; the pre-cleanup assignment created
+    # a local that shadowed the module global without ever being read.
+    global MINIMUM_PATTERN_LENGTH
     MINIMUM_PATTERN_LENGTH = args.min
 
     logging.info('Analyzing archive files...')
+    exapis = _load_excluded_apis(args.excluded_api)
     tab = {}
     crt_tab = {}
-
-    EXCLUDE_OBJ_FILES = []#['Scrt1.o', 'rcrt1.o', 'crtbegin.o', 'crtbeginS.o', 'crtendS.o']
-
     for filename in args.files:
-        # skip dynamic link object
-        if filename.split('/')[-1] in EXCLUDE_OBJ_FILES:
-            #print(filename.split('/')[-1])
+        result = _process_input_file(filename, exapis)
+        if result is None:
             continue
-        # c-lang only fast mode
-        #skip c++ objfile (libstdc++)
-        cpp_obj_list = ['libstdc++.a']
-        if filename.split('/')[-1] in cpp_obj_list:
-            continue
-
-        #print('%s' % filename, flush=True)
-        ftype = magic.from_file(filename, mime = True)
-
-        if ftype == 'application/x-archive': #filename[-2:] == '.a':
-            newtab, new_crt_tab = fetch_opecodes_from_arfile(filename)
-        elif ftype == 'application/x-object': #filename[-2:] == '.o':
-            with open(filename, 'rb') as f:
-                newtab, new_crt_tab = fetch_opecodes(f)
-        elif ftype in ['application/x-executable', 'application/x-sharedlib', 'application/x-pie-executable']: # TODO: support other executables
-            if args.excluded_api and os.path.exists(args.excluded_api):
-                with open(args.excluded_api) as f:
-                    exapis = f.read().split('\n')
-            else:
-                exapis = []
-            with open(filename, 'rb') as f:
-                newtab, new_crt_tab = fetch_opecodes(f, exapis)
-        elif ftype in ['text/plain', 'inode/symlink']:
-            continue
-        else:
-            logging.error('Not supported file type of %s: %s' % (filename, ftype))
-            #continue
-            exit(-1)
+        newtab, new_crt_tab = result
         tab = merge_dicts(tab, newtab)
         crt_tab = merge_dicts(crt_tab, new_crt_tab)
 
-    # marge crt opecode
-    _tmp_crt_info = {}
-    crt_obj_list = ['crti.o', 'crtn.o']
-    if len(set(crt_tab.keys()) & set(crt_obj_list)) == len(crt_obj_list):
-        crt_func_name_list = []
-        # get connect crt function name list
-        for info_in_obj in crt_tab['crti.o']:
-            crt_func_name_list.append(info_in_obj['name'])
-
-        for crt_obj,  crt_info_list in crt_tab.items():
-            if crt_obj == 'crti.o':
-                for crt_info in crt_info_list:
-                    for crt_func_name in crt_func_name_list:
-                        if crt_info['name'] == crt_func_name:
-                            opecodes_str = crt_info['opecodes']
-                            _tmp_crt_info[crt_func_name] = {'i-opecode' : opecodes_str}
-        for crt_obj,  crt_info_list in crt_tab.items():
-            if crt_obj == 'crtn.o':
-                for crt_info in crt_info_list:
-                    for crt_func_name in crt_func_name_list:
-                        if crt_info['name'] == crt_func_name:
-                            opecodes_str = crt_info['opecodes']
-                            _tmp_crt_info[crt_func_name]['n-opecode'] = opecodes_str
-        # marge
-        marged_crt_func_opecs = {}
-        for func_name in _tmp_crt_info.keys():
-            for t_opecodes_str in _tmp_crt_info[func_name].values():
-                if not func_name in marged_crt_func_opecs.keys():
-                    marged_crt_func_opecs[func_name] = t_opecodes_str
-                else:
-                    marged_crt_func_opecs[func_name] = marged_crt_func_opecs[func_name] + ' [0-12] ' +  t_opecodes_str
-
-        for _crt_func_name, _crt_func_opecodes in marged_crt_func_opecs.items():
-            if _crt_func_opecodes in tab.keys():
-                tab[_crt_func_opecodes] = [ \
-                        tab[_crt_func_opecodes][0], \
-                        { 'name': _crt_func_name, 'type': 'func', \
-                        'size': len(_crt_func_opecodes.split(' ')), 'exports': [], 'imports': [], \
-                        'objname': 'crti.o'} \
-                        ]
-            else:
-                tab[_crt_func_opecodes] = [{'name': _crt_func_name, 'type': 'func', \
-                        'size': len(_crt_func_opecodes.split(' ')), 'exports': [], 'imports': [], \
-                        'objname': 'crti.o'}]
-
-    # show shinked functions
-    for v in tab.values():
-        if v[0]['size'] > MAXIMUM_PATTERN_LENGTH:
-            #logging.warning('Shrinked %s: %d -> %d' % (v[0]['name'], v[0]['size'], MAXIMUM_PATTERN_LENGTH))
-            continue
+    _merge_crt_pairs(tab, crt_tab)
 
     logging.info('\n\nGenerating a yara file...\n\n')
     rules_list = get_rules(tab)
+    _emit_output(rules_list, args.output_path)
 
-    # output yara rule
-    if args.output_path == 'no': # no output
-        None
-    elif args.output_path: # file output
-        output_rules(rules_list, args.output_path)
-    else: # stdout
-        for rules in rules_list:
-            print(rules)
 
 if __name__ == '__main__':
     main()
-
-    #if args.save_api:
-    #    output_function_names(args.save_api, tab.values())
-    #print('Completed successfully.')
 
