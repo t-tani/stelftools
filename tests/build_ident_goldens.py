@@ -205,34 +205,20 @@ def ensure_runtime_dirs():
 
 
 def run_ident_capture(target_path, cfg_arch, fixture_dir, toolchain_dir, gcc_relpath, sig_stem):
-    """Drive ident.run_one with the yara + alist + dlist cfg and return
-    the captured ident.output('default') stdout.
-
-    ``compiler_path`` is intentionally omitted from the cfg so the
-    link-order identification path (id_func_name_for_linkorder ->
-    DubMaker.get_order_list -> gcc-driven dummy build) is skipped.
-    That path is not reproducible between Python invocations -- its
-    build_source loop converged on the very first invocation that
-    produced the original goldens, but every clean-cache re-run on
-    the same target / signatures since (including ``PYTHONHASHSEED=0``)
-    hits ``[DubMaker] error : build source loop limit`` and exits.
-
-    The depend-id path (id_func_name_for_depend, driven by the
-    dlist) IS reproducible and is exercised by this cfg shape. When
-    dub_maker is hardened so its loop converges across runs, the
-    ``compiler_path`` can come back -- callers of this function are
-    the only place that needs to change.
+    """Drive ident.run_one with the full cfg (yara + alist + dlist +
+    compiler_path) and return the captured ident.output('default')
+    stdout. ``compiler_path`` engages the link-order identification
+    pass (id_func_name_for_linkorder -> DubMaker.get_order_list);
+    determinism there depends on the ``undefined reference to ...``
+    parser in dub_maker that this branch hardened.
     """
     cfg = {
         "arch": cfg_arch,
         "yara_path": str(fixture_dir / f"{sig_stem}.yara"),
         "alias_list_path": str(fixture_dir / f"{sig_stem}.alist"),
         "dependency_list_path": str(fixture_dir / f"{sig_stem}.dlist"),
+        "compiler_path": str(toolchain_dir / gcc_relpath),
     }
-    # ``toolchain_dir`` and ``gcc_relpath`` are accepted for forward
-    # compatibility -- once link-order ID is reproducible they slot
-    # straight back into the cfg as ``compiler_path``.
-    _ = (toolchain_dir, gcc_relpath)
     target_info = ident.run_one(target_path, cfg)
     buf = io.StringIO()
     saved = sys.stdout

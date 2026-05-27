@@ -173,8 +173,22 @@ def build_source(toolchain_path, c_source_list, dummy_bin_name, exclude_error_fu
                 error_func_list.append(re.sub('\'|‘|’', '', c_stderr.split(' ')[2]))
                 #print('delete a :', re.sub('\'|‘|’', '', c_stderr.split(' ')[2]))
             elif 'undefined reference to ' in c_stderr:
-                error_func_list.append(re.sub('\'|‘|’|`|', '', c_stderr.split(' ')[4]))
-                #print('delete b :', re.sub('\'|‘|’', '', c_stderr.split(' ')[2]))
+                # gcc / ld error formats vary by version and by whether
+                # the diagnostic line is prefixed with the absolute ld
+                # path. Two real shapes the build_source loop sees on
+                # x86_64 Buildroot 2025.08:
+                #   ``<file>:(.text+0x20): undefined reference to `creal'``
+                #   ``/.../bin/ld: <file>:(.text+0x20): undefined reference to `creal'``
+                # The pre-fix code took ``split(' ')[4]`` which lands on
+                # the literal word ``to`` in the prefixed form and
+                # caused the rewrite loop to spin without removing
+                # anything until it hit LIMIT_LOOP. Pull the symbol out
+                # of the substring after the marker instead.
+                marker = 'undefined reference to '
+                tail = c_stderr.split(marker, 1)[1].strip()
+                symbol = re.sub('\'|‘|’|`', '', tail).split()[0] if tail else ''
+                if symbol:
+                    error_func_list.append(symbol)
             elif '#include' in c_stderr:
                 #print(c_stderr)
                 #print(re.sub('^ ', '', c_stderr))
