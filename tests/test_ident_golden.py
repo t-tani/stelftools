@@ -38,6 +38,7 @@ def _toolchain_stem(entry):
     return f"{entry['arch']}--{entry['libc']}--{entry['stability']}-{entry['release']}"
 
 
+@pytest.mark.linkorder
 @pytest.mark.parametrize("entry", _load_spec_entries(), ids=lambda e: e["id"])
 def test_ident_default_output_matches_golden(entry):
     fixture = FIXTURE_DIR / entry["id"]

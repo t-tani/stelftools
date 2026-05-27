@@ -71,6 +71,20 @@ exclude = ["plugins*", "tools*", "samples*", "signatures*", "research*", "docs*"
 # Release attachment set is published.
 stelftools = ["signatures_manifest.json"]
 
+[tool.pytest.ini_options]
+# Register custom markers so pytest does not warn on first encounter and
+# `pytest -m "not <marker>"` filters work without --strict-markers
+# misfiring during partial runs.
+markers = [
+    # ident's link-order identification pass invokes the real cross-gcc
+    # to extract a link-order map; that dominates per-test wall time at
+    # ~25 seconds per arch (~80 seconds across the three arch fixtures).
+    # Skip with `pytest -m "not linkorder"` when iterating on the
+    # matching pipeline and the compiler-driven path is not what you
+    # are touching.
+    "linkorder: exercises the link-order identification pass (slow; needs a cross-gcc)",
+]
+
 [tool.ruff]
 target-version = "py310"
 extend-exclude = ["research/**", "samples/**", "signatures/**", ".cache/**"]
