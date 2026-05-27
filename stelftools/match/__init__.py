@@ -48,7 +48,7 @@ MAX_PATTERN_LENGTH = 15000
 # off this partially-initialised package on its way up. Only the names
 # the orchestrator below calls are re-bound -- consumers that want
 # ``get_yara_rule`` / ``yara_matching`` import them from
-# ``stelftools.ident.yara`` directly.
+# ``stelftools.match.yara`` directly.
 from .yara import (  # noqa: E402
     compile_yara_file,
     format_match_res,
@@ -399,7 +399,7 @@ from .linkorder import id_func_name_for_linkorder  # noqa: E402
 # multiset on a matched address using a different external signal:
 # recorded caller-callee dependencies from the corpus build (depend),
 # or runs of consecutive single-candidate addresses (consecutive).
-# The link-order pass lives in :mod:`stelftools.ident.linkorder`.
+# The link-order pass lives in :mod:`stelftools.match.linkorder`.
 # ---------------------------------------------------------------------------
 
 
@@ -664,7 +664,7 @@ def multiple_consecutive_candidate_filt(functions, link_order_list, alias_list):
 # CLI driver + orchestrator -- ``arch_pattern_length`` is the per-arch
 # starting bucket size the multi-pass YARA match loop counts down from;
 # ``run_one_with_state`` is the library entry point bruteforce drivers
-# call; ``main`` is the legacy ``python -m stelftools.ident`` route.
+# call; ``main`` is the ``python -m stelftools.match`` route.
 # ---------------------------------------------------------------------------
 
 

@@ -27,15 +27,15 @@ from stelftools.elf import (
     get_symtab_info_by_capstone,
     get_symtab_info_by_reaelf,
 )
-from stelftools.ident import (
+from stelftools.match import (
     del_alias,
     del_mismatch,
     get_alias_list,
     id_func_name_for_depend,
     output,
 )
-from stelftools.ident.linkorder import id_func_name_for_linkorder
-from stelftools.ident.yara import (
+from stelftools.match.linkorder import id_func_name_for_linkorder
+from stelftools.match.yara import (
     format_match_res,
     get_target_fp,
     get_yara_rule,

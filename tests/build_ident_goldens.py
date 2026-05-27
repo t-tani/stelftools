@@ -44,7 +44,8 @@ sys.path.insert(0, str(REPO_ROOT))
 
 # Import order matters: info_create.signature_dir reads ``STELFTOOLS_SIGNATURES_DIR``
 # at call time, so the env var can be set per entry below.
-from stelftools import ident, info_create  # noqa: E402
+from stelftools import info_create  # noqa: E402
+from stelftools import match as ident  # noqa: E402
 
 CACHE = REPO_ROOT / ".cache" / "_bootlin_work"
 TOOLCHAIN_DIR = CACHE / "toolchains"

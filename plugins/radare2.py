@@ -55,7 +55,7 @@ else:
     toolchain = str(matches[0]) if matches else str(Path(STELFTOOLS_TOOLCHAIN_PATH) / toolchain)
 
 run_cmd = [ \
-            'python3', '-m', 'stelftools.ident', \
+            'python3', '-m', 'stelftools.match', \
             '-cfg', toolchain, \
             '-target', f'./{target}', \
             '-o', 'ghidra']

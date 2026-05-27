@@ -30,11 +30,11 @@ def func_ident():
     tc_cfg_path = str(tc_cfg_path)
     # set running command
     run_cmd = [ \
-            "python3", "-m", "stelftools.ident", \
+            "python3", "-m", "stelftools.match", \
             '-cfg', tc_cfg_path, \
             '-target', location, \
             '-o', 'ghidra']
-    # run stelftools (stelftools.ident); cwd anchors -m at the repo root
+    # run stelftools (stelftools.match); cwd anchors -m at the repo root
     cmd_res = subprocess.check_output(run_cmd, cwd=STELFTOOLS_PATH).split('\n')
     res_list = [x for x in cmd_res if x != '']
     for res in res_list:

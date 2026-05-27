@@ -34,7 +34,7 @@ def set_args():
 def ident_lfunc(cfg_path, target_path):
     tc_cfg_path = STELFTOOLS_PATH + cfg_path
     run_cmd = [ \
-            'python3', '-m', 'stelftools.ident', \
+            'python3', '-m', 'stelftools.match', \
             '-cfg', tc_cfg_path, \
             '-target', target_path \
             ]

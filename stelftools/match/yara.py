@@ -1,6 +1,6 @@
-"""YARA-x scan pipeline for ident.
+"""YARA-x scan pipeline for the matcher.
 
-Stages, in the order :func:`stelftools.ident.run_one_with_state` calls
+Stages, in the order :func:`stelftools.match.run_one_with_state` calls
 them:
 
 1. :func:`compile_yara_file` reads the ``.yara`` source, compiles it via
