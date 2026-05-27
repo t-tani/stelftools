@@ -18,9 +18,31 @@ from shims import ida_shims
 
 import time
 import json
+from pathlib import Path
 
-from stelftools.ident import *
-from stelftools.info_create import *
+from elftools.common import exceptions
+
+from stelftools.ident import (
+    del_alias,
+    del_mismatch,
+    format_match_res,
+    get_alias_list,
+    get_func_addr,
+    get_symtab_info_by_capstone,
+    get_symtab_info_by_reaelf,
+    get_target_fp,
+    get_yara_rule,
+    id_func_name_for_depend,
+    id_func_name_for_linkorder,
+    marge_functions,
+    marge_nomatch_functions,
+    output,
+    yara_matching,
+)
+from stelftools.info_create import (
+    create_toolchain_cfg_file,
+    mkrule_and_other,
+)
 
 def overwrite_func_label(match_info):
     same_name_idx = 0
