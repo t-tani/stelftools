@@ -1,0 +1,381 @@
+{
+  "schema_version": 1,
+  "_comment": "Bootlin toolchains chosen for stelftools.mkrule.fetch_opecodes regression coverage. One entry per (e_machine, EI_CLASS, EI_DATA) profile stelftools supports today. libc preference: glibc > uclibc. release pinned to 2025.08-1. tarball_sha256 is populated by `python tests/fetch_test_objects.py --resolve-sha`. leaves: leaf filenames (no path) to extract from the tarball; missing leaves are logged and skipped. Gaps known but not covered here: PPC64 .opd (Bootlin has no powerpc64 token in our supported set) and ET_EXEC x86 capstone path (archives are ET_REL only).",
+  "entries": [
+    {
+      "arch": "aarch64",
+      "libc": "glibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "dfb47eee874eef9e8a7fc042eee4e0a183f444b6bcde6a82fef8f009918389c9",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    },
+    {
+      "arch": "aarch64be",
+      "libc": "glibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "4eca1a03d3d73bd31427d0f231d40a9f00a682a50c6ae5b31f6738a4675f9dd8",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    },
+    {
+      "arch": "arcle-750d",
+      "libc": "uclibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "dd0fb263ec10ffd15a4743974af6509a66e705c1da1dc1a72a270702e4567be0",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    },
+    {
+      "arch": "arcle-hs38",
+      "libc": "uclibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "acf19ed3f1fd6b633cd4ef0e84bb5df8c20890ac4efc7312de4c00221ba7a774",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    },
+    {
+      "arch": "armebv7-eabihf",
+      "libc": "glibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "98150dbf42927fe33a1ce51f48d13fcd83e04ba7c3d8c9ad0fc1837a3fa971ce",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    },
+    {
+      "arch": "armv5-eabi",
+      "libc": "glibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "53f3d7c2b0ce32f120043bf4b338b3ea3f3375015ed63f5b382a5f62894baeec",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    },
+    {
+      "arch": "armv6-eabihf",
+      "libc": "glibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "062c148a62785ce583f32e2e69bb1e8fc5dbb598bf4baacce0df118de4066de8",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    },
+    {
+      "arch": "armv7-eabihf",
+      "libc": "glibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "97d6fbaf19832002f3d6aa8fd31b2d29c1dc7b0752f4ae8ed35860fd33c1f9b4",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    },
+    {
+      "arch": "armv7m",
+      "libc": "uclibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "8024e0e353c85eb9c0a70aa258a0b6a2023e619e4d8cde082578742a80e1278c",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    },
+    {
+      "arch": "m68k-68xxx",
+      "libc": "glibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "0ad3bde066917d3d57b05b89fd13529acd401f4bef4a2afdd0c14452d039ca77",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    },
+    {
+      "arch": "m68k-coldfire",
+      "libc": "uclibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "ae1f50f6b274464208ebd291dbd9a6b2fa35682c16ed390eab4d8f6607006a77",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    },
+    {
+      "arch": "mips32",
+      "libc": "glibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "23d0f36aa7962230ef43338ba14ac2a7fa6eb68e15ef39cb9114ac711b907f70",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    },
+    {
+      "arch": "mips32el",
+      "libc": "glibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "1085fe6b13d74205ef6e92d1d40fb3960bf6e4bad50555c723fa07416cb53c1c",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    },
+    {
+      "arch": "mips32r5el",
+      "libc": "glibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "47e4a737c7f820c4f490ac7ffb54adf2c853d7a05e450ef1e6da3f44e663b487",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    },
+    {
+      "arch": "powerpc-440fp",
+      "libc": "glibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "ff9425efff6ea7f9853fd2c0df7cf8f6c86d7a4cbd4f58605f3794e51237acfb",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    },
+    {
+      "arch": "powerpc-e300c3",
+      "libc": "glibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "581d0441a31bff4f3a0996b824afb3fe35c6c32f543765b28a6b63a5684fc116",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    },
+    {
+      "arch": "powerpc-e500mc",
+      "libc": "glibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "0232c110f2e47dcab4834ab375015a1a7a19379b059c352e5a95b5578f74a0a9",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    },
+    {
+      "arch": "riscv32-ilp32d",
+      "libc": "glibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "d42680e926542595c4c87629d33f5f90aac1e9a964c8955089e0514caa01b78f",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    },
+    {
+      "arch": "x86-64",
+      "libc": "glibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "760acd5c3159448b618e237b61935335baada74fe0cdc0d7611826cb49b41c8c",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    },
+    {
+      "arch": "x86-64-core-i7",
+      "libc": "glibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "f40b098d0435485a76307347e36e8f11727d25c8f5ba09a1c048d5e9e1edb2f0",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    },
+    {
+      "arch": "x86-64-v2",
+      "libc": "glibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "fcbf8a7ce1c1c5dbd8d322a54f0fa8d5e18dec7511df66032d553a0a8639a076",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    },
+    {
+      "arch": "x86-64-v3",
+      "libc": "glibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "fd63f95fa5eb52ef891da434bd3deada493d78fc11e42144f02d8806d7b47504",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    },
+    {
+      "arch": "x86-64-v4",
+      "libc": "glibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "8f1a5623cb0a0b7814d7b87495685f5e98338f78062ea749c31648554a58ddc2",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    },
+    {
+      "arch": "x86-core2",
+      "libc": "glibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "69eb5c2dfc9e1dc594feda5e5f61d60d60de830ab4390751b4f2c07b084e939f",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    },
+    {
+      "arch": "x86-i686",
+      "libc": "glibc",
+      "release": "2025.08-1",
+      "stability": "stable",
+      "ext": "xz",
+      "tarball_sha256": "f9b365d7fd8f8860dfb1845ff731013550f071ca4a8de0e5074abc995296b26c",
+      "leaves": [
+        "libm.a",
+        "libc.a",
+        "libpthread.a",
+        "crti.o",
+        "crtn.o"
+      ]
+    }
+  ]
+}
