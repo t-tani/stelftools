@@ -133,7 +133,7 @@ ignore = [
 # in the per-architecture dispatch tables. Listing them by hand bloats
 # the import header without any analytical win, so we ignore the
 # star-import diagnostics here.
-"stelftools/ident.py" = ["F403", "F405"]
+"stelftools/elf/disasm.py" = ["F403", "F405"]
 "stelftools/mkrule.py" = ["F403", "F405"]
 "stelftools/info_create.py" = ["F403", "F405"]
 
