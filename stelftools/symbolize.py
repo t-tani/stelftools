@@ -89,7 +89,7 @@ def run_match(target_path, cfg_path, output_mode='ghidra', logger=None):
 
     t0 = time.time()
     target_info = ident.run_one_with_state(
-        target_state, cfg_info, relative_paths=True)
+        target_state, cfg_info, cfg_path=cfg_path)
     if logger:
         logger.info("run_one_with_state done in %.1fs (functions=%d)",
                     time.time() - t0, len(target_info['functions']))
