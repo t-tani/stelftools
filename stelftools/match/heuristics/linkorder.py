@@ -16,8 +16,8 @@ alias list, and the link-order list returned by
 the number of slots the pass narrowed.
 """
 
-from .. import dub_maker as DubMaker
-from . import (
+from ... import dub_maker as DubMaker
+from .. import (
     INIT_CRT_FUNC_LIST,
     STELFTOOLS_PATH,
     TOP_LIBC_FUNC_LIST,

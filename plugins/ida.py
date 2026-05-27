@@ -34,7 +34,7 @@ from stelftools.match import (
     id_func_name_for_depend,
     output,
 )
-from stelftools.match.linkorder import id_func_name_for_linkorder
+from stelftools.match.heuristics.linkorder import id_func_name_for_linkorder
 from stelftools.match.yara import (
     format_match_res,
     get_target_fp,

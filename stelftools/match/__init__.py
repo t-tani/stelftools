@@ -388,7 +388,7 @@ def _match_array_index(_list, func_name):
 
 # ``linkorder`` reaches back here for _match_array_index, so the import
 # must follow that definition.
-from .linkorder import id_func_name_for_linkorder  # noqa: E402
+from .heuristics.linkorder import id_func_name_for_linkorder  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
