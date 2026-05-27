@@ -132,7 +132,7 @@ def output(target_info, target_path, output_mode):
     #print("area :", hex(libc_area_top), '-', hex(libc_area_bot))
 
     if output_mode in ['no']:
-        None
+        pass
     # default output mode
     elif output_mode in ['compare', 'ida', 'ghidra']:
         match_info = {}
@@ -160,21 +160,8 @@ def output(target_info, target_path, output_mode):
                     match_info[addr] = {'names' : match_func}
         return match_info
     elif output_mode in ['default']:
-        #print(hex(libc_area_top), '-', hex(libc_area_bot))
         matched_func_addrs = []
         for addr in sorted(target_info['functions'].keys()):
-            #print('dbg :', target_info['functions'][addr])
-            # # skip
-            # if not addr in skip_func_addr:
-            #     if libc_area_top != 0 and addr < libc_area_top:
-            #         print('skip(a) :', target_info['functions'][addr])
-            #         continue
-            #     if libc_area_bot != 0 and addr > libc_area_bot:
-            #         print('skip(b) :', target_info['functions'][addr])
-            #         continue
-            # if target_info['functions'][addr]['names'] == ['']:
-            #     print('skip(c) :', target_info['functions'][addr])
-            #     continue
             matched_func_addrs.append(addr)
             match_func = ','.join([x for x in sorted(target_info['functions'][addr]['names'])])
             print(hex(addr), match_func)
@@ -555,9 +542,6 @@ def get_func_addr(target, base_vaddr):
 
 def get_symtab_info_by_capstone(target):
     symtab_info = []
-    offset = 0
-    size = 0
-    vaddr = 0
     PH_EXEC = 0x1
     PH_WRITE = 0x2
     PH_READ = 0x4
@@ -802,7 +786,6 @@ def marge_functions(functions, _functions):
 
 # Todo : fix the hardcode point
 def get_yara_rule(yara_rule_path, r_type, r_length):
-#def get_yara_rule(yara_rule_path, rule_length, start_rule_length):
     risc_v_flag = False
 
     use_rule_list = []
@@ -940,7 +923,6 @@ def compute_target_state(target_path):
     # and file size. Cfg-independent — bruteforce drivers compute it
     # once per binary and reuse across every candidate cfg.
     target = get_target_fp(target_path)
-    target.read()
     try:
         symtab_info = get_symtab_info_by_capstone(target_path)
     except exceptions.ELFParseError:
@@ -1686,7 +1668,7 @@ def set_args():
     parser.add_argument('-target', help = 'target path')
     # old
     parser.add_argument('--yara', help = 'yara rule path')
-    parser.add_argument('--arch', help = 'yara rule path')
+    parser.add_argument('--arch', help = 'target architecture')
     #parser.add_argument('--pattern_length', '-pl', default = 8, type = int)
     parser.add_argument('--output_style', '-o', default='default', help = 'output style')
     parser.add_argument('--virtual_addr', '-va', action='store_true', help = 'output virtual address')
