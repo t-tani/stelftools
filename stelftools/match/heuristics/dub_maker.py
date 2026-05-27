@@ -8,9 +8,11 @@ import subprocess
 import argparse
 from pathlib import Path
 
-# Anchor at the repository root (the parent of the stelftools/ package
-# directory) so runtime caches under .cache/runtime/ resolve correctly.
-STELFTOOLS_PATH = str(Path(__file__).resolve().parent.parent) + "/"
+# Anchor at the repository root so runtime caches under .cache/runtime/
+# resolve correctly. The four parent hops climb out of
+# stelftools/match/heuristics/dub_maker.py -> heuristics/ -> match/ ->
+# stelftools/ (package dir) -> repo root.
+STELFTOOLS_PATH = str(Path(__file__).resolve().parent.parent.parent.parent) + "/"
 
 def get_funclist(funclist_path):
     with open(funclist_path) as f:

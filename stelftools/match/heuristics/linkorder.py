@@ -3,7 +3,7 @@
 When a YARA rule's signature matches multiple aliased function names,
 the link order the toolchain assigns to its archives is a strong
 disambiguator. :func:`id_func_name_for_linkorder` drives the
-:mod:`stelftools.dub_maker` helper to compile a dummy binary against
+:mod:`.dub_maker` helper to compile a dummy binary against
 the same cross-toolchain and capture the order in which the linker
 pulls referenced libfuncs; :func:`link_order_base_identificate` then
 walks the matched-address table and narrows each multi-candidate slot
@@ -16,7 +16,7 @@ alias list, and the link-order list returned by
 the number of slots the pass narrowed.
 """
 
-from ... import dub_maker as DubMaker
+from . import dub_maker as DubMaker
 from .. import (
     INIT_CRT_FUNC_LIST,
     STELFTOOLS_PATH,
