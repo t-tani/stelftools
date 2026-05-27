@@ -30,6 +30,7 @@ import argparse
 import cxxfilt
 
 from . import arch as arch_pkg
+from . import crt
 from .arch import i386 as _arch_i386
 from .arch import ppc64 as _arch_ppc64
 from .arch import riscv as _arch_riscv
@@ -57,13 +58,10 @@ MINIMUM_PATTERN_LENGTH = 0
 #MAXIMUM_PATTERN_LENGTH = 1000 # 600  # TODO: parameter tuning
 MAXIMUM_PATTERN_LENGTH = 15000 # 600  # TODO: risc-v
 
-CRT_INIT_FINI_FUNC_LIST = ['.init', '_init', '__init', '.fini', '_fini', '__fini']
-
-
 # ---------------------------------------------------------------------------
 # fetch_opecodes pipeline -- phase helpers in execution order, then the
-# orchestrator. Per-arch hooks live in stelftools.arch; this module owns
-# the cross-arch control flow.
+# orchestrator. Per-arch hooks live in stelftools.arch; CRT-glue handling
+# lives in stelftools.crt; this module owns the cross-arch control flow.
 # ---------------------------------------------------------------------------
 
 
@@ -153,31 +151,6 @@ def _apply_all_relocations(e, sections, relnames, textsec, ei_data, fname):
                 _reloc_info, _checked_r_offset, ei_data, fname,
             )
     return handler
-
-
-def _collect_crt_funcs(textsec, fname):
-    """Pick up the ``_init`` / ``_fini`` entries from crti.o / crtn.o.
-
-    The trailing pass in ``main`` knits the two halves together into a
-    single ``[0-12]``-spanning rule that matches the linked ``crt`` glue
-    regardless of how the loader concatenates them.
-    """
-    crt_marge_tab = {}
-    leaf = fname.split('/')[-1]
-    if leaf not in ['crti.o', 'crtn.o']:
-        return crt_marge_tab
-    for _sym_name in textsec.keys():
-        if _sym_name not in CRT_INIT_FINI_FUNC_LIST:
-            continue
-        opecodes_str = ' '.join(textsec[_sym_name])
-        entry = {
-            'name': _sym_name, 'type': 'func',
-            'size': len(textsec[_sym_name]),
-            'exports': [], 'imports': [],
-            'opecodes': opecodes_str,
-        }
-        crt_marge_tab.setdefault(leaf, []).append(entry)
-    return crt_marge_tab
 
 
 def _select_symtab(e):
@@ -337,7 +310,7 @@ def _populate_tab_from_symbols(tab, exsymtab, e, symtab, textsec,
                     continue
             except cxxfilt.InvalidName:
                 continue
-        if sym.name in CRT_INIT_FINI_FUNC_LIST:
+        if sym.name in crt.INIT_FINI_FUNC_LIST:
             continue
         _insert_tab_entry(
             tab, opecodes_str, sym.name, size, fname, arfile,
@@ -395,7 +368,7 @@ def fetch_opecodes(f, arfile='', exapis=()):
     if e['e_machine'] == 'EM_RISCV':
         _arch_riscv.postprocess_text(textsec)
 
-    crt_marge_tab = _collect_crt_funcs(textsec, fname)
+    crt_marge_tab = crt.collect_funcs(textsec, fname)
     symtab = _select_symtab(e)
     if symtab is None:
         return {}, crt_marge_tab
@@ -620,42 +593,6 @@ def _process_input_file(filename, exapis):
     exit(-1)
 
 
-def _merge_crt_pairs(tab, crt_tab):
-    """Knit each ``(crti.o, crtn.o)`` function pair into a single rule.
-
-    The ``[0-12]`` window between the two halves matches whatever the
-    linker may splice between the crti and crtn glue (typically a
-    ``.note.ABI-tag`` or a short init thunk).
-    """
-    if not (set(crt_tab.keys()) >= {'crti.o', 'crtn.o'}):
-        return
-    crt_func_name_list = [info['name'] for info in crt_tab['crti.o']]
-    half_opecodes = {}
-    for slot, leaf in (('i-opecode', 'crti.o'), ('n-opecode', 'crtn.o')):
-        for info in crt_tab.get(leaf, []):
-            if info['name'] in crt_func_name_list:
-                half_opecodes.setdefault(info['name'], {})[slot] = info['opecodes']
-
-    merged = {}
-    for func_name, halves in half_opecodes.items():
-        joined = ''
-        for opecodes_str in halves.values():
-            joined = opecodes_str if not joined else joined + ' [0-12] ' + opecodes_str
-        merged[func_name] = joined
-
-    for func_name, joined in merged.items():
-        entry = {
-            'name': func_name, 'type': 'func',
-            'size': len(joined.split(' ')),
-            'exports': [], 'imports': [],
-            'objname': 'crti.o',
-        }
-        if joined in tab:
-            tab[joined] = [tab[joined][0], entry]
-        else:
-            tab[joined] = [entry]
-
-
 def _emit_output(rules_list, output_path):
     """Write the rendered rules to ``output_path``, or stdout if no
     path was given. The literal string ``"no"`` disables output so a
@@ -703,7 +640,7 @@ def main():
         tab = merge_dicts(tab, newtab)
         crt_tab = merge_dicts(crt_tab, new_crt_tab)
 
-    _merge_crt_pairs(tab, crt_tab)
+    crt.merge_pairs(tab, crt_tab)
 
     logging.info('\n\nGenerating a yara file...\n\n')
     rules_list = get_rules(tab)

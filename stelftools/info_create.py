@@ -10,24 +10,22 @@ import logging
 import collections
 import glob
 import argparse
+from pathlib import Path
+
 import arpy
 import magic
-from capstone import *
-from elftools.elf.constants import *
 
 from . import mkrule as libfunc_mkrule
 from . import deparse as libfunc_deparse
 from . import sigstore
+from . import crt
 from .families import family_for
-from pathlib import Path
 
-# Anchor at the repository root (the parent of the stelftools/ package
-# directory). Reserved for non-signature caches (.cache/runtime, etc.);
-# signature artifacts live under the resolver-managed signatures tree.
-STELFTOOLS_PATH = str(Path(__file__).resolve().parent.parent) + "/"
 
-MINIMUM_PATTERN_LENGTH = 0
-MAXIMUM_PATTERN_LENGTH=15000
+# ---------------------------------------------------------------------------
+# Signature output paths -- where the yara / dlist / alist / cfg files
+# land for one (toolchain name, arch) pair.
+# ---------------------------------------------------------------------------
 
 
 def signature_dir(tc_name: str, arch: str) -> Path:
@@ -52,6 +50,14 @@ def create_toolchain_cfg_file(tc_name, arch, tc_compiler_path):
     with open(out_dir / (tc_name + ".json"), "w") as f:
         json.dump(cfg, f, indent=2)
         f.write("\n")
+
+
+# ---------------------------------------------------------------------------
+# Static-library discovery -- walk the toolchain tree, deduplicate by
+# realpath + size + sha256, return the per-archive worklist that drives
+# the rest of the pipeline.
+# ---------------------------------------------------------------------------
+
 
 _STATIC_LIB_EXTS = ('.a', '.o', '.os', '.lo')
 
@@ -113,6 +119,15 @@ def get_static_lib_file_list(tc_path):
                 by_hash[digest] = path
         final.extend(by_hash.values())
     return sorted(final)
+
+
+# ---------------------------------------------------------------------------
+# Per-file processing -- libmagic-driven dispatch from one toolchain
+# file to (tab, crt_tab, depend) deltas. Workers in the multiprocessing
+# pool call into this section; it must stay self-contained on
+# module-level state so pickling round-trips cleanly.
+# ---------------------------------------------------------------------------
+
 
 # Toolchain object files that the rule generator skips. crtbegin / Scrt1
 # / rcrt1 are dynamic-link helpers whose code is not part of any user
@@ -239,6 +254,13 @@ def _process_one_file_inner(filename):
     return (tab, crt_tab, depend)
 
 
+# ---------------------------------------------------------------------------
+# Combined pipeline -- orchestrate the per-file calls over the worklist,
+# optionally via a multiprocessing pool, merge results, drive the YARA
+# / dlist / alist render at the end.
+# ---------------------------------------------------------------------------
+
+
 def _default_worker_count():
     """Half the available CPUs, capped at 8, with a floor of 1.
 
@@ -251,6 +273,37 @@ def _default_worker_count():
     """
     cpu = os.cpu_count() or 1
     return max(1, min(8, cpu // 2))
+
+
+def _merge_one_result(result, tab, crt_tab, depend_list):
+    """Fold one worker / serial result into the running accumulators.
+
+    Returns the new ``(tab, crt_tab)``; ``depend_list`` is updated in
+    place because :class:`dict.update` already has the right merge
+    shape for it. ``result`` is whatever :func:`_process_one_file`
+    returned:
+
+    - ``None``: file was skipped (libstdc++, plain text, libmagic
+      failure). No-op; the accumulators come back unchanged.
+    - ``('error', message, filename)``: matcher aborted. Logs and
+      exits so the CLI surfaces the failure loudly.
+    - ``(newtab, new_crt_tab, new_depend)``: merge the deltas in.
+
+    The merge keeps ``libfunc_mkrule.merge_dicts``'s "new contribution's
+    per-key list first" ordering so the rendered YARA rule's
+    ``syms[0]`` matches the pre-cleanup output byte-for-byte.
+    """
+    if result is None:
+        return tab, crt_tab
+    if isinstance(result, tuple) and result and result[0] == 'error':
+        _, msg, fname = result
+        logging.error('aborting on %s: %s', fname, msg)
+        exit(-1)
+    newtab, new_crt_tab, new_depend = result
+    tab = libfunc_mkrule.merge_dicts(tab, newtab)
+    crt_tab = libfunc_mkrule.merge_dicts(crt_tab, new_crt_tab)
+    depend_list.update(new_depend)
+    return tab, crt_tab
 
 
 def mkrule_and_other(tc_path, tc_name, arch, workers=None):
@@ -301,80 +354,13 @@ def mkrule_and_other(tc_path, tc_name, arch, workers=None):
         with multiprocessing.Pool(processes=workers) as pool:
             results = pool.imap(_process_one_file, static_lib_file_list, chunksize=1)
             for result in results:
-                if result is None:
-                    continue
-                if isinstance(result, tuple) and result and result[0] == 'error':
-                    _, msg, fname = result
-                    logging.error('aborting on %s: %s', fname, msg)
-                    exit(-1)
-                newtab, new_crt_tab, new_depend = result
-                tab = libfunc_mkrule.merge_dicts(tab, newtab)
-                crt_tab = libfunc_mkrule.merge_dicts(crt_tab, new_crt_tab)
-                depend_list.update(new_depend)
+                tab, crt_tab = _merge_one_result(result, tab, crt_tab, depend_list)
     else:
         for filename in static_lib_file_list:
-            result = _process_one_file(filename)
-            if result is None:
-                continue
-            if isinstance(result, tuple) and result and result[0] == 'error':
-                _, ftype, fname = result
-                logging.error('Not supported file type of %s: %s' % (fname, ftype))
-                exit(-1)
-            newtab, new_crt_tab, new_depend = result
-            tab = libfunc_mkrule.merge_dicts(tab, newtab)
-            crt_tab = libfunc_mkrule.merge_dicts(crt_tab, new_crt_tab)
-            depend_list.update(new_depend)
+            tab, crt_tab = _merge_one_result(_process_one_file(filename), tab, crt_tab, depend_list)
 
-    # marge crt opecode
-    _tmp_crt_info = {}
-    crt_obj_list = ['crti.o', 'crtn.o']
-    if len(set(crt_tab.keys()) & set(crt_obj_list)) == len(crt_obj_list):
-        crt_func_name_list = []
-        # get connect crt function name list
-        for info_in_obj in crt_tab['crti.o']:
-            crt_func_name_list.append(info_in_obj['name'])
-        for crt_obj, crt_info_list in crt_tab.items():
-            if crt_obj == 'crti.o':
-                for crt_info in crt_info_list:
-                    for crt_func_name in crt_func_name_list:
-                        if crt_info['name'] == crt_func_name:
-                            opecodes_str = crt_info['opecodes']
-                            _tmp_crt_info[crt_func_name] = {'i-opecode': opecodes_str}
-        for crt_obj, crt_info_list in crt_tab.items():
-            if crt_obj == 'crtn.o':
-                for crt_info in crt_info_list:
-                    for crt_func_name in crt_func_name_list:
-                        if crt_info['name'] == crt_func_name:
-                            opecodes_str = crt_info['opecodes']
-                            _tmp_crt_info[crt_func_name]['n-opecode'] = opecodes_str
-        # marge
-        marged_crt_func_opecs = {}
-        for func_name in _tmp_crt_info.keys():
-            for t_opecodes_str in _tmp_crt_info[func_name].values():
-                if not func_name in marged_crt_func_opecs.keys():
-                    marged_crt_func_opecs[func_name] = t_opecodes_str
-                else:
-                    marged_crt_func_opecs[func_name] = marged_crt_func_opecs[func_name] + ' [0-12] ' + t_opecodes_str
-        for _crt_func_name, _crt_func_opecodes in marged_crt_func_opecs.items():
-            if _crt_func_opecodes in tab.keys():
-                tab[_crt_func_opecodes] = [
-                    tab[_crt_func_opecodes][0],
-                    {'name': _crt_func_name, 'type': 'func',
-                     'size': len(_crt_func_opecodes.split(' ')), 'exports': [], 'imports': [],
-                     'objname': 'crti.o'},
-                ]
-            else:
-                tab[_crt_func_opecodes] = [
-                    {'name': _crt_func_name, 'type': 'func',
-                     'size': len(_crt_func_opecodes.split(' ')), 'exports': [], 'imports': [],
-                     'objname': 'crti.o'},
-                ]
+    crt.merge_pairs(tab, crt_tab)
 
-    # show shinked functions
-    for v in tab.values():
-        if v[0]['size'] > MAXIMUM_PATTERN_LENGTH:
-            #logging.warning('Shrinked %s: %d -> %d' % (v[0]['name'], v[0]['size'], MAXIMUM_PATTERN_LENGTH))
-            continue
     logging.info('\n\nGenerating a yara file...\n\n')
     rules_list = libfunc_mkrule.get_rules(tab)
     libfunc_mkrule.output_rules(rules_list, yara_output_path)
@@ -384,6 +370,23 @@ def mkrule_and_other(tc_path, tc_name, arch, workers=None):
     libfunc_deparse.output_alist(formatted_depend_data, alist_output_path)
 
     return yara_output_path, dlist_output_path, alist_output_path
+
+
+# ---------------------------------------------------------------------------
+# CLI driver -- argparse, default tc_path derivation, and the success-line
+# print helpers. The stelftools-mkrule console script wires here.
+# ---------------------------------------------------------------------------
+
+
+def _announce_output(label, path, verb='created'):
+    """Print one ``[successfully <verb>] <label> : <path>`` line, but
+    only if ``path`` actually exists on disk -- a guard against a
+    silent ``mkrule_and_other`` failure that returned a path without
+    writing the file.
+    """
+    if os.path.exists(path):
+        print('[successfully %s] %s : %s' % (verb, label, path))
+
 
 def main():
     parser = argparse.ArgumentParser(prog = sys.argv[0])
@@ -401,22 +404,23 @@ def main():
 
     tc_name = args.name
     tc_compiler_path = args.compiler_path
+    # Default --toolchain_path is two directory levels above the
+    # compiler binary: typical Bootlin layout is
+    # <root>/bin/<triplet>-gcc, so the root is dirname(dirname(...)).
     if args.toolchain_path:
         tc_path = args.toolchain_path
     else:
-        tc_path = "/".join(args.compiler_path.split('/')[0:(len(args.compiler_path.split('/'))-2)])
+        tc_path = str(Path(args.compiler_path).parent.parent)
     arch = args.arch
 
     workers = None if args.workers <= 0 else args.workers
-    yara_rule_path, depend_list_path, alias_list_path = mkrule_and_other(tc_path, tc_name, arch, workers=workers)
-    if os.path.exists(yara_rule_path):
-        print('[successfully created] yara rule : %s' % yara_rule_path)
-    if os.path.exists(tc_compiler_path):
-        print('[successfully checked] toolchain compiler path : %s' % tc_compiler_path)
-    if os.path.exists(depend_list_path):
-        print('[successfully created] dependency list : %s' % depend_list_path)
-    if os.path.exists(alias_list_path):
-        print('[successfully created] alias list : %s' % alias_list_path)
+    yara_rule_path, depend_list_path, alias_list_path = mkrule_and_other(
+        tc_path, tc_name, arch, workers=workers,
+    )
+    _announce_output('yara rule', yara_rule_path)
+    _announce_output('toolchain compiler path', tc_compiler_path, verb='checked')
+    _announce_output('dependency list', depend_list_path)
+    _announce_output('alias list', alias_list_path)
 
     create_toolchain_cfg_file(tc_name, arch, tc_compiler_path)
 
