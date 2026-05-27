@@ -15,6 +15,7 @@ Reference: https://github.com/rui314/mold/blob/b7102d26ca42c7d72838f64c82835cb6d
 """
 
 import logging
+import re
 
 R_RISCV_BRANCH         = 0x10
 R_RISCV_JAL            = 0x11
@@ -103,3 +104,67 @@ def apply_relocation(textsec, name, offset, rtype,
         logging.warning('Not implemented: unknown relocation type %d - 0x%X at 0x%X in %s', rtype, rtype, offset, fname)
         return
         exit(-1)
+
+
+_SKIP_NAMES = frozenset({'_nl_locale_subfreeres', '__libc_freeres_fn'})
+
+
+def postprocess_text(textsec):
+    """Walk every 4-byte instruction slot in each text section and widen
+    branch / call thunks that ``apply_relocation`` left untouched. The
+    pre-split implementation ran this pass unconditionally for any
+    ``EM_RISCV`` binary.
+    """
+    for t_sec, t_opecode_list in textsec.items():
+        _offset_size = int(len(t_opecode_list) / 4)
+        for _offset in range(_offset_size):
+            _fmt_offset = _offset * 4
+            if textsec[t_sec][_fmt_offset] == '63':  # bnez instruction
+                textsec[t_sec][_fmt_offset:_fmt_offset+4] = ['?3', '??', '??', '??']
+            elif textsec[t_sec][_fmt_offset] == 'E3':  # bgeu instruction
+                textsec[t_sec][_fmt_offset:_fmt_offset+4] = ['?3', '??', '??', '??']
+            elif textsec[t_sec][_fmt_offset:_fmt_offset+4] == ['E7', '80', '00', '00']:
+                textsec[t_sec][_fmt_offset:_fmt_offset+4] = ['E?', '??', '??', '??']
+            elif textsec[t_sec][_fmt_offset:_fmt_offset+4] == ['67', '00', '03', '00']:
+                textsec[t_sec][_fmt_offset:_fmt_offset+4] = ['67', '??', '??', '??']
+
+
+def should_skip_symbol(sym):
+    """Drop two libc symbols whose body the relax pass does not coalesce
+    cleanly enough to leave a useful signature.
+    """
+    return sym.name in _SKIP_NAMES
+
+
+def compute_min_length(opecodes):
+    """Count hex / ?? tokens so the rule can carry a ``min_size``
+    annotation alongside the literal pattern size. RELAX-window markers
+    (``[0-N]`` and the trailing empty slots) do not count toward the
+    minimum.
+    """
+    return sum(1 for h in opecodes if h == '??' or re.search('^[0-9a-fA-f]{2}$', h) is not None)
+
+
+def finalize_opecodes(opecodes):
+    """Normalise the leading and trailing edges of a RELAX-window slice.
+
+    A function that starts inside a coalesced window keeps its first
+    byte literal but widens the marker to ``?? [3-N]``. A slice whose
+    trailing slot is empty (mid-window) is shifted so the marker spans
+    the variable tail.
+    """
+    if not opecodes:
+        return
+    if opecodes[0].startswith('['):
+        _fix_len = int(opecodes[0].split(']')[0].split('-')[1]) - 1
+        opecodes[0] = '??'
+        opecodes[1] = '[3-' + str(_fix_len) + ']'
+    if opecodes[-1] == '':
+        target_flex_offset = 0
+        for _offset, _hex in enumerate(reversed(opecodes)):
+            if _hex.endswith(']'):
+                target_flex_offset = len(opecodes) - _offset - 1
+                break
+        _fix_max_len = int(opecodes[target_flex_offset].split(']')[0].split('-')[1]) - 1
+        opecodes[target_flex_offset] = '[' + str(0) + '-' + str(_fix_max_len) + ']'
+        opecodes[target_flex_offset+1] = '??'

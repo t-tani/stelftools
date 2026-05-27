@@ -16,23 +16,23 @@
 # - genptn.py -> mkrule.py -> libfunc_mkrule.py
 
 import os
-import re
 import sys
 import shutil
 import arpy
 #import ar
 from elftools.elf.elffile import ELFFile
 from elftools.elf.constants import *
-from capstone import *
 import logging
 import hashlib
 import magic
 import argparse
 
 import cxxfilt
-import collections
 
 from . import arch as arch_pkg
+from .arch import i386 as _arch_i386
+from .arch import ppc64 as _arch_ppc64
+from .arch import riscv as _arch_riscv
 
 col, row = shutil.get_terminal_size()
 
@@ -180,97 +180,16 @@ def fetch_opecodes(f, arfile = '', exapis = []):
         return tab, crt_marge_tab
     exsymtab = {}
 
-    # ToDo fix wong code
-    opd_func_dict = {}
-    _ndx_list = []
-    _syminfo_list = []
-
-    # check .opd flag
-    opd_flag = False
-    if e['e_machine'] == 'EM_PPC64':
-        for sec in sections:
-            if sec.name == '.opd':
-                opd_flag = True
-                break
-    if opd_flag == True:
-        for sym in symtab.iter_symbols():
-            #print(sym.name, sym.entry)
-            if sym['st_info']['type'] == 'STT_FUNC' and sym['st_info']['bind'] == 'STB_LOCAL' \
-                    and sym['st_size'] == 0:
-                _ndx_list.append(sym['st_shndx'])
-                _syminfo_list.append([sym['st_shndx'], sym.name, sym['st_value'], sym['st_size']])
-            if sym['st_info']['type'] == 'STT_FUNC' and sym['st_info']['bind'] == 'STB_GLOBAL':
-            #if sym['st_info']['type'] == 'STT_FUNC' and sym['st_info']['bind'] == 'STB_GLOBAL' \
-            #        and sym.entry['st_other']['visibility'] == 'STV_HIDDEN':
-                #print(sym['st_shndx'], [sym['st_shndx'], sym.name, sym['st_value'], sym['st_size']])
-                _ndx_list.append(sym['st_shndx'])
-                _syminfo_list.append([sym['st_shndx'], sym.name, sym['st_value'], sym['st_size']])
-
-        # if the function instruction is actually in .text instead of .opd
-        opd_func_info = {}
-        for ndx in collections.Counter(_ndx_list).keys():
-            _target_sec = e.get_section(ndx)
-            #print(ndx, _target_sec.name)
-            if _target_sec.name == '.opd':
-                for sym in symtab.iter_symbols():
-                    if len(sym.name) > 0 and sym['st_info']['type'] == 'STT_FUNC' \
-                            and sym['st_other']['visibility'] in ['STV_DEFAULT', 'STV_HIDDEN'] \
-                            and sym['st_shndx'] != 'SHN_UNDEF':
-                        #print(sym.name, sym.entry)
-                        opd_func_info[sym.name] = sym.entry
-        ## get func order in sec
-        f_order_in_sec = {}
-        for k, v in opd_func_info.items():
-            if not ndx in f_order_in_sec.keys():
-                f_order_in_sec[v['st_shndx']] = [v['st_value']]
-            else:
-                f_order_in_sec[v['st_shndx']] = [v['st_value']] + f_order_in_sec[v['st_shndx']]
-        for ndx in f_order_in_sec.keys():
-            ndx_func_offset = 0
-            #print(sorted(set(f_order_in_sec[ndx])))
-            for ndx_in_val in sorted(set(f_order_in_sec[ndx])):
-            #for ndx_in_val in [0x00, 0x30, 0x48, 0x60, 0x78]:
-                #print(hex(ndx_in_val))
-                for sym_name, sym_entry in opd_func_info.items():
-                    if sym_entry['st_shndx'] == ndx and sym_entry['st_value'] == ndx_in_val:
-                        if sym_name == 'free_mem':
-                            continue
-                        # print('-')
-                        # print('base :', hex(ndx_func_offset))
-                        if ndx_func_offset == 0:
-                            _func_offset = ndx_func_offset
-                        else:
-                            _mod = (ndx_func_offset % 16)
-                            # print(_mod)
-                            if _mod == 0:
-                                _func_offset = ndx_func_offset
-                            else:
-                                _func_offset = (ndx_func_offset // 16) * 16 + 16
-                        #print(sym_name, sym_entry)
-                        # print(hex(ndx_in_val), sym_name, hex(_func_offset), '-', hex(_func_offset + sym_entry['st_size']), \
-                        #         len(textsec['.text'][_func_offset:_func_offset+sym_entry['st_size']]) )
-                        # print(textsec['.text'][_func_offset : _func_offset+sym_entry['st_size']])
-                        #print(textsec['.text'][_func_offset+sym_entry['st_size']-12 : _func_offset+sym_entry['st_size']])
-                                #textsec['.text'][_func_offset:_func_offset+sym_entry['st_size']])
-                        func_opecode = textsec['.text'][_func_offset:_func_offset+sym_entry['st_size']]
-                        func_size = len(func_opecode)
-                        opd_func_dict[sym_name] = {'func_opecode' : func_opecode, 'func_size' :func_size }
-                        #ndx_func_offset += sym_entry['st_size']
-                        ndx_func_offset = _func_offset + sym_entry['st_size']
-
+    # RISC-V post-relocation text rewrite (bnez / bgeu / call thunks).
     if e['e_machine'] == 'EM_RISCV':
-        for t_sec, t_opecode_list in textsec.items():
-            _offset_size = int(len(t_opecode_list) / 4)
-            for _offset in range(_offset_size):
-                _fmt_offset = _offset * 4
-                if textsec[t_sec][_fmt_offset] == '63': # bnez instruction
-                    textsec[t_sec][_fmt_offset:_fmt_offset+4] = ['?3', '??', '??', '??']
-                elif textsec[t_sec][_fmt_offset] == 'E3': # bgeu instruction
-                    textsec[t_sec][_fmt_offset:_fmt_offset+4] = ['?3', '??', '??', '??']
-                elif textsec[t_sec][_fmt_offset:_fmt_offset+4] == ['E7', '80', '00', '00']: # bgeu instruction
-                    textsec[t_sec][_fmt_offset:_fmt_offset+4] = ['E?', '??', '??', '??']
-                elif textsec[t_sec][_fmt_offset:_fmt_offset+4] == ['67', '00', '03', '00']: # bgeu instruction
-                    textsec[t_sec][_fmt_offset:_fmt_offset+4] = ['67', '??', '??', '??']
+        _arch_riscv.postprocess_text(textsec)
+
+    # PPC64 .opd path: build a parallel {name: opecode-slice} dict; when
+    # it is non-empty the main symbol loop below is skipped and the
+    # entries land directly in `tab` via the trailing PPC64 block.
+    opd_func_dict = {}
+    if e['e_machine'] == 'EM_PPC64':
+        opd_func_dict = _arch_ppc64.build_opd_dict(e, sections, symtab, textsec)
 
     # dbg
     exclude_alias_list = []
@@ -290,15 +209,17 @@ def fetch_opecodes(f, arfile = '', exapis = []):
             f_info_dict[sym.name] = {'value':sym['st_value'], 'size':sym['st_size'], 'st_shndx':sym['st_shndx']}
     _offset_list = sorted(set(_offset_list))
 
-    # ppc64 custom
-    if opd_flag == False:
+    # The PPC64 .opd path bypasses the symbol loop and inserts straight
+    # from opd_func_dict (see the trailing block); every other arch runs
+    # the loop here.
+    if not opd_func_dict:
         for sym in symtab.iter_symbols():
             if sym.name in exclude_alias_list: # exclude long alias
                 #print(sym.name)
                 continue
             if sym.name in exapis:
                 continue
-            if e['e_machine'] == 'EM_RISCV' and sym.name in ['_nl_locale_subfreeres', '__libc_freeres_fn']:
+            if e['e_machine'] == 'EM_RISCV' and _arch_riscv.should_skip_symbol(sym):
                 continue
             if sym['st_info']['bind'] == 'STB_LOCAL':
                 pass #continu
@@ -324,31 +245,7 @@ def fetch_opecodes(f, arfile = '', exapis = []):
             target_sec = e.get_section(sym['st_shndx'])
             fix_sec_flag = False
             if e['e_machine'] == 'EM_PPC64':
-                #print('-')
-                #print(sym.name, sym.entry['st_value'])
-                #print(sym.entry)
-                # support ppc64 .opd section case  ## ToDo fix bad process
-                #print(target_sec.name, textsec.keys(), sym.name) # dbg
-                if not target_sec.name in textsec.keys() \
-                        and target_sec.name in ['.opd']:
-                    if '.text' in textsec.keys():
-
-                        if len(textsec['.text']) != 0 and sym.entry['st_value'] == 0:# and len(textsec['.text.unlikely']) == 0:
-                            target_sec = e.get_section_by_name('.text')
-                        elif '.text.unlikely' in textsec.keys() \
-                                and len(textsec['.text.unlikely']) != 0 and len(textsec['.text.unlikely']) != 0:
-                            target_sec = e.get_section_by_name('.text.unlikely')
-                            fix_sec_flag = True
-                        else:
-                            for _sec_name in textsec.keys():
-                                if re.match(sym.name, _sec_name):
-                                    target_sec = e.get_section_by_name(_sec_name)
-                            if target_sec.name == '.opd' and '.text.unlikely' in textsec.keys():
-                                if len(textsec['.text.unlikely']) != 0:
-                                    target_sec = e.get_section_by_name('.text.unlikely')
-                        if target_sec.name == '.opd': # force overwrite
-                            target_sec = e.get_section_by_name('.text')
-            #target_sec = e.get_section_by_name('.text.unlikely') # ppc64 .opd <-> .text support
+                target_sec, fix_sec_flag = _arch_ppc64.retarget_section(e, sym, target_sec, textsec)
 
             # check sec
             if not target_sec.name in textsec.keys():
@@ -383,68 +280,27 @@ def fetch_opecodes(f, arfile = '', exapis = []):
             #if e['e_machine'] in ['EM_386', 'EM_X86_64']:
             #    opecodes[0] = '( CC | %s )' % opecodes[0] # matches INT3 prologue for api hooking # TODO: sohuld modify functions code of crt*.o?
 
-            # ELF executable # TODO: supports other architectures
+            # ET_EXEC: capstone-driven branch wildcarding. The pre-split
+            # code only handled EM_386 here; any other ET_EXEC arch is
+            # dropped via the trailing ``continue``.
             if e.header['e_type'] == 'ET_EXEC':
-                if e['e_machine'] == 'EM_386' and e['e_ident']['EI_CLASS'] == 'ELFCLASS32':  # Intel 80386
-                    md = Cs(CS_ARCH_X86, CS_MODE_32)
-                    md.detail = True
-                    code = target_sec.data()[sym['st_value'] - baseaddr:sym['st_value'] + sym['st_size'] - baseaddr]
-                    index = 0
-                    for i in md.disasm(code, 0):
-                        if i.mnemonic == 'call' or i.mnemonic[0] == 'j':
-                            if i.disp_offset > 0:
-                                # print("%s %s (%s)" % (i.mnemonic, i.op_str, " ".join(["%02X" % (x) for x in i.bytes])))
-                                opecodes[index + i.disp_offset:index + len(i.bytes)] = ['??'] * (len(i.bytes) - i.disp_offset)
-                                # print("%s" % (' '.join(opecodes[index - len(i.bytes):index])))
-                            elif i.imm_offset > 0:
-                                opecodes[index + i.imm_offset:index + len(i.bytes)] = ['??'] * (len(i.bytes) - i.imm_offset)
-                        else:
-                            # but, use wildcards if the instruction has a 4-bytes displayment
-                            if i.disp_offset > 0 and (len(i.bytes) - i.disp_offset) == 4:
-                                opecodes[index + i.disp_offset:index + len(i.bytes)] = ['??'] * (len(i.bytes) - i.disp_offset)
-                        index += len(i.bytes)
+                if e['e_machine'] == 'EM_386' and e['e_ident']['EI_CLASS'] == 'ELFCLASS32':
+                    _arch_i386.apply_exec_capstone(target_sec, sym, opecodes, baseaddr)
                 else:
-                    # TODO: supports other architectures
-                    #logging.warning('Not supported architecture (disassemble): %s %s' % (e['e_machine'], e['e_ident']['EI_CLASS']))
                     continue
-                    exit(-1)
 
-            # get risc-v minimum legth
+            # RISC-V records a ``min_size`` annotation alongside the
+            # pattern; every other arch leaves it at 0 (field omitted).
             opecode_minimum_length = 0
             if e['e_machine'] == 'EM_RISCV':
-                #opecode_default_length = len(opecodes)
-                _hex_num = len([_hex for _hex in opecodes if re.search('^[0-9a-fA-f]{2}$', _hex) != None or _hex == '??'])
-                #_relax_num = len([_hex for _hex in opecodes if _hex.startswith('[')])
-                opecode_minimum_length = _hex_num# + _relax_num * 4
-                #print(opecode_default_length, opecode_minimum_length)
-
-
+                opecode_minimum_length = _arch_riscv.compute_min_length(opecodes)
 
             if size > MAXIMUM_PATTERN_LENGTH:
                 opecodes = opecodes[:MAXIMUM_PATTERN_LENGTH]
 
-            # dbg : RISCVa
-            if len(opecodes) != 0:
-                # optimize
-                #for _io in range(0, len(opecodes), 4):
-                #    if opecodes[_io:_io+4] == ['67', '00', '03', '00']:
-                #        opecodes[_io:_io+4] = ['??', '??', '??', '??']
-                # relax
-                if opecodes[0].startswith('['):
-                    _fix_len = int(opecodes[0].split(']')[0].split('-')[1]) - 1
-                    opecodes[0] = '??'
-                    opecodes[1] = '[3-' + str(_fix_len) + ']'
-                if opecodes[-1] == '':
-                    target_flex_offset = 0
-                    for _offset, _hex in enumerate(reversed(opecodes)):
-                        if _hex.endswith(']'):
-                            target_flex_offset = len(opecodes) - _offset -1
-                            break
-                    _fix_max_len = int(opecodes[target_flex_offset].split(']')[0].split('-')[1]) - 1
-                    #_fix_min_len = int(opecodes[target_flex_offset].split(']')[0].split('-')[0].split('[')[1]) - 1
-                    #opecodes[target_flex_offset] = '[' + str(_fix_min_len) + '-' + str(_fix_max_len) + ']'
-                    opecodes[target_flex_offset] = '[' + str(0) + '-' + str(_fix_max_len) + ']'
-                    opecodes[target_flex_offset+1] = '??'
+            # Normalise RELAX-window markers at the slice edges (RISC-V).
+            if e['e_machine'] == 'EM_RISCV':
+                _arch_riscv.finalize_opecodes(opecodes)
             opecodes_str = ' '.join(opecodes)
             # The original guard ran every symbol through cxxfilt to drop
             # names that the demangler rewrites (i.e. actual C++ mangled
@@ -482,8 +338,10 @@ def fetch_opecodes(f, arfile = '', exapis = []):
             for i in range(len(tab[opecodes_str])):
                 for symname, export_or_import in exsymtab.items():
                     tab[opecodes_str][i][export_or_import].append(symname)
-    # ppc64 custom
-    if opd_flag == True:
+    # PPC64 .opd: insert the parallel dict's entries directly into tab.
+    # Other arches produced an empty opd_func_dict above so this block
+    # is a no-op for them.
+    if opd_func_dict:
         for func_name, func_info in opd_func_dict.items():
             #print(func_name, func_info)
             if func_info != 'checked':

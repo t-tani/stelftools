@@ -4,6 +4,8 @@ Reloc type values cross-checked against mold's elf.h (commit b7102d2).
 Reference: https://github.com/rui314/mold/blob/b7102d26ca42c7d72838f64c82835cb6d7ccdd7b/src/elf.h
 """
 
+from capstone import Cs, CS_ARCH_X86, CS_MODE_32
+
 R_386_32            = 0x01
 R_386_PC32          = 0x02
 R_386_GOT32         = 0x03
@@ -63,3 +65,28 @@ def apply_relocation(textsec, name, offset, rtype,
         # logging.warning('Not implemented: unknown relocation type (0x%X) at 0x%X in %s', rtype, offset, fname)
         return
         exit(-1)
+
+
+def apply_exec_capstone(target_sec, sym, opecodes, baseaddr):
+    """ET_EXEC i386: disassemble the symbol body via capstone and
+    wildcard the displacement / immediate bytes of every call, jmp, and
+    Jcc the function contains so the signature survives a relink that
+    shifts those targets. The pre-split implementation only handled
+    EM_386 here, and any other ET_EXEC arch was silently dropped.
+    """
+    md = Cs(CS_ARCH_X86, CS_MODE_32)
+    md.detail = True
+    code = target_sec.data()[sym['st_value'] - baseaddr:sym['st_value'] + sym['st_size'] - baseaddr]
+    index = 0
+    for i in md.disasm(code, 0):
+        if i.mnemonic == 'call' or i.mnemonic[0] == 'j':
+            if i.disp_offset > 0:
+                opecodes[index + i.disp_offset:index + len(i.bytes)] = ['??'] * (len(i.bytes) - i.disp_offset)
+            elif i.imm_offset > 0:
+                opecodes[index + i.imm_offset:index + len(i.bytes)] = ['??'] * (len(i.bytes) - i.imm_offset)
+        else:
+            # Non-branch instruction whose displacement fills the rest
+            # of the encoding -- widen it too.
+            if i.disp_offset > 0 and (len(i.bytes) - i.disp_offset) == 4:
+                opecodes[index + i.disp_offset:index + len(i.bytes)] = ['??'] * (len(i.bytes) - i.disp_offset)
+        index += len(i.bytes)
