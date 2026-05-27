@@ -1,6 +1,6 @@
 __pycache__/
 *.pyc
-_bootlin_work/
+.cache/_bootlin_work/
 *.egg-info/
 build/
 dist/

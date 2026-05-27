@@ -26,7 +26,7 @@ usage: build_bootlin_signature.sh --release <ver> --libc <libc> --arch <arch>
   --arch         Bootlin arch token, e.g. aarch64, mips32el
   --ext          Tarball extension (default: xz; releases <= 2023.11 use bz2)
   --stability    Default: stable
-  --work-dir     Scratch directory (default: <repo>/_bootlin_work)
+  --work-dir     Scratch directory (default: <repo>/.cache/_bootlin_work)
   --keep         Do not delete the extracted toolchain after success
   --python       Python interpreter (default: python3)
 EOF
@@ -65,7 +65,7 @@ case "$libc" in glibc|musl|uclibc) ;; *) printf 'invalid --libc %s\n' "$libc" >&
 case "$ext"  in xz|bz2) ;;            *) printf 'invalid --ext %s\n'  "$ext"  >&2; exit 2;; esac
 
 repo_root="$(cd -- "$(dirname -- "$0")/../.." && pwd)"
-work_dir="${work_dir:-$repo_root/_bootlin_work}"
+work_dir="${work_dir:-$repo_root/.cache/_bootlin_work}"
 mkdir -p "$work_dir"
 
 stem="${arch}--${libc}--${stability}-${release}"

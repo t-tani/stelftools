@@ -115,7 +115,7 @@ fi
 log_dir="$repo_root/.cache/batch_logs"
 mkdir -p "$log_dir"
 
-work_root="$repo_root/_bootlin_work"
+work_root="$repo_root/.cache/_bootlin_work"
 mkdir -p "$work_root"
 
 idx_json="$(mktemp -t bl_index.XXXXXX.json)"
