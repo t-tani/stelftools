@@ -8,5 +8,10 @@ back into a stripped binary lives in :mod:`stelftools.elf_symtab`.
 """
 
 from .arch_info import get_bin_arch
+from .symtab import get_symtab_info_by_capstone, get_symtab_info_by_reaelf
 
-__all__ = ["get_bin_arch"]
+__all__ = [
+    "get_bin_arch",
+    "get_symtab_info_by_capstone",
+    "get_symtab_info_by_reaelf",
+]

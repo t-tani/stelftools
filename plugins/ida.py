@@ -22,14 +22,16 @@ from pathlib import Path
 
 from elftools.common import exceptions
 
+from stelftools.elf import (
+    get_symtab_info_by_capstone,
+    get_symtab_info_by_reaelf,
+)
 from stelftools.ident import (
     del_alias,
     del_mismatch,
     format_match_res,
     get_alias_list,
     get_func_addr,
-    get_symtab_info_by_capstone,
-    get_symtab_info_by_reaelf,
     get_target_fp,
     get_yara_rule,
     id_func_name_for_depend,
