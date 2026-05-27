@@ -31,9 +31,9 @@ from stelftools.match import (
     del_alias,
     del_mismatch,
     get_alias_list,
-    id_func_name_for_depend,
     output,
 )
+from stelftools.match.heuristics.depend import id_func_name_for_depend
 from stelftools.match.heuristics.linkorder import id_func_name_for_linkorder
 from stelftools.match.yara import (
     format_match_res,
