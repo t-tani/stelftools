@@ -59,6 +59,14 @@ MAXIMUM_PATTERN_LENGTH = 15000 # 600  # TODO: risc-v
 
 CRT_INIT_FINI_FUNC_LIST = ['.init', '_init', '__init', '.fini', '_fini', '__fini']
 
+
+# ---------------------------------------------------------------------------
+# fetch_opecodes pipeline -- phase helpers in execution order, then the
+# orchestrator. Per-arch hooks live in stelftools.arch; this module owns
+# the cross-arch control flow.
+# ---------------------------------------------------------------------------
+
+
 def _resolve_name(f):
     """Recover the file name from either an arpy member or a raw file object."""
     if hasattr(f, 'header'):
@@ -411,6 +419,13 @@ def fetch_opecodes(f, arfile='', exapis=()):
 
     return tab, crt_marge_tab
 
+
+# ---------------------------------------------------------------------------
+# Multi-file aggregation -- merge per-file fetch_opecodes outputs and the
+# ar-archive wrapper that drives them.
+# ---------------------------------------------------------------------------
+
+
 def merge_dicts(src, dst):
     # dst[key] += src[key] was the hot path: dict.keys() materialises the
     # key view on each iteration and the `+=` allocates a fresh
@@ -447,6 +462,12 @@ def fetch_opecodes_from_arfile(arfile):
         tab = merge_dicts(tab, newtab)
         crt_tab = merge_dicts(crt_tab, new_crt_tab)
     return tab, crt_tab
+
+
+# ---------------------------------------------------------------------------
+# YARA rule rendering -- turn the in-memory tab into the on-disk rule text.
+# ---------------------------------------------------------------------------
+
 
 _RULE_NAME_SUBS = {'.': '_DOT_', '@': '_AT_', '$': '_DOLLER_'}
 
@@ -538,6 +559,14 @@ def output_rules(rules_list, output_path):
     with open(output_path, 'w') as f:
         for rule in rules_list:
             f.write("%s\n" % rule)
+
+
+# ---------------------------------------------------------------------------
+# CLI driver -- argparse, per-file dispatch, output. The stelftools-mkrule
+# console script targets stelftools.info_create:main; the main below is the
+# legacy ``python -m stelftools.mkrule`` entry point.
+# ---------------------------------------------------------------------------
+
 
 # Object leaves the CLI skips before feeding fetch_opecodes. libstdc++.a
 # carries the C++ runtime, which is out of scope for the C-function
