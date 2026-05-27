@@ -10,8 +10,8 @@ from pathlib import Path
 
 from elftools.common import exceptions
 
-from . import dub_maker as DubMaker
-from .elf import (
+from .. import dub_maker as DubMaker
+from ..elf import (
     get_func_addr,
     get_symtab_info_by_capstone,
     get_symtab_info_by_reaelf,
@@ -19,8 +19,10 @@ from .elf import (
 
 # Anchor at the repository root (the parent of the stelftools/ package
 # directory). Resolves through any symlinks so plugins set up by the
-# host tool (IDA/Ghidra) still find the signatures tree.
-STELFTOOLS_PATH = str(Path(__file__).resolve().parent.parent) + "/"
+# host tool (IDA/Ghidra) still find the signatures tree. The triple
+# parent climb steps out of stelftools/ident/ (this file) -> stelftools/
+# (package dir) -> repo root.
+STELFTOOLS_PATH = str(Path(__file__).resolve().parent.parent.parent) + "/"
 
 INIT_CRT_FUNC_LIST = ['__init', '_init', '.init', \
         '_start', '_start_c', '__start', 'hlt', '__gmon_start__', 'set_fast_math', \
@@ -1298,6 +1300,3 @@ def main():
         exit(-1)
 
     output(target_info, args.target, args.output_style)
-
-if __name__ == '__main__':
-    main()
