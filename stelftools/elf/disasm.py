@@ -324,13 +324,25 @@ def parse_inst(target, target_inst, base_vaddr, t_arch, t_bit, t_endian, top_ins
             exit(-1)
 
     if t_arch in ['EM_MIPS']: # mips, mipsel, mips64, mips64el
-        for inst_addr, inst_size, ref_got_offset in list(map(list, set(map(tuple, got_addr_resolve_map)))):
-            for got_addr, got_offset, callee_addr in readelf_got_map:
-                if ref_got_offset == int(got_offset):
-                    if not [inst_addr, inst_size, int(callee_addr, 16)] in call_map:
-                        #print([hex(inst_addr), inst_size, hex(int(callee_addr, 16))])
-                        call_map.append([inst_addr, inst_size, int(callee_addr, 16)])
-                        func_addr.append(callee_addr)
+        # Resolve each $gp-relative GOT reference to its callee. The
+        # historical form scanned all ~2.3K GOT rows for every resolved
+        # reference and re-parsed int(got_offset) on each comparison: on a
+        # static busybox that is ~36K x 2.3K = 82M iterations (~20s).
+        # Index the GOT by its parsed offset once so the inner scan is an
+        # O(1) dict hit, and dedupe via a set instead of the former
+        # `in call_map` linear membership test.
+        got_by_offset = {}
+        for got_addr, got_offset, callee_addr in readelf_got_map:
+            got_by_offset.setdefault(int(got_offset), []).append(callee_addr)
+        seen_calls = set()
+        for inst_addr, inst_size, ref_got_offset in set(map(tuple, got_addr_resolve_map)):
+            for callee_addr in got_by_offset.get(ref_got_offset, []):
+                callee_int = int(callee_addr, 16)
+                key = (inst_addr, inst_size, callee_int)
+                if key not in seen_calls:
+                    seen_calls.add(key)
+                    call_map.append([inst_addr, inst_size, callee_int])
+                    func_addr.append(callee_addr)
         # fmt call instruction address
         for _idx in range(len(call_map)):
             call_map[_idx][0] += base_vaddr
