@@ -50,7 +50,7 @@ dev = [
 ]
 
 [project.scripts]
-stelftools-ident = "stelftools.match:main"
+stelftools-ident = "stelftools.match.cli:main"
 stelftools-mkrule = "stelftools.info_create:main"
 stelftools-bruteforce = "stelftools.bruteforce:main"
 stelftools-symbolize = "stelftools.symbolize:main"

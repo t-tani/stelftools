@@ -6,6 +6,6 @@ dedicated __main__ that delegates to the public main() in
 :mod:`stelftools.match`.
 """
 
-from . import main
+from .cli import main
 
 main()
