@@ -142,7 +142,11 @@ def capstone_disasm_bin(target, t_arch, t_bit, t_endian, top_inst_addr, bot_inst
         print("[disasm/capstone] Not support arch : %s " % t_arch, file = sys.stderr)
         exit(-1)
     md.skipdata = True
-    md.detail = True
+    # parse_inst reads only mnemonic / op_str / address / size / bytes,
+    # none of which require capstone's detail mode. Leaving detail off
+    # skips the per-instruction operand/register decode and roughly
+    # halves disassembly time on large text sections.
+    md.detail = False
     target.seek(top_inst_addr)
     target_code = target.read()
     for i in md.disasm(target_code, top_inst_addr):
