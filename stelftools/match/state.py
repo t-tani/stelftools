@@ -202,22 +202,43 @@ def get_alias_list(alias_list_path):
 
 
 def del_alias(functions, alias_list):
+    # An alias only rewrites a function when the function's names intersect
+    # it; a disjoint alias leaves the names untouched. Index each alias by
+    # the names it contains so each function visits only the aliases that
+    # can affect it, instead of scanning the whole alias_list (the
+    # historical O(multi_funcs * alias_list) cost, ~1.3s per cfg on a
+    # busybox-class MIPS target).
+    #
+    # The rewrites below only ever shrink a function's name set -- they
+    # never introduce a name outside the original set -- so every alias
+    # relevant to a later (mutated) state is also relevant to the original
+    # names. Gathering candidate aliases from the original names and
+    # visiting them in ascending alias_list index (the original iteration
+    # order) is therefore byte-identical to the full scan.
+    alias_sets = [set(a) for a in alias_list]
+    name_to_alias_idx = {}
+    for i, aset in enumerate(alias_sets):
+        for name in aset:
+            name_to_alias_idx.setdefault(name, []).append(i)
+
     for _addr in sorted(functions.keys()):
-        # skip
-        if len(functions[_addr]['names']) == 1:
+        names = functions[_addr]['names']
+        if len(names) == 1:
             continue
-        for alias in alias_list:
-            compare_list = sorted(set(functions[_addr]['names']) & set(alias))
-            no_compare_list = sorted(set(functions[_addr]['names']) - set(alias))
-            # phase 1: delete all alias
-            if len(compare_list) == len(functions[_addr]['names']):
-                #print('alias match 1 :', functions[_addr]['names'], '->', [ min(alias, key=len) ] )
+        cand = sorted({i for name in names for i in name_to_alias_idx.get(name, [])})
+        for i in cand:
+            cur = functions[_addr]['names']
+            compare_set = set(cur) & alias_sets[i]
+            if not compare_set:
+                continue
+            compare_list = sorted(compare_set)
+            # phase 1: every current name is in this alias -> collapse to one
+            if len(compare_list) == len(cur):
                 functions[_addr]['names'] = [min(compare_list, key=len)]
-            # phase 2:
+            # phase 2: partial overlap of >1 -> keep one representative
             elif len(compare_list) > 1:
-                #print('alias match 2 :', functions[_addr]['names'], '->', [ min(alias, key=len) ] + no_compare_list)
+                no_compare_list = sorted(set(cur) - alias_sets[i])
                 functions[_addr]['names'] = sorted([min(compare_list, key=len)] + no_compare_list)
-        #print(hex(_addr), functions[_addr]['names'])
     return functions
 
 
