@@ -12,7 +12,8 @@ run) is the heuristic's main false-positive guard: shorter runs are
 common across unrelated function families and would over-narrow.
 """
 
-from .. import _match_array_index, get_func_name_list_alias_list
+from .. import get_func_name_list_alias_list
+from ..state import _match_array_index
 
 
 def multiple_consecutive_candidate_filt(functions, link_order_list, alias_list):

@@ -21,8 +21,8 @@ from .. import (
     INIT_CRT_FUNC_LIST,
     STELFTOOLS_PATH,
     TOP_LIBC_FUNC_LIST,
-    _match_array_index,
 )
+from ..state import _match_array_index
 
 
 def _match_array_index_list(_list, func_name_list):
