@@ -1,16 +1,27 @@
 """stelftools: cross-architecture static-library function identification.
 
-This package houses the rule generator, the matcher, the dependency
-parser, and a few helpers around them. The most common entry points are
-exposed as console scripts (``stelftools-ident``, ``stelftools-mkrule``,
-``stelftools-bruteforce``) declared in ``pyproject.toml`` and as
-``python -m stelftools.<module>`` for environments that have not run a
-``pip install``.
+The package shape mirrors the three-part design the README pitches:
 
-Public API surface today is intentionally narrow: ``family_for`` resolves
-a toolchain signature name to its family directory and is re-exported
-here so callers (CI helpers, plugins) can ``from stelftools import
-family_for`` without poking at the leaf module path.
+* :mod:`stelftools.match` -- the YARA-driven matcher and the three
+  named heuristics that lift detection accuracy to 97.18% on the
+  IoT-malware reference set (link-order, dependency, consecutive-
+  candidate, each its own file under
+  :mod:`stelftools.match.heuristics`).
+* :mod:`stelftools.generate` -- the rule generator that turns a
+  toolchain's ``.a`` / ``.o`` archives into the per-arch YARA rule
+  set, relocation / optimisation / linker-relaxation aware
+  (:mod:`stelftools.generate.fetch_opecodes` does the opcode
+  extraction, :mod:`stelftools.generate.arch` carries the per-arch
+  relocation handlers).
+* :mod:`stelftools.elf` -- read primitives and the write-side symtab
+  synthesiser shared across both stacks.
+
+Operational glue stays at this top level: console scripts in
+:mod:`stelftools.drivers` (``stelftools-ident``, ``stelftools-mkrule``,
+``stelftools-bruteforce``, ``stelftools-symbolize``,
+``stelftools-fetch-signatures``) tie the library to the shell;
+:mod:`stelftools.sigstore` and :mod:`stelftools.families` are the
+public helpers external tools and plugins reach for.
 """
 
 from .families import family_for, known_families

@@ -25,16 +25,15 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import shutil
 import sys
 import tarfile
 import tempfile
 import urllib.parse
 import urllib.request
+from collections.abc import Iterable
 from importlib import resources
 from pathlib import Path
-from typing import Iterable
 
 import zstandard
 
