@@ -131,7 +131,7 @@ def _stream_to_file(url: str, dest: Path) -> str:
     """
     h = hashlib.sha256()
     req = urllib.request.Request(
-        url, headers={"User-Agent": "stelftools-sigfetch/1"}
+        url, headers={"User-Agent": "stelftools-fetch/1"}
     )
     with urllib.request.urlopen(req) as resp, dest.open("wb") as out:
         while True:
@@ -251,27 +251,46 @@ def _split_csv(s: str | None) -> list[str] | None:
     return [t for t in s.split(",") if t]
 
 
+def _add_arguments(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--manifest", help="Path to a manifest JSON (default: packaged).")
+    parser.add_argument("--family", help="Comma-separated family allowlist (e.g. bootlin-stable,aboriginal-linux).")
+    parser.add_argument("--arch", help="Comma-separated arch allowlist (e.g. mips32el,aarch64).")
+    parser.add_argument(
+        "--dest",
+        help="Override the on-disk root (default: sigstore.signatures_root()). "
+             "Useful for staging or testing.",
+    )
+    parser.add_argument("--force", action="store_true", help="Re-download even when the sentinel matches.")
+    parser.add_argument("--dry-run", action="store_true", help="Report what would be fetched and exit.")
+    parser.add_argument("--status", action="store_true", help="Print per-asset state and exit.")
+
+
+def register_parser(subparsers) -> argparse.ArgumentParser:
+    """Attach the ``stelftools fetch`` sub-command to ``subparsers``.
+
+    Sets ``_run`` to :func:`run` so the dispatcher in :mod:`.cli` can
+    invoke the verb without knowing its name.
+    """
+    parser = subparsers.add_parser(
+        "fetch",
+        help="Download published signature tarballs.",
+        description="Download signature tarballs declared in the package manifest.",
+    )
+    _add_arguments(parser)
+    parser.set_defaults(_run=run)
+    return parser
+
+
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(
         prog="stelftools-fetch-signatures",
         description="Download signature tarballs declared in the package manifest.",
     )
-    p.add_argument("--manifest", help="Path to a manifest JSON (default: packaged).")
-    p.add_argument("--family", help="Comma-separated family allowlist (e.g. bootlin-stable,aboriginal-linux).")
-    p.add_argument("--arch", help="Comma-separated arch allowlist (e.g. mips32el,aarch64).")
-    p.add_argument(
-        "--dest",
-        help="Override the on-disk root (default: sigstore.signatures_root()). "
-             "Useful for staging or testing.",
-    )
-    p.add_argument("--force", action="store_true", help="Re-download even when the sentinel matches.")
-    p.add_argument("--dry-run", action="store_true", help="Report what would be fetched and exit.")
-    p.add_argument("--status", action="store_true", help="Print per-asset state and exit.")
+    _add_arguments(p)
     return p.parse_args(argv)
 
 
-def main(argv: list[str] | None = None) -> int:
-    args = _parse_args(argv)
+def run(args: argparse.Namespace) -> int:
     manifest = load_manifest(args.manifest)
     dest_root = Path(args.dest).expanduser() if args.dest else sigstore.signatures_root()
 
@@ -310,6 +329,13 @@ def main(argv: list[str] | None = None) -> int:
         file=sys.stderr,
     )
     return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    """Backward-compatible entry point used by the legacy
+    ``stelftools-fetch-signatures`` console script.
+    """
+    return run(_parse_args(argv))
 
 
 if __name__ == "__main__":

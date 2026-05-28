@@ -1,9 +1,10 @@
 """Resolve the MIPS Global Offset Table into a (got_addr, gp_offset, callee)
 table that mirrors what ``llvm-readelf -A`` reports for the Local entries.
 
-ident's disassembler uses this map to turn ``lw $reg, gp_offset($gp)``
-loads into the concrete callee addresses they resolve to at link time,
-so MIPS call sites can be parsed without an external toolchain.
+MIPS does not encode the callee in the call instruction itself; the
+linker writes it into the GOT, and call sites reach it through
+``lw $reg, gp_offset($gp)``. This module walks the GOT so MIPS call
+sites can be parsed without an external toolchain.
 
 Two paths cover stripped and unstripped firmware:
 

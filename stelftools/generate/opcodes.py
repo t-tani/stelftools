@@ -1,19 +1,28 @@
-#! /usr/bin/env python3
-#
-# mkrule.py - yara rule generator
-#
-# Usage: ./mkrule.py archive_files
-# - e.g., ./libfunc_mkrule.py /opt/cross-compilter/i586/lib/lib*.a
-# - e.g., ./libfunc_mkrule.py $(find /opt/cross-compiler/i586/ -type f -name '*.[a|o]')
-#
-# Output: patterns.yara
-#
-# Requirements:
-# - pyelftools: ELF file tools
-# - capstone: disassembler
-# - arpy
-# Changes:
-# - genptn.py -> mkrule.py -> libfunc_mkrule.py
+"""Extract opcodes from static library objects into YARA rule bodies.
+
+The entry points :func:`extract_opcodes` and
+:func:`extract_opcodes_from_arfile` walk one ELF object (or every
+member of an ``ar`` archive) and return the per-function ``(tab,
+crt_merge_tab)`` pair that the package's rule renderer consumes.
+
+The pipeline per object:
+
+1. Harvest every executable SHT_PROGBITS section into a byte map.
+2. Wildcard relocatable addresses with the per-architecture handler
+   under :mod:`stelftools.generate.arch`.
+3. Hand the CRT init / fini pair (crti.o / crtn.o) to
+   :mod:`stelftools.generate.crt` so they can be merged into a single
+   spanning rule once every input has been walked.
+4. Populate ``tab`` keyed on the function's opcode hex string, with
+   the symbol name(s) it covered. PPC64 routes through the .opd
+   helper in :mod:`stelftools.generate.arch.ppc64`.
+
+The rule body length is capped by ``MAXIMUM_PATTERN_LENGTH``.
+stelftools originally capped this at 200 bytes; the current value
+(15000) was raised to accommodate RISC-V linker relaxation, where a
+single function's opcode stream can span thousands of bytes before
+reaching a relocation boundary.
+"""
 
 import os
 import sys
@@ -48,7 +57,7 @@ logging.basicConfig(level=logging.WARNING)
 
 # Needed for c++ because function names are too long in C++
 MAX_RULE_INDENTIFIER_LENGTH = 30
-# Needed for c++ because there are too many same opecode functions
+# Needed for c++ because there are too many same opcode functions
 #MAX_ALIASES = 50 # TODO: C++ function names may cause too long string errors
 MAX_ALIASES = 70 # TODO: C++ function names may cause too long string errors
 #VERSION = '0.1.1_2020_04_26'
@@ -59,7 +68,7 @@ MINIMUM_PATTERN_LENGTH = 0
 MAXIMUM_PATTERN_LENGTH = 15000 # 600  # TODO: risc-v
 
 # ---------------------------------------------------------------------------
-# fetch_opecodes pipeline -- phase helpers in execution order, then the
+# extract_opcodes pipeline -- phase helpers in execution order, then the
 # orchestrator. Per-arch hooks live in stelftools.generate.arch; CRT-glue
 # handling lives in stelftools.generate.crt; this module owns the
 # cross-arch control flow.
@@ -191,7 +200,7 @@ def _build_alias_index(symtab):
     return exclude_alias_list, sorted(set(offset_list))
 
 
-def _opecodes_for_symbol(sym, target_sec, textsec, baseaddr,
+def _opcodes_for_symbol(sym, target_sec, textsec, baseaddr,
                         offset_list, offset_state, fix_sec_flag):
     """Slice the function's bytes out of textsec[target_sec.name].
 
@@ -207,17 +216,17 @@ def _opecodes_for_symbol(sym, target_sec, textsec, baseaddr,
         except IndexError:
             _top = sym['st_value'] - baseaddr
             _bot = _top + len(textsec[target_sec.name][sym['st_value'] - baseaddr:])
-        opecodes = textsec[target_sec.name][_top:_bot]
-        return opecodes, len(opecodes)
+        opcodes = textsec[target_sec.name][_top:_bot]
+        return opcodes, len(opcodes)
     if fix_sec_flag:
-        opecodes = textsec[target_sec.name][baseaddr:sym['st_size'] - baseaddr]
+        opcodes = textsec[target_sec.name][baseaddr:sym['st_size'] - baseaddr]
     else:
-        opecodes = textsec[target_sec.name][sym['st_value'] - baseaddr:sym['st_value'] + sym['st_size'] - baseaddr]
-    return opecodes, sym['st_size']
+        opcodes = textsec[target_sec.name][sym['st_value'] - baseaddr:sym['st_value'] + sym['st_size'] - baseaddr]
+    return opcodes, sym['st_size']
 
 
-def _insert_tab_entry(tab, opecodes_str, name, size, fname, arfile, *, min_size=0):
-    """Append one function entry to ``tab[opecodes_str]``, creating the
+def _insert_tab_entry(tab, opcodes_str, name, size, fname, arfile, *, min_size=0):
+    """Append one function entry to ``tab[opcodes_str]``, creating the
     bucket on demand. ``min_size`` is only recorded when non-zero so
     arches that do not compute it keep their entries dict-equal to the
     pre-split form.
@@ -229,13 +238,13 @@ def _insert_tab_entry(tab, opecodes_str, name, size, fname, arfile, *, min_size=
     }
     if min_size:
         entry['min_size'] = min_size
-    tab.setdefault(opecodes_str, []).append(entry)
+    tab.setdefault(opcodes_str, []).append(entry)
 
 
 def _populate_tab_from_symbols(tab, exsymtab, e, symtab, textsec,
                                exclude_alias_list, offset_list,
                                exapis, fname, arfile):
-    """Walk ``symtab`` and insert per-function opecode patterns into
+    """Walk ``symtab`` and insert per-function opcode patterns into
     ``tab``. ``exsymtab`` is filled with ``imports`` / ``exports`` and
     merged into every tab entry at the end so each rule carries the
     full import / export view of the object it came from.
@@ -277,7 +286,7 @@ def _populate_tab_from_symbols(tab, exsymtab, e, symtab, textsec,
             exit(-1)
         baseaddr = target_sec.header['sh_addr']
 
-        opecodes, size = _opecodes_for_symbol(
+        opcodes, size = _opcodes_for_symbol(
             sym, target_sec, textsec, baseaddr,
             offset_list, offset_state, fix_sec_flag,
         )
@@ -287,20 +296,20 @@ def _populate_tab_from_symbols(tab, exsymtab, e, symtab, textsec,
         # through the trailing ``continue``.
         if e.header['e_type'] == 'ET_EXEC':
             if e['e_machine'] == 'EM_386' and e['e_ident']['EI_CLASS'] == 'ELFCLASS32':
-                _arch_i386.apply_exec_capstone(target_sec, sym, opecodes, baseaddr)
+                _arch_i386.apply_exec_capstone(target_sec, sym, opcodes, baseaddr)
             else:
                 continue
 
-        opecode_minimum_length = 0
+        opcode_minimum_length = 0
         if e['e_machine'] == 'EM_RISCV':
-            opecode_minimum_length = _arch_riscv.compute_min_length(opecodes)
+            opcode_minimum_length = _arch_riscv.compute_min_length(opcodes)
 
         if size > MAXIMUM_PATTERN_LENGTH:
-            opecodes = opecodes[:MAXIMUM_PATTERN_LENGTH]
+            opcodes = opcodes[:MAXIMUM_PATTERN_LENGTH]
 
         if e['e_machine'] == 'EM_RISCV':
-            _arch_riscv.finalize_opecodes(opecodes)
-        opecodes_str = ' '.join(opecodes)
+            _arch_riscv.finalize_opcodes(opcodes)
+        opcodes_str = ' '.join(opcodes)
 
         # cxxfilt drops mangled C++ symbols (their demangled form differs
         # from the raw name). The Itanium ABI prefix ``_Z`` short-circuits
@@ -314,29 +323,29 @@ def _populate_tab_from_symbols(tab, exsymtab, e, symtab, textsec,
         if sym.name in crt.INIT_FINI_FUNC_LIST:
             continue
         _insert_tab_entry(
-            tab, opecodes_str, sym.name, size, fname, arfile,
-            min_size=opecode_minimum_length,
+            tab, opcodes_str, sym.name, size, fname, arfile,
+            min_size=opcode_minimum_length,
         )
 
     # Stamp every tab entry with the object's full import / export view.
-    for opecodes_str in tab.keys():
-        for i in range(len(tab[opecodes_str])):
+    for opcodes_str in tab.keys():
+        for i in range(len(tab[opcodes_str])):
             for symname, export_or_import in exsymtab.items():
-                tab[opecodes_str][i][export_or_import].append(symname)
+                tab[opcodes_str][i][export_or_import].append(symname)
 
 
 def _populate_tab_from_opd(tab, opd_func_dict, fname, arfile):
-    """PPC64-only: insert opecode slices the ``.opd`` walker produced.
+    """PPC64-only: insert opcode slices the ``.opd`` walker produced.
     Iterates the dict produced by ``_arch_ppc64.build_opd_dict``;
     other arches keep the dict empty so this is a no-op for them.
     """
     for func_name, func_info in opd_func_dict.items():
         if func_info == 'checked':
             continue
-        opecodes = func_info['func_opecode']
+        opcodes = func_info['func_opcode']
         size = func_info['func_size']
         if size > MAXIMUM_PATTERN_LENGTH:
-            opecodes = opecodes[:MAXIMUM_PATTERN_LENGTH]
+            opcodes = opcodes[:MAXIMUM_PATTERN_LENGTH]
         if func_name.startswith('_Z'):
             try:
                 if func_name != cxxfilt.demangle(func_name):
@@ -344,16 +353,16 @@ def _populate_tab_from_opd(tab, opd_func_dict, fname, arfile):
                     continue
             except cxxfilt.InvalidName:
                 continue
-        opecodes_str = ' '.join(opecodes)
-        _insert_tab_entry(tab, opecodes_str, func_name, size, fname, arfile)
+        opcodes_str = ' '.join(opcodes)
+        _insert_tab_entry(tab, opcodes_str, func_name, size, fname, arfile)
         opd_func_dict[func_name] = 'checked'
 
 
-def fetch_opecodes(f, arfile='', exapis=()):
+def extract_opcodes(f, arfile='', exapis=()):
     """Top-level driver: read one ELF object and return its
-    ``(tab, crt_marge_tab)`` pair. Walks the input as a fixed pipeline
+    ``(tab, crt_merge_tab)`` pair. Walks the input as a fixed pipeline
     of phases; each phase is a free function above. info_create.py
-    treats the return shape as ``(tab, crt_marge_tab)`` so the function
+    treats the return shape as ``(tab, crt_merge_tab)`` so the function
     signature is the load-bearing API of this module.
     """
     fname = _resolve_name(f)
@@ -369,10 +378,10 @@ def fetch_opecodes(f, arfile='', exapis=()):
     if e['e_machine'] == 'EM_RISCV':
         _arch_riscv.postprocess_text(textsec)
 
-    crt_marge_tab = crt.collect_funcs(textsec, fname)
+    crt_merge_tab = crt.collect_funcs(textsec, fname)
     symtab = _select_symtab(e)
     if symtab is None:
-        return {}, crt_marge_tab
+        return {}, crt_merge_tab
 
     opd_func_dict = {}
     if e['e_machine'] == 'EM_PPC64':
@@ -391,11 +400,11 @@ def fetch_opecodes(f, arfile='', exapis=()):
     else:
         _populate_tab_from_opd(tab, opd_func_dict, fname, arfile)
 
-    return tab, crt_marge_tab
+    return tab, crt_merge_tab
 
 
 # ---------------------------------------------------------------------------
-# Multi-file aggregation -- merge per-file fetch_opecodes outputs and the
+# Multi-file aggregation -- merge per-file extract_opcodes outputs and the
 # ar-archive wrapper that drives them.
 # ---------------------------------------------------------------------------
 
@@ -415,8 +424,8 @@ def merge_dicts(src, dst):
     return dst
 
 
-def fetch_opecodes_from_arfile(arfile):
-    """Walk an ``ar`` archive and merge each member's fetch_opecodes
+def extract_opcodes_from_arfile(arfile):
+    """Walk an ``ar`` archive and merge each member's extract_opcodes
     output into one ``(tab, crt_tab)`` pair. The arpy iteration order
     is deterministic per-archive, so the merge sequence is stable.
     """
@@ -432,7 +441,7 @@ def fetch_opecodes_from_arfile(arfile):
         # patched.
         if fname in ['aeabi_sighandlers.os', 'aeabi_sighandlers.o']:
             continue
-        newtab, new_crt_tab = fetch_opecodes(f, arfile=rel_arfile)
+        newtab, new_crt_tab = extract_opcodes(f, arfile=rel_arfile)
         tab = merge_dicts(tab, newtab)
         crt_tab = merge_dicts(crt_tab, new_crt_tab)
     return tab, crt_tab
@@ -446,23 +455,23 @@ def fetch_opecodes_from_arfile(arfile):
 _RULE_NAME_SUBS = {'.': '_DOT_', '@': '_AT_', '$': '_DOLLER_'}
 
 
-def _rule_identifier(funcs, hexstr_opecodes):
-    """Derive a YARA-legal rule name from the symbol set + opecode hash.
+def _rule_identifier(funcs, hexstr_opcodes):
+    """Derive a YARA-legal rule name from the symbol set + opcode hash.
 
     Picks the alphabetically last function name (deterministic across
     runs) as a prefix, sanitises ASCII punctuation YARA does not allow
-    in identifiers, and appends an md5 of the opecodes so two distinct
-    patterns sharing a prefix get distinct rules.
+    in identifiers, and appends an md5 of the opcode hex string so two
+    distinct patterns sharing a prefix get distinct rules.
     """
     name = funcs[-1][:MAX_RULE_INDENTIFIER_LENGTH]
     for ch, repl in _RULE_NAME_SUBS.items():
         name = name.replace(ch, repl)
-    return name + '_' + hashlib.md5(hexstr_opecodes.encode('utf-8')).hexdigest()
+    return name + '_' + hashlib.md5(hexstr_opcodes.encode('utf-8')).hexdigest()
 
 
-def create_rule(syms, hexstr_opecodes, options=[]):
+def create_rule(syms, hexstr_opcodes, options=[]):
     """Render one YARA rule for a group of symbols sharing the same
-    opecode pattern. ``options`` toggles the optional meta fields
+    opcode pattern. ``options`` toggles the optional meta fields
     (``objfiles`` / ``exports`` / ``imports`` / ``prototype``).
     """
     funcs = sorted(set([syminfo['name'] for syminfo in syms]))
@@ -470,7 +479,7 @@ def create_rule(syms, hexstr_opecodes, options=[]):
     exports = set([(syminfo['objname'].split('.')[0].replace('-', '_'), ', '.join(syminfo['exports'])) for syminfo in syms])
     imports = set([(syminfo['objname'].split('.')[0].replace('-', '_'), ', '.join(syminfo['imports'])) for syminfo in syms])
 
-    rule = 'rule %s {\n' % _rule_identifier(funcs, hexstr_opecodes)
+    rule = 'rule %s {\n' % _rule_identifier(funcs, hexstr_opcodes)
     rule += '\tmeta:\n'
     rule += '\t\taliases = "%s"\n' % ', '.join(funcs[:MAX_ALIASES])
     rule += '\t\ttype = "%s"\n' % (syms[0]['type'])
@@ -494,37 +503,37 @@ def create_rule(syms, hexstr_opecodes, options=[]):
     if 'prototype' in options:
         rule += '\t\tprototype = "%s, %s"\n' % ('void', 'void')
     rule += '\tstrings:\n'
-    rule += '\t\t$pattern = { %s }\n' % (hexstr_opecodes)
+    rule += '\t\t$pattern = { %s }\n' % (hexstr_opcodes)
     rule += '\tcondition:\n'
     rule += '\t\t$pattern\n'
     rule += '}\n'
     return rule
 
 def get_rules(tab):
-    """Render every tab entry to a YARA rule, in opecode-sorted order.
+    """Render every tab entry to a YARA rule, in opcode-sorted order.
 
     Skips entries whose literal byte content (size minus wildcard ``??``
     and zero-hex slots) does not clear ``MINIMUM_PATTERN_LENGTH`` and
-    skips degenerate patterns whose opecodes are entirely wildcards or
+    skips degenerate patterns whose opcodes are entirely wildcards or
     entirely ``00`` bytes -- both would match anything.
     """
     rules_list = ['// YARA rules, version ' + VERSION + '\n\n']
-    for opecodes in sorted(tab.keys()):
+    for opcodes in sorted(tab.keys()):
         # TODO: tighten wildcard handling for short functions. Past
         # benchmarks showed an accuracy regression on size-~5 patterns
         # dominated by ?? / 00 slots; the filter immediately below is a
         # partial mitigation, not a fix.
-        question_mark_size = tab[opecodes][0]['size'] - opecodes.count('??')
-        zero_hex_size = tab[opecodes][0]['size'] - opecodes.count('00')
+        question_mark_size = tab[opcodes][0]['size'] - opcodes.count('??')
+        zero_hex_size = tab[opcodes][0]['size'] - opcodes.count('00')
         if question_mark_size + zero_hex_size <= MINIMUM_PATTERN_LENGTH:
             continue
-        opecode_list = opecodes.split(' ')
-        wildcard_num = opecode_list.count('??')
-        zero_hex_num = opecode_list.count('00')
-        if len(opecodes.split(' ')) >= 1 and not opecode_list == [''] \
-                and not wildcard_num == len(opecode_list) \
-                and not zero_hex_num == len(opecode_list):
-            rules = create_rule(tab[opecodes], opecodes, ['objfiles'])
+        opcode_list = opcodes.split(' ')
+        wildcard_num = opcode_list.count('??')
+        zero_hex_num = opcode_list.count('00')
+        if len(opcodes.split(' ')) >= 1 and not opcode_list == [''] \
+                and not wildcard_num == len(opcode_list) \
+                and not zero_hex_num == len(opcode_list):
+            rules = create_rule(tab[opcodes], opcodes, ['objfiles'])
             rules_list.extend(rules.split('\n'))
     return rules_list
 
@@ -539,11 +548,11 @@ def output_rules(rules_list, output_path):
 # CLI driver -- argparse, per-file dispatch, output. The stelftools-mkrule
 # console script targets stelftools.generate:main; the main below is a
 # standalone "scan one toolchain dir without the merge / dlist / alist
-# steps" entry point still useful when iterating on the opecode extraction.
+# steps" entry point still useful when iterating on the opcode extraction.
 # ---------------------------------------------------------------------------
 
 
-# Object leaves the CLI skips before feeding fetch_opecodes. libstdc++.a
+# Object leaves the CLI skips before feeding extract_opcodes. libstdc++.a
 # carries the C++ runtime, which is out of scope for the C-function
 # signature corpus this tool produces.
 _SKIP_OBJ_LEAVES = frozenset({'libstdc++.a'})
@@ -557,7 +566,7 @@ _EXEC_MIMES = (
 def _load_excluded_apis(path):
     """Read the optional ``--excluded-api`` file into a list. Returns
     ``[]`` when the path is missing so the executable branch's
-    fetch_opecodes call still receives a real (empty) list.
+    extract_opcodes call still receives a real (empty) list.
     """
     if path and os.path.exists(path):
         with open(path) as f:
@@ -566,7 +575,7 @@ def _load_excluded_apis(path):
 
 
 def _process_input_file(filename, exapis):
-    """Dispatch one input file to fetch_opecodes via libmagic.
+    """Dispatch one input file to extract_opcodes via libmagic.
 
     Returns ``(newtab, new_crt_tab)`` for archives / object files /
     executables, or ``None`` when the file should be skipped (C++
@@ -578,17 +587,17 @@ def _process_input_file(filename, exapis):
         return None
     ftype = magic.from_file(filename, mime=True)
     if ftype == 'application/x-archive':
-        return fetch_opecodes_from_arfile(filename)
+        return extract_opcodes_from_arfile(filename)
     if ftype == 'application/x-object':
         with open(filename, 'rb') as f:
-            return fetch_opecodes(f)
+            return extract_opcodes(f)
     if ftype in _EXEC_MIMES:
         with open(filename, 'rb') as f:
             # The pre-cleanup call passed ``exapis`` positionally, which
-            # landed on ``fetch_opecodes``'s ``arfile`` parameter and
+            # landed on ``extract_opcodes``'s ``arfile`` parameter and
             # would later raise TypeError on a ``str + list`` concat. The
             # kwarg form is what info_create.py already uses.
-            return fetch_opecodes(f, exapis=exapis)
+            return extract_opcodes(f, exapis=exapis)
     if ftype in ['text/plain', 'inode/symlink']:
         return None
     logging.error('Not supported file type of %s: %s' % (filename, ftype))

@@ -85,8 +85,8 @@ def id_func_name_for_depend(functions, call_map, depend_path, alias_list):
             if not candidates:
                 continue
             func_end = key + functions[key]['size']
-            for opecode_addr, inst_size, operand_callee_addr in call_map:
-                if not (key <= opecode_addr <= func_end):
+            for opcode_addr, inst_size, operand_callee_addr in call_map:
+                if not (key <= opcode_addr <= func_end):
                     continue
                 callee_entry = functions.get(operand_callee_addr)
                 if callee_entry is None:
@@ -94,7 +94,7 @@ def id_func_name_for_depend(functions, call_map, depend_path, alias_list):
                 functions_callee = callee_entry['names']
                 if len(functions_callee) <= 1:
                     continue
-                call_offset_start = opecode_addr - key
+                call_offset_start = opcode_addr - key
                 call_offset_end = call_offset_start + inst_size
                 # Mirror the original behaviour: if multiple depend rows
                 # match this call site, every match applies (last-wins

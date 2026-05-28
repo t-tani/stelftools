@@ -1,9 +1,12 @@
-"""``stelftools-ident`` console script entry point.
+"""Legacy ``stelftools-ident`` console-script entry point.
 
 Argument parsing and the ``main`` flow stay isolated from the library
-surface so consumers that drive the matcher programmatically (the
-bruteforce driver, the IDA / Ghidra / radare2 / qiling plugins) never
-see argparse symbols leak into their namespace.
+surface so programmatic consumers (the ``stelftools identify`` driver,
+the IDA / Ghidra / radare2 / qiling plugins) never see argparse
+symbols leak into their namespace. New code should call the verb
+``stelftools identify`` instead; this module survives only to back the
+``stelftools-ident`` legacy shim under
+:mod:`stelftools.drivers.legacy_shims`.
 """
 
 import argparse
@@ -36,7 +39,7 @@ def set_args():
     parser.add_argument('--virtual_addr', '-va', action='store_true', help = 'output virtual address')
     parser.add_argument('--list_mode', '-lm', action='store_true', help = 'list mode')
     parser.add_argument('--alias_list', '-al', help = 'Enable function name identification by function dependency')
-    parser.add_argument('--id_linkorder', '-id_l', help = 'Path to toolchain used to indentify function names by function link order')
+    parser.add_argument('--id_linkorder', '-id_l', help = 'Path to toolchain used to identify function names by function link order')
     parser.add_argument('--id_depend', '-id_d', help = 'Enable function name identification by function dependency')
     args = parser.parse_args()
     return args

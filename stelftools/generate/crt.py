@@ -6,9 +6,9 @@ the matching epilogues, and the link step splices ABI metadata or a
 short thunk between them. This module owns the two-phase handling
 that turns the pair into a single YARA-rule pattern:
 
-- :func:`collect_funcs` runs per-file inside ``fetch_opecodes``. It
+- :func:`collect_funcs` runs per-file inside ``extract_opcodes``. It
   picks up each crti.o / crtn.o member's ``_init`` / ``_fini``
-  opecode list and stashes it under the leaf name (``crti.o`` or
+  opcode list and stashes it under the leaf name (``crti.o`` or
   ``crtn.o``) so the trailing merge knows which half it has.
 - :func:`merge_pairs` runs after every input has been walked. It
   knits matching ``(crti.o, crtn.o)`` halves into one
@@ -33,7 +33,7 @@ def collect_funcs(textsec, fname):
     Returns ``{leaf: [entry, ...]}`` where ``leaf`` is ``crti.o`` or
     ``crtn.o``; an empty dict for any other input. ``entry`` carries
     the function name, the byte size of its section, and the joined
-    opecode hex string so :func:`merge_pairs` can paste the two halves
+    opcode hex string so :func:`merge_pairs` can paste the two halves
     together later without re-reading the file.
     """
     out = {}
@@ -43,12 +43,12 @@ def collect_funcs(textsec, fname):
     for sym_name in textsec.keys():
         if sym_name not in INIT_FINI_FUNC_LIST:
             continue
-        opecodes_str = ' '.join(textsec[sym_name])
+        opcodes_str = ' '.join(textsec[sym_name])
         entry = {
             'name': sym_name, 'type': 'func',
             'size': len(textsec[sym_name]),
             'exports': [], 'imports': [],
-            'opecodes': opecodes_str,
+            'opcodes': opcodes_str,
         }
         out.setdefault(leaf, []).append(entry)
     return out
@@ -68,17 +68,17 @@ def merge_pairs(tab, crt_tab):
     if not (set(crt_tab.keys()) >= {'crti.o', 'crtn.o'}):
         return
     crt_func_name_list = [info['name'] for info in crt_tab['crti.o']]
-    half_opecodes = {}
-    for slot, leaf in (('i-opecode', 'crti.o'), ('n-opecode', 'crtn.o')):
+    half_opcodes = {}
+    for slot, leaf in (('i-opcode', 'crti.o'), ('n-opcode', 'crtn.o')):
         for info in crt_tab.get(leaf, []):
             if info['name'] in crt_func_name_list:
-                half_opecodes.setdefault(info['name'], {})[slot] = info['opecodes']
+                half_opcodes.setdefault(info['name'], {})[slot] = info['opcodes']
 
     merged = {}
-    for func_name, halves in half_opecodes.items():
+    for func_name, halves in half_opcodes.items():
         joined = ''
-        for opecodes_str in halves.values():
-            joined = opecodes_str if not joined else joined + ' [0-12] ' + opecodes_str
+        for opcodes_str in halves.values():
+            joined = opcodes_str if not joined else joined + ' [0-12] ' + opcodes_str
         merged[func_name] = joined
 
     for func_name, joined in merged.items():

@@ -56,7 +56,7 @@ def apply_relocation(textsec, name, offset, rtype,
         elif textsec[name][offset - 2] == '3B':  # 3b 98 00 00 00 00: cmp reg, dword ptr [reg] --> 81 F? 00 00 00 00 # fflush+0x13: gcc-7.4.0-i686+uClibc-ng-1.0.30
             textsec[name][offset - 2:offset + 4] = ['( 3B | 81 )', '??', '??', '??', '??', '??']
         else:
-            # logging.warning('Unexpected opecode: %s %s type %x offset %x', textsec[name][offset - 2], textsec[name][offset - 1], rtype, offset)
+            # logging.warning('Unexpected opcode: %s %s type %x offset %x', textsec[name][offset - 2], textsec[name][offset - 1], rtype, offset)
             return
             exit(-1)
     elif rtype in [R_386_16, R_386_PC16]:
@@ -67,7 +67,7 @@ def apply_relocation(textsec, name, offset, rtype,
         exit(-1)
 
 
-def apply_exec_capstone(target_sec, sym, opecodes, baseaddr):
+def apply_exec_capstone(target_sec, sym, opcodes, baseaddr):
     """ET_EXEC i386: disassemble the symbol body via capstone and
     wildcard the displacement / immediate bytes of every call, jmp, and
     Jcc the function contains so the signature survives a relink that
@@ -81,12 +81,12 @@ def apply_exec_capstone(target_sec, sym, opecodes, baseaddr):
     for i in md.disasm(code, 0):
         if i.mnemonic == 'call' or i.mnemonic[0] == 'j':
             if i.disp_offset > 0:
-                opecodes[index + i.disp_offset:index + len(i.bytes)] = ['??'] * (len(i.bytes) - i.disp_offset)
+                opcodes[index + i.disp_offset:index + len(i.bytes)] = ['??'] * (len(i.bytes) - i.disp_offset)
             elif i.imm_offset > 0:
-                opecodes[index + i.imm_offset:index + len(i.bytes)] = ['??'] * (len(i.bytes) - i.imm_offset)
+                opcodes[index + i.imm_offset:index + len(i.bytes)] = ['??'] * (len(i.bytes) - i.imm_offset)
         else:
             # Non-branch instruction whose displacement fills the rest
             # of the encoding -- widen it too.
             if i.disp_offset > 0 and (len(i.bytes) - i.disp_offset) == 4:
-                opecodes[index + i.disp_offset:index + len(i.bytes)] = ['??'] * (len(i.bytes) - i.disp_offset)
+                opcodes[index + i.disp_offset:index + len(i.bytes)] = ['??'] * (len(i.bytes) - i.disp_offset)
         index += len(i.bytes)

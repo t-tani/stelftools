@@ -8,14 +8,13 @@ Resolution order (highest priority first):
 2. ``<package_root>/signatures/`` — the in-repo location, used
    automatically when a checkout includes the tree.
 3. ``${XDG_DATA_HOME:-~/.local/share}/stelftools/signatures/`` —
-   the user cache where a future ``stelftools-fetch-signatures``
-   command will land downloads.
+   the user cache where ``stelftools fetch`` lands downloads.
 
-``signatures_root()`` always returns a ``Path``; callers (bruteforce,
-ident, info_create, the radare2 plugin) decide how to react to an
-empty or missing tree. For reads that means an empty candidate list
-falls through naturally; for writes (mkrule) the parent is created at
-file-creation time.
+``signatures_root()`` always returns a ``Path``; callers (the
+identify, mkrule, fetch verbs and the radare2 plugin) decide how to
+react to an empty or missing tree. For reads that means an empty
+candidate list falls through naturally; for writes (mkrule) the
+parent is created at file-creation time.
 
 The lookup runs on every call rather than being cached at import so an
 ``os.environ`` change during a session takes effect immediately.

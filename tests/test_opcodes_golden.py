@@ -1,4 +1,4 @@
-"""Regression: fetch_opecodes output must equal the committed golden.
+"""Regression: extract_opcodes output must equal the committed golden.
 
 Fixture set is described in ``tests/test_objects_spec.json``; the inputs
 live under ``.cache/_bootlin_work/test_objects/<id>/`` (populated by
@@ -43,7 +43,7 @@ def _entry_id(e):
 
 
 @pytest.mark.parametrize("entry", _load_spec_entries(), ids=_entry_id)
-def test_fetch_opecodes_matches_golden(entry):
+def test_extract_opcodes_matches_golden(entry):
     obj_dir = OBJECTS / _entry_id(entry)
     golden = GOLDEN_DIR / f"{_entry_id(entry)}.json.gz"
     if not obj_dir.exists() or not any(obj_dir.iterdir()):
@@ -56,4 +56,4 @@ def test_fetch_opecodes_matches_golden(entry):
     with gzip.open(golden, "rb") as f:
         expected = json.loads(f.read().decode("utf-8"))
 
-    assert observed == expected, f"fetch_opecodes diverged from golden for {_entry_id(entry)}"
+    assert observed == expected, f"extract_opcodes diverged from golden for {_entry_id(entry)}"

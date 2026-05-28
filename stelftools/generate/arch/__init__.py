@@ -1,4 +1,4 @@
-"""Per-architecture relocation handlers for stelftools.generate.fetch_opecodes.
+"""Per-architecture relocation handlers for stelftools.generate.opcodes.
 
 Each module under this package exports one function:
 
@@ -34,7 +34,7 @@ from . import (
 
 
 class UnsupportedArch(Exception):
-    """Raised when fetch_opecodes meets an unhandled (e_machine, EI_CLASS)."""
+    """Raised when opcodes meets an unhandled (e_machine, EI_CLASS)."""
 
 
 HANDLERS = {

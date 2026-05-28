@@ -48,7 +48,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from stelftools.families import known_families  # noqa: E402
-from stelftools.drivers.bruteforce import lief_arch_group_for  # noqa: E402
+from stelftools.drivers.identify import lief_arch_group_for  # noqa: E402
 from stelftools import sigstore  # noqa: E402
 
 
@@ -85,7 +85,7 @@ def _build_tarball(
         # ``mode="w|"`` streams the tar headers + payload through the
         # zstd writer without seeking. ``arcname`` keeps the on-disk
         # layout: archives carry ``<family>/<arch>/*``, matching what
-        # sigfetch.py expects when it promotes
+        # drivers/fetch.py expects when it promotes
         # ``staging/<family>/<arch>/`` into place.
         with tarfile.open(fileobj=compressor, mode="w|") as tf:
             tf.add(arch_dir, arcname=f"{family}/{arch}")

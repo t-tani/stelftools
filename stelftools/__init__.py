@@ -10,16 +10,17 @@ The package shape mirrors the three-part design the README pitches:
 * :mod:`stelftools.generate` -- the rule generator that turns a
   toolchain's ``.a`` / ``.o`` archives into the per-arch YARA rule
   set, relocation / optimisation / linker-relaxation aware
-  (:mod:`stelftools.generate.fetch_opecodes` does the opcode
-  extraction, :mod:`stelftools.generate.arch` carries the per-arch
-  relocation handlers).
+  (:mod:`stelftools.generate.opcodes` does the opcode extraction,
+  :mod:`stelftools.generate.arch` carries the per-arch relocation
+  handlers).
 * :mod:`stelftools.elf` -- read primitives and the write-side symtab
   synthesiser shared across both stacks.
 
-Operational glue stays at this top level: console scripts in
-:mod:`stelftools.drivers` (``stelftools-ident``, ``stelftools-mkrule``,
-``stelftools-bruteforce``, ``stelftools-symbolize``,
-``stelftools-fetch-signatures``) tie the library to the shell;
+Operational glue stays at this top level. The user-facing CLI is the
+single ``stelftools`` entry point (verbs ``identify``, ``symbolize``,
+``mkrule``, ``fetch``) wired through :mod:`stelftools.drivers.cli`;
+deprecated hyphen-separated scripts (``stelftools-ident`` etc.) live
+in :mod:`stelftools.drivers.legacy_shims` and forward to the verbs.
 :mod:`stelftools.sigstore` and :mod:`stelftools.families` are the
 public helpers external tools and plugins reach for.
 """

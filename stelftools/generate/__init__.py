@@ -15,7 +15,7 @@ from pathlib import Path
 import arpy
 import magic
 
-from . import fetch_opecodes as libfunc_mkrule
+from . import opcodes as libfunc_mkrule
 from . import deparse as libfunc_deparse
 from . import crt
 from .. import sigstore
@@ -133,7 +133,7 @@ def get_static_lib_file_list(tc_path):
 # / rcrt1 are dynamic-link helpers whose code is not part of any user
 # library; they used to be filtered from the rule pass only and still
 # need to feed the dependency analyser to record their callers.
-_EXCLUDE_OPECODE_TOPLEVEL = {'Scrt1.o', 'rcrt1.o', 'crtbegin.o', 'crtbeginS.o', 'crtendS.o'}
+_EXCLUDE_OPCODE_TOPLEVEL = {'Scrt1.o', 'rcrt1.o', 'crtbegin.o', 'crtbeginS.o', 'crtendS.o'}
 
 # Top-level archive that the rule generator does not handle (C++ symbol
 # names blow past the YARA identifier-length limits the rule writer
@@ -143,7 +143,7 @@ _EXCLUDE_BOTH_TOPLEVEL = {'libstdc++.a'}
 
 # Per-archive members the rule generator avoids; the dependency walk
 # still descends into them to preserve depend_list parity.
-_EXCLUDE_OPECODE_IN_ARCHIVE = {'aeabi_sighandlers.os', 'aeabi_sighandlers.o'}
+_EXCLUDE_OPCODE_IN_ARCHIVE = {'aeabi_sighandlers.os', 'aeabi_sighandlers.o'}
 
 _EXECUTABLE_MIMES = {
     'application/x-executable',
@@ -155,7 +155,7 @@ _EXECUTABLE_MIMES = {
 def _named_bytesio(data, name):
     """BytesIO wrapper whose ``.name`` attribute satisfies libfunc_mkrule.
 
-    libfunc_mkrule.fetch_opecodes picks up the file name from ``f.header.name``
+    libfunc_mkrule.extract_opcodes picks up the file name from ``f.header.name``
     (for arpy archive members) or ``f.name`` (for plain files). A bare
     BytesIO has neither, so the rule writer would error out; setting
     ``.name`` matches the plain-file path.
@@ -203,7 +203,7 @@ def _process_one_file_inner(filename):
     except magic.MagicException:
         return None
 
-    skip_opecode_outer = leaf in _EXCLUDE_OPECODE_TOPLEVEL
+    skip_opcode_outer = leaf in _EXCLUDE_OPCODE_TOPLEVEL
     tab = {}
     crt_tab = {}
     depend = {}
@@ -220,8 +220,8 @@ def _process_one_file_inner(filename):
             if not data:
                 continue
             buf = _named_bytesio(data, inner_fname)
-            if inner_fname not in _EXCLUDE_OPECODE_IN_ARCHIVE:
-                newtab, new_crt_tab = libfunc_mkrule.fetch_opecodes(buf, arfile=rel_arfile)
+            if inner_fname not in _EXCLUDE_OPCODE_IN_ARCHIVE:
+                newtab, new_crt_tab = libfunc_mkrule.extract_opcodes(buf, arfile=rel_arfile)
                 tab = libfunc_mkrule.merge_dicts(tab, newtab)
                 crt_tab = libfunc_mkrule.merge_dicts(crt_tab, new_crt_tab)
             buf.seek(0)
@@ -231,18 +231,18 @@ def _process_one_file_inner(filename):
         with open(filename, 'rb') as f:
             data = f.read()
         buf = _named_bytesio(data, filename)
-        if not skip_opecode_outer:
-            newtab, new_crt_tab = libfunc_mkrule.fetch_opecodes(buf)
+        if not skip_opcode_outer:
+            newtab, new_crt_tab = libfunc_mkrule.extract_opcodes(buf)
             tab = libfunc_mkrule.merge_dicts(tab, newtab)
             crt_tab = libfunc_mkrule.merge_dicts(crt_tab, new_crt_tab)
         buf.seek(0)
         depend.update(libfunc_deparse.func_depend_analy(buf, leaf))
 
     elif ftype in _EXECUTABLE_MIMES:
-        if skip_opecode_outer:
+        if skip_opcode_outer:
             return None
         with open(filename, 'rb') as f:
-            newtab, new_crt_tab = libfunc_mkrule.fetch_opecodes(f, exapis=[])
+            newtab, new_crt_tab = libfunc_mkrule.extract_opcodes(f, exapis=[])
         tab = libfunc_mkrule.merge_dicts(tab, newtab)
         crt_tab = libfunc_mkrule.merge_dicts(crt_tab, new_crt_tab)
 
@@ -318,7 +318,7 @@ def mkrule_and_other(tc_path, tc_name, arch, workers=None):
 
     The combined walk reads each object file (standalone or pulled from
     an archive) into a BytesIO once, then feeds the same buffer through
-    libfunc_mkrule.fetch_opecodes and libfunc_deparse.func_depend_analy
+    libfunc_mkrule.extract_opcodes and libfunc_deparse.func_depend_analy
     back-to-back with a seek(0) in between. Exclusion rules from the
     original two functions are preserved verbatim — the rule pass still
     skips Scrt1.o / crtbegin*.o / aeabi_sighandlers.o while the depend

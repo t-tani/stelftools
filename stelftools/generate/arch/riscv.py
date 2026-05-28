@@ -115,8 +115,8 @@ def postprocess_text(textsec):
     pre-split implementation ran this pass unconditionally for any
     ``EM_RISCV`` binary.
     """
-    for t_sec, t_opecode_list in textsec.items():
-        _offset_size = int(len(t_opecode_list) / 4)
+    for t_sec, t_opcode_list in textsec.items():
+        _offset_size = int(len(t_opcode_list) / 4)
         for _offset in range(_offset_size):
             _fmt_offset = _offset * 4
             if textsec[t_sec][_fmt_offset] == '63':  # bnez instruction
@@ -136,16 +136,16 @@ def should_skip_symbol(sym):
     return sym.name in _SKIP_NAMES
 
 
-def compute_min_length(opecodes):
+def compute_min_length(opcodes):
     """Count hex / ?? tokens so the rule can carry a ``min_size``
     annotation alongside the literal pattern size. RELAX-window markers
     (``[0-N]`` and the trailing empty slots) do not count toward the
     minimum.
     """
-    return sum(1 for h in opecodes if h == '??' or re.search('^[0-9a-fA-f]{2}$', h) is not None)
+    return sum(1 for h in opcodes if h == '??' or re.search('^[0-9a-fA-f]{2}$', h) is not None)
 
 
-def finalize_opecodes(opecodes):
+def finalize_opcodes(opcodes):
     """Normalise the leading and trailing edges of a RELAX-window slice.
 
     A function that starts inside a coalesced window keeps its first
@@ -153,18 +153,18 @@ def finalize_opecodes(opecodes):
     trailing slot is empty (mid-window) is shifted so the marker spans
     the variable tail.
     """
-    if not opecodes:
+    if not opcodes:
         return
-    if opecodes[0].startswith('['):
-        _fix_len = int(opecodes[0].split(']')[0].split('-')[1]) - 1
-        opecodes[0] = '??'
-        opecodes[1] = '[3-' + str(_fix_len) + ']'
-    if opecodes[-1] == '':
+    if opcodes[0].startswith('['):
+        _fix_len = int(opcodes[0].split(']')[0].split('-')[1]) - 1
+        opcodes[0] = '??'
+        opcodes[1] = '[3-' + str(_fix_len) + ']'
+    if opcodes[-1] == '':
         target_flex_offset = 0
-        for _offset, _hex in enumerate(reversed(opecodes)):
+        for _offset, _hex in enumerate(reversed(opcodes)):
             if _hex.endswith(']'):
-                target_flex_offset = len(opecodes) - _offset - 1
+                target_flex_offset = len(opcodes) - _offset - 1
                 break
-        _fix_max_len = int(opecodes[target_flex_offset].split(']')[0].split('-')[1]) - 1
-        opecodes[target_flex_offset] = '[' + str(0) + '-' + str(_fix_max_len) + ']'
-        opecodes[target_flex_offset+1] = '??'
+        _fix_max_len = int(opcodes[target_flex_offset].split(']')[0].split('-')[1]) - 1
+        opcodes[target_flex_offset] = '[' + str(0) + '-' + str(_fix_max_len) + ']'
+        opcodes[target_flex_offset+1] = '??'

@@ -59,13 +59,13 @@ def apply_relocation(textsec, name, offset, rtype,
 
 
 def build_opd_dict(e, sections, symtab, textsec):
-    """Walk ``.opd`` and produce ``{func_name: {func_opecode, func_size}}``.
+    """Walk ``.opd`` and produce ``{func_name: {func_opcode, func_size}}``.
 
     PPC64 stores function descriptors in ``.opd`` and the actual code in
     ``.text``. Each STT_FUNC symbol whose section index lands in
     ``.opd`` corresponds to a function whose bytes live inside
     ``.text``. The dict returned here drives a parallel insert path in
-    :mod:`stelftools.generate.fetch_opecodes` that bypasses the main symbol loop; an
+    :mod:`stelftools.generate.opcodes` that bypasses the main symbol loop; an
     empty dict (no ``.opd`` section) means the main loop runs normally.
     """
     opd_present = any(sec.name == '.opd' for sec in sections)
@@ -110,9 +110,9 @@ def build_opd_dict(e, sections, symtab, textsec):
                             _func_offset = ndx_func_offset
                         else:
                             _func_offset = (ndx_func_offset // 16) * 16 + 16
-                    func_opecode = textsec['.text'][_func_offset:_func_offset+sym_entry['st_size']]
-                    func_size = len(func_opecode)
-                    opd_func_dict[sym_name] = {'func_opecode': func_opecode, 'func_size': func_size}
+                    func_opcode = textsec['.text'][_func_offset:_func_offset+sym_entry['st_size']]
+                    func_size = len(func_opcode)
+                    opd_func_dict[sym_name] = {'func_opcode': func_opcode, 'func_size': func_size}
                     ndx_func_offset = _func_offset + sym_entry['st_size']
     return opd_func_dict
 
@@ -120,7 +120,7 @@ def build_opd_dict(e, sections, symtab, textsec):
 def retarget_section(e, sym, target_sec, textsec):
     """When a STT_FUNC's recorded section is ``.opd`` but its code lives
     in ``.text`` / ``.text.unlikely``, redirect ``target_sec`` so the
-    opecode slice lands on real instructions. Returns
+    opcode slice lands on real instructions. Returns
     ``(target_sec, fix_sec_flag)``; the flag tells the caller to slice
     the alternative section from offset 0 rather than from
     ``st_value - sh_addr``.

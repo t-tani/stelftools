@@ -38,8 +38,8 @@ from .yara import get_target_fp
 def compute_target_state(target_path):
     # Compute the target-side state used by run_one_with_state():
     # the executable-segment table, callsite map, instruction bounds,
-    # and file size. Cfg-independent — bruteforce drivers compute it
-    # once per binary and reuse across every candidate cfg.
+    # and file size. Config-independent — multi-config drivers compute
+    # it once per binary and reuse across every candidate cfg.
     target = get_target_fp(target_path)
     try:
         symtab_info = get_symtab_info_by_capstone(target_path)

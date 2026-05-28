@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "_comment": "Bootlin toolchains chosen for stelftools.mkrule.fetch_opecodes regression coverage. One entry per (e_machine, EI_CLASS, EI_DATA) profile stelftools supports today. libc preference: glibc > uclibc. release pinned to 2025.08-1. tarball_sha256 is populated by `python tests/fetch_test_objects.py --resolve-sha`. leaves: leaf filenames (no path) to extract from the tarball; missing leaves are logged and skipped. Gaps known but not covered here: PPC64 .opd (Bootlin has no powerpc64 token in our supported set) and ET_EXEC x86 capstone path (archives are ET_REL only).",
+  "_comment": "Bootlin toolchains chosen for stelftools.generate.opcodes regression coverage. One entry per (e_machine, EI_CLASS, EI_DATA) profile stelftools supports today. libc preference: glibc > uclibc. release pinned to 2025.08-1. tarball_sha256 is populated by `python tests/fetch_test_objects.py --resolve-sha`. leaves: leaf filenames (no path) to extract from the tarball; missing leaves are logged and skipped. Gaps known but not covered here: PPC64 .opd (Bootlin has no powerpc64 token in our supported set) and ET_EXEC x86 capstone path (archives are ET_REL only).",
   "entries": [
     {
       "arch": "aarch64",

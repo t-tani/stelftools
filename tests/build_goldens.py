@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Generate golden JSON dumps of stelftools.generate.fetch_opecodes output.
+"""Generate golden JSON dumps of stelftools.generate.opcodes output.
 
 Reads ``tests/test_objects_spec.json``, runs
-:func:`stelftools.generate.fetch_opecodes.fetch_opecodes` /
-``fetch_opecodes_from_arfile``
+:func:`stelftools.generate.opcodes.extract_opcodes` /
+``extract_opcodes_from_arfile``
 on the extracted test objects under
 ``.cache/_bootlin_work/test_objects/<arch>--<libc>--<release>/``, and
 writes a gzip-compressed canonicalised ``{"tab": ..., "crt": ...}``
@@ -11,7 +11,7 @@ payload to ``tests/golden/<arch>--<libc>--<release>.json.gz``.
 
 Canonicalisation sorts the ``tab[key]`` list by ``(name, objname)`` and
 sorts each entry's ``exports``/``imports`` lists so the comparison in
-:mod:`tests.test_fetch_opecodes_golden` is independent of any insertion
+:mod:`tests.test_opcodes_golden` is independent of any insertion
 order that ``elftools`` symbol iteration or archive walk may produce.
 """
 
@@ -24,7 +24,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from stelftools.generate import fetch_opecodes as mkrule  # noqa: E402
+from stelftools.generate import opcodes as mkrule  # noqa: E402
 
 CACHE = REPO_ROOT / ".cache" / "_bootlin_work"
 OBJECTS = CACHE / "test_objects"
@@ -67,7 +67,7 @@ def _looks_like_ar(path):
     """Glibc ships libm.a / libpthread.a as ld linker scripts or empty AR
     stubs; arpy chokes on the former and yields nothing useful on the
     latter. Detect by magic and skip in both cases — the regression
-    fixtures only exercise files that fetch_opecodes actually processes.
+    fixtures only exercise files that extract_opcodes actually processes.
     """
     try:
         with open(path, "rb") as f:
@@ -78,7 +78,7 @@ def _looks_like_ar(path):
 
 
 def run_fetch_on_dir(obj_dir):
-    """Drive fetch_opecodes / fetch_opecodes_from_arfile over a fixture dir.
+    """Drive extract_opcodes / extract_opcodes_from_arfile over a fixture dir.
 
     Inputs are processed in sorted leaf order so the merge sequence is
     reproducible. ``.a`` files that are linker scripts or empty archives
@@ -91,10 +91,10 @@ def run_fetch_on_dir(obj_dir):
         if fp.name.endswith(".a"):
             if not _looks_like_ar(fp):
                 continue
-            newtab, new_crt = mkrule.fetch_opecodes_from_arfile(str(fp))
+            newtab, new_crt = mkrule.extract_opcodes_from_arfile(str(fp))
         elif fp.name.endswith(".o"):
             with open(fp, "rb") as f:
-                newtab, new_crt = mkrule.fetch_opecodes(f)
+                newtab, new_crt = mkrule.extract_opcodes(f)
         else:
             continue
         tab = mkrule.merge_dicts(tab, newtab)
@@ -126,7 +126,7 @@ def main(argv=None):
         if not d.exists() or not any(d.iterdir()):
             print(f"[{e['arch']}] no extract at {d}, skip", flush=True)
             continue
-        print(f"[{e['arch']}] running fetch_opecodes ...", flush=True)
+        print(f"[{e['arch']}] running extract_opcodes ...", flush=True)
         tab, crt = run_fetch_on_dir(d)
         payload = {"tab": canonicalize(tab), "crt": canonicalize(crt)}
         text = json.dumps(payload, sort_keys=True, ensure_ascii=False)

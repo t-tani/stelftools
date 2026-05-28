@@ -50,11 +50,15 @@ dev = [
 ]
 
 [project.scripts]
-stelftools-ident = "stelftools.match.cli:main"
-stelftools-mkrule = "stelftools.generate:main"
-stelftools-bruteforce = "stelftools.drivers.bruteforce:main"
-stelftools-symbolize = "stelftools.drivers.symbolize:main"
-stelftools-fetch-signatures = "stelftools.drivers.sigfetch:main"
+# Main entry point: `stelftools <verb>` with subcommand dispatch.
+stelftools = "stelftools.drivers.cli:main"
+# Deprecated hyphen-separated names. Each shim prints a one-line
+# warning and forwards to the new verb form.
+stelftools-ident = "stelftools.drivers.legacy_shims:ident"
+stelftools-mkrule = "stelftools.drivers.legacy_shims:mkrule"
+stelftools-bruteforce = "stelftools.drivers.legacy_shims:bruteforce"
+stelftools-symbolize = "stelftools.drivers.legacy_shims:symbolize"
+stelftools-fetch-signatures = "stelftools.drivers.legacy_shims:fetch"
 
 [project.urls]
 Homepage = "https://github.com/t-tani/stelftools"
@@ -134,7 +138,7 @@ ignore = [
 # the import header without any analytical win, so we ignore the
 # star-import diagnostics here.
 "stelftools/elf/disasm.py" = ["F403", "F405"]
-"stelftools/generate/fetch_opecodes.py" = ["F403", "F405"]
+"stelftools/generate/opcodes.py" = ["F403", "F405"]
 "stelftools/generate/__init__.py" = ["F403", "F405"]
 
 # Plugins bridge to the host RE tool's runtime; star imports are the

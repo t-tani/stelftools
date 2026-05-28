@@ -11,7 +11,7 @@ mutation and no per-function rename calls. The symbolized copy is what
 downstream analysis imports; the original ELF is left untouched.
 
 ``--cfg`` supplies a toolchain config explicitly. When ``--cfg`` is
-omitted, :func:`stelftools.drivers.bruteforce.select_best` elects the
+omitted, :func:`stelftools.drivers.identify.select_best` elects the
 best-scoring cfg from the on-disk signatures tree. A JSON summary is
 written to ``--out`` (default stdout).
 """
@@ -27,8 +27,8 @@ import sys
 import time
 from pathlib import Path
 
-from . import bruteforce
-from .. import match as ident
+from . import identify as _identify
+from .. import match
 from ..elf.symtab_write import append_symtab, section_index_for_addr
 
 log = logging.getLogger("stelftools.drivers.symbolize")
@@ -54,13 +54,13 @@ def pick_toolchain(target_path, jobs):
 
     Returns ``(cfg_path, score)``. Raises :class:`RuntimeError` if no
     candidate cfg matches. The selection runs in-process through
-    :func:`stelftools.drivers.bruteforce.select_best`; the bruteforce logger
-    is left untouched so the CLI of stelftools-symbolize and the CLI
-    of stelftools-bruteforce show the same per-cfg trail.
+    :func:`stelftools.drivers.identify.select_best`; the identify logger
+    is left untouched so the CLI of ``stelftools symbolize`` and
+    ``stelftools identify`` show the same per-cfg trail.
     """
-    rankings = bruteforce.select_best(target_path, jobs)
+    rankings = _identify.select_best(target_path, jobs)
     if not rankings:
-        raise RuntimeError("bruteforce produced no candidate; "
+        raise RuntimeError("identify produced no candidate cfg; "
                            "the signatures tree may be empty or "
                            "every cfg errored out")
     return rankings[0]
@@ -71,7 +71,7 @@ def run_match(target_path, cfg_path, output_mode='ghidra', logger=None):
 
     ``match_info`` maps a virtual address to ``{'names': '<name>'}``
     where the name is the underscore-OR-joined alias string produced
-    by :func:`stelftools.ident.output` — the libc-area filter and
+    by :func:`stelftools.match.output` — the libc-area filter and
     alias collapsing are done inside the matcher. ``output_mode`` is
     ``'ida'`` or ``'ghidra'``; both yield the same ``_OR_``-joined
     format. The matcher prints the match list to stdout; we capture
@@ -84,12 +84,12 @@ def run_match(target_path, cfg_path, output_mode='ghidra', logger=None):
         cfg_info = json.load(fp)
 
     t0 = time.time()
-    target_state = ident.compute_target_state(target_path)
+    target_state = match.compute_target_state(target_path)
     if logger:
         logger.info("compute_target_state done in %.1fs", time.time() - t0)
 
     t0 = time.time()
-    target_info = ident.run_one_with_state(
+    target_info = match.run_one_with_state(
         target_state, cfg_info, cfg_path=cfg_path)
     if logger:
         logger.info("run_one_with_state done in %.1fs (functions=%d)",
@@ -97,7 +97,7 @@ def run_match(target_path, cfg_path, output_mode='ghidra', logger=None):
 
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
-        match_info = ident.output(target_info, target_path, output_mode)
+        match_info = match.output(target_info, target_path, output_mode)
     return match_info, target_info
 
 
@@ -105,12 +105,12 @@ def symbolize(binary_path, out_elf_path, cfg_path=None, jobs=None):
     """Run match + ELF symtab patch and write the symbolized copy.
 
     Returns a summary dict with the match counts and the chosen cfg.
-    ``cfg_path`` may be ``None``, in which case the bruteforce ranker
-    elects one and the chosen score lands in ``bruteforce_score`` on
+    ``cfg_path`` may be ``None``, in which case the identify ranker
+    elects one and the chosen score lands in ``identify_score`` on
     the returned dict. ``jobs`` defaults to ``min(8, cpu_count())``.
 
-    No file is written until the matcher has produced a result, so a
-    bruteforce failure or an unparseable cfg leaves the destination
+    No file is written until the matcher has produced a result, so an
+    identify failure or an unparseable cfg leaves the destination
     untouched.
     """
     binary_path = Path(binary_path)
@@ -119,10 +119,10 @@ def symbolize(binary_path, out_elf_path, cfg_path=None, jobs=None):
         jobs = min(8, os.cpu_count() or 1)
 
     if cfg_path is None:
-        cfg_path, bruteforce_score = pick_toolchain(str(binary_path), jobs)
+        cfg_path, identify_score = pick_toolchain(str(binary_path), jobs)
     else:
         cfg_path = str(Path(cfg_path).resolve())
-        bruteforce_score = None
+        identify_score = None
 
     log.info("matching cfg=%s ...", Path(cfg_path).name)
     match_info, target_info = run_match(
@@ -148,7 +148,7 @@ def symbolize(binary_path, out_elf_path, cfg_path=None, jobs=None):
         "binary": str(binary_path),
         "out_elf": str(out_elf_path),
         "cfg": cfg_path,
-        "bruteforce_score": bruteforce_score,
+        "identify_score": identify_score,
         "match_count": len(match_info),
         "total_funcs": total_funcs,
         "symbols_added": len(symbols),
@@ -164,27 +164,48 @@ def _write_summary(path, data):
         Path(path).write_text(text + "\n")
 
 
-def main():
-    ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("binary", help="absolute path to the target ELF on the host")
-    ap.add_argument("--cfg", default=None,
-                    help="signatures/configs/<family>/<name>.json to apply. "
-                    "Omitted = bruteforce-pick from the ELF.")
-    ap.add_argument("--out-elf", required=True,
-                    help="path to write the symbolized ELF copy")
-    ap.add_argument("-j", "--jobs", type=int,
-                    default=min(8, os.cpu_count() or 1),
-                    help="bruteforce worker count when --cfg is omitted")
-    ap.add_argument("--out", default="-",
-                    help="output JSON summary path or '-' for stdout")
-    args = ap.parse_args()
+def _add_arguments(parser):
+    parser.add_argument(
+        "binary", help="absolute path to the target ELF on the host")
+    parser.add_argument(
+        "--cfg", default=None,
+        help="signatures/<family>/<arch>/<name>.json to apply. "
+             "When omitted, the identify ranker elects one from the "
+             "on-disk signatures tree.",
+    )
+    parser.add_argument(
+        "--out-elf", "-o", dest="out_elf", required=True,
+        help="path to write the symbolized ELF copy",
+    )
+    parser.add_argument(
+        "-j", "--jobs", type=int, default=min(8, os.cpu_count() or 1),
+        help="worker count for cfg scoring when --cfg is omitted",
+    )
+    parser.add_argument(
+        "--summary", default="-", dest="summary_path",
+        help="output JSON summary path or '-' for stdout",
+    )
 
+
+def register_parser(subparsers):
+    parser = subparsers.add_parser(
+        "symbolize",
+        help="Write matched library names into a fresh .symtab on a copy of the ELF.",
+        description=__doc__.splitlines()[0],
+    )
+    _add_arguments(parser)
+    parser.set_defaults(_run=run)
+    return parser
+
+
+def run(args):
     _setup_default_logging()
-    bruteforce.log.setLevel(logging.INFO)  # propagate to the bruteforce trail
+    _identify.log.setLevel(logging.INFO)  # propagate to the identify trail
 
     binary_path = Path(args.binary)
     if not binary_path.is_file():
-        _write_summary(args.out, {"error": f"binary not found: {binary_path}"})
+        _write_summary(args.summary_path,
+                       {"error": f"binary not found: {binary_path}"})
         return 2
 
     try:
@@ -195,11 +216,19 @@ def main():
             jobs=args.jobs,
         )
     except RuntimeError as exc:
-        _write_summary(args.out, {"error": str(exc), "binary": str(binary_path)})
+        _write_summary(args.summary_path,
+                       {"error": str(exc), "binary": str(binary_path)})
         return 4
 
-    _write_summary(args.out, summary)
+    _write_summary(args.summary_path, summary)
     return 0
+
+
+def main(argv=None):
+    """Legacy entry point for the ``stelftools-symbolize`` shim."""
+    parser = argparse.ArgumentParser(prog="stelftools-symbolize")
+    _add_arguments(parser)
+    return run(parser.parse_args(argv))
 
 
 if __name__ == "__main__":

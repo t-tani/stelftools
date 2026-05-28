@@ -39,8 +39,8 @@ from stelftools.match.yara import (
     format_match_res,
     get_target_fp,
     get_yara_rule,
-    marge_functions,
-    marge_nomatch_functions,
+    merge_functions,
+    merge_nomatch_functions,
     yara_matching,
 )
 from stelftools.generate import (
@@ -150,10 +150,10 @@ def func_ident(tc_cfg_path):
         #for _addr in sorted(_functions.keys()):
         #    print('dbg', _length, ':', hex(_addr), _functions[_addr])
         if _length == start_rule_length:
-            #functions = marge_nomatch_functions(_functions, call_map, base_vaddr)
-            functions = marge_nomatch_functions(_functions, call_map)
+            #functions = merge_nomatch_functions(_functions, call_map, base_vaddr)
+            functions = merge_nomatch_functions(_functions, call_map)
         else:
-            functions = marge_functions(functions, _functions)
+            functions = merge_functions(functions, _functions)
     # delete mismatch signature
     functions = del_mismatch(functions)
     # close target fp

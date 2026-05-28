@@ -1,14 +1,14 @@
-"""Link-order identification pass for ident.
+"""Link-order identification pass for the matcher.
 
 When a YARA rule's signature matches multiple aliased function names,
 the link order the toolchain assigns to its archives is a strong
 disambiguator. :func:`id_func_name_for_linkorder` drives the
-:mod:`.dub_maker` helper to compile a dummy binary against
-the same cross-toolchain and capture the order in which the linker
-pulls referenced libfuncs; :func:`link_order_base_identificate` then
-walks the matched-address table and narrows each multi-candidate slot
-to the names that appear between its top and bottom anchor in the
-linker's order.
+:mod:`.dub_maker` helper (dub = dummy binary; the module compiles a
+throwaway program against the same cross-toolchain) to capture the
+order in which the linker pulls referenced library functions;
+:func:`link_order_base_identificate` then walks the matched-address
+table and narrows each multi-candidate slot to the names that appear
+between its top and bottom anchor in the linker's order.
 
 Inputs come from the caller's matched-function dict, the per-toolchain
 alias list, and the link-order list returned by

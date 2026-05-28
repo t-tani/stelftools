@@ -12,7 +12,7 @@ them:
 3. :func:`format_match_res` folds yara-x ``Rule`` objects into the
    canonical ``{addr: {names, size, detected, category}}`` shape every
    downstream pass consumes.
-4. :func:`marge_nomatch_functions` and :func:`marge_functions` graft
+4. :func:`merge_nomatch_functions` and :func:`merge_functions` graft
    unmatched call sites and lower-length matches onto that table.
 
 Two helpers (:func:`get_target_fp`, :func:`_get_target_data`) open and
@@ -53,7 +53,7 @@ def format_match_res(match_res, symtab_info, risc_v_flag):
                 # yara-python code overrode it with meta['size'] whenever
                 # max_match_data capped the reported length. Keep the
                 # semantic so signature-length-based heuristics downstream
-                # (del_mismatch, marge_functions) see the rule's declared
+                # (del_mismatch, merge_functions) see the rule's declared
                 # function size, not the raw scan return.
                 if int(meta['size']) > MAX_PATTERN_LENGTH or risc_v_flag == False:
                     matched_len = int(meta['size'])
@@ -103,8 +103,8 @@ def get_target_fp(target_path):
     return target
 
 
-#def marge_nomatch_functions(_functions, call_map, base_vaddr):
-def marge_nomatch_functions(_functions, call_map):
+#def merge_nomatch_functions(_functions, call_map, base_vaddr):
+def merge_nomatch_functions(_functions, call_map):
     # add addresses to the dict that do not have a pattern match from the function being called
     _exclude_addr_list = []
     for _, _, _c_addr in call_map:
@@ -133,7 +133,7 @@ def marge_nomatch_functions(_functions, call_map):
     return _functions
 
 
-def marge_functions(functions, _functions):
+def merge_functions(functions, _functions):
     _func_addr_list = sorted(functions.keys())
     for _addr in _func_addr_list:
         if functions[_addr]['names'] != ['']:
@@ -217,8 +217,8 @@ def compile_yara_file(yara_rule_path):
     # Compiled rules are persisted under STELFTOOLS_PATH/.cache/yara/ as
     # <basename>.yarc + <basename>.lengths.json. A warm hit deserialises
     # ~8x faster than recompiling, which is the dominant per-cfg cost
-    # in the bruteforce driver. Cache invalidates when the .yara file
-    # is newer than the cached pair.
+    # in the multi-config identify driver. Cache invalidates when the
+    # .yara file is newer than the cached pair.
     name = os.path.basename(yara_rule_path)
     cache_yarc = os.path.join(CACHE_DIR, name + ".yarc")
     cache_lens = os.path.join(CACHE_DIR, name + ".lengths.json")

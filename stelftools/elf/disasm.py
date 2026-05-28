@@ -7,9 +7,20 @@ back-end (:func:`capstone_disasm_bin` for every supported architecture
 except ARC, :func:`objdump_disasm_bin` via :func:`_find_objdump` for
 ARC) produces an ``{addr: instruction}`` map, and :func:`parse_inst`
 walks it to extract a per-arch ``(call_inst_addr, call_inst_size,
-callee_addr)`` table. MIPS adds a GOT-resolution post-pass via
-:func:`._mips_got_map` so ``lw $reg, gp_offset($gp)`` loads resolve to
-the callee.
+callee_addr)`` table.
+
+There are three address-discovery strategies, by architecture:
+
+* Call-instruction operand -- ARC (``bl``, ``bl.d``), ARM (``bl``),
+  m68k (``bsrl``), PowerPC (``bl``), SPARC (``call``), Intel 80386
+  (``call``), x86_64 (``call``).
+* Global Offset Table entries -- MIPS 32 / 64; :mod:`.mips_got`
+  resolves the per-callee GOT slot so a ``lw $reg, gp_offset($gp)``
+  load reaches the actual callee.
+* Function-address table loaded from a literal pool -- Renesas sh4,
+  where the calling convention is ``mov.l @(disp,pc),Rn`` followed by
+  ``jsr @Rn``; the EM_SH branch dereferences the slot address and
+  treats the 4 bytes there as the callee.
 """
 
 import os
@@ -43,7 +54,7 @@ def get_inst_area(target, base_vaddr, t_bit):
                     _last_sec_addr = sec.header['sh_addr']
                     bot_inst_addr = sec.header['sh_addr'] + sec.header['sh_size']
         if len(_sh_addr_list) != 0:
-            if 0x0 > min(_sh_addr_list) - base_vaddr: # ToDo: fix worng code
+            if 0x0 > min(_sh_addr_list) - base_vaddr: # ToDo: fix wrong code
                 top_inst_addr = min(_sh_addr_list)
                 bot_inst_addr = bot_inst_addr - 1
             else:
