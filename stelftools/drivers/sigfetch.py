@@ -38,7 +38,7 @@ from typing import Iterable
 
 import zstandard
 
-from . import sigstore
+from .. import sigstore
 
 
 SENTINEL_NAME = ".fetched_sha256"

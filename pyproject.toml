@@ -52,9 +52,9 @@ dev = [
 [project.scripts]
 stelftools-ident = "stelftools.match.cli:main"
 stelftools-mkrule = "stelftools.generate:main"
-stelftools-bruteforce = "stelftools.bruteforce:main"
-stelftools-symbolize = "stelftools.symbolize:main"
-stelftools-fetch-signatures = "stelftools.sigfetch:main"
+stelftools-bruteforce = "stelftools.drivers.bruteforce:main"
+stelftools-symbolize = "stelftools.drivers.symbolize:main"
+stelftools-fetch-signatures = "stelftools.drivers.sigfetch:main"
 
 [project.urls]
 Homepage = "https://github.com/t-tani/stelftools"

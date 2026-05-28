@@ -48,7 +48,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from stelftools.families import known_families  # noqa: E402
-from stelftools.bruteforce import lief_arch_group_for  # noqa: E402
+from stelftools.drivers.bruteforce import lief_arch_group_for  # noqa: E402
 from stelftools import sigstore  # noqa: E402
 
 

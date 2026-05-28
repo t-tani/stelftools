@@ -11,7 +11,7 @@ mutation and no per-function rename calls. The symbolized copy is what
 downstream analysis imports; the original ELF is left untouched.
 
 ``--cfg`` supplies a toolchain config explicitly. When ``--cfg`` is
-omitted, :func:`stelftools.bruteforce.select_best` elects the
+omitted, :func:`stelftools.drivers.bruteforce.select_best` elects the
 best-scoring cfg from the on-disk signatures tree. A JSON summary is
 written to ``--out`` (default stdout).
 """
@@ -27,10 +27,11 @@ import sys
 import time
 from pathlib import Path
 
-from . import bruteforce, ident
-from .elf.symtab_write import append_symtab, section_index_for_addr
+from . import bruteforce
+from .. import match as ident
+from ..elf.symtab_write import append_symtab, section_index_for_addr
 
-log = logging.getLogger("stelftools.symbolize")
+log = logging.getLogger("stelftools.drivers.symbolize")
 
 
 def _setup_default_logging():
@@ -53,7 +54,7 @@ def pick_toolchain(target_path, jobs):
 
     Returns ``(cfg_path, score)``. Raises :class:`RuntimeError` if no
     candidate cfg matches. The selection runs in-process through
-    :func:`stelftools.bruteforce.select_best`; the bruteforce logger
+    :func:`stelftools.drivers.bruteforce.select_best`; the bruteforce logger
     is left untouched so the CLI of stelftools-symbolize and the CLI
     of stelftools-bruteforce show the same per-cfg trail.
     """

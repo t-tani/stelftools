@@ -32,8 +32,8 @@ _handler.setFormatter(logging.Formatter(
 log.addHandler(_handler)
 log.setLevel(logging.INFO)
 
-from . import ident as func_ident  # noqa: E402
-from . import sigstore  # noqa: E402
+from .. import match as func_ident  # noqa: E402
+from .. import sigstore  # noqa: E402
 
 # Each toolchain's cfg JSON, yara rules, dlist, and alist all sit
 # together under <signatures_root>/<family>/<arch>/. The root itself
