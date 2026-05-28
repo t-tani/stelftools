@@ -375,8 +375,10 @@ def get_func_addr(target, base_vaddr):
     #exit(-1)
     # get function address
     call_map = parse_inst(target, target_inst, base_vaddr, t_arch, t_bit, t_endian, top_inst_addr, bot_inst_addr)
-    #print('---')
-    #for cm1, cm2, cm3 in sorted(call_map):
-    #    print(hex(cm1), cm2, hex(cm3))
-    #exit(-1)
+    # Sort ascending by opcode address. Non-MIPS arches already emit
+    # call_map in disassembly order, but the MIPS path builds it from a
+    # set iteration whose order is unspecified. Downstream consumers that
+    # bisect call_map by opcode address (the depend heuristic) require
+    # this invariant; establishing it here keeps it true for every arch.
+    call_map.sort(key=lambda c: c[0])
     return call_map, top_inst_addr, bot_inst_addr

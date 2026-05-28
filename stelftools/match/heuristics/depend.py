@@ -20,6 +20,7 @@ structure.
 """
 
 import sys
+from bisect import bisect_left, bisect_right
 
 from .. import get_func_name_list_alias_list
 
@@ -69,13 +70,22 @@ def _load_depend(d_list_path):
 def id_func_name_for_depend(functions, call_map, depend_path, alias_list):
     depend_data, caller_alias_index = _load_depend(depend_path)
 
+    # call_map is sorted ascending by opcode address and the addresses
+    # are unique (see stelftools.elf.get_func_addr). Both filters below
+    # need, for a given function span [start, end), the call sites that
+    # fall inside it. A precomputed list of opcode addresses lets bisect
+    # slice that span in O(log n + k) instead of rescanning all ~35K
+    # call_map rows per function, which dominated wall time on
+    # busybox-class targets (one depend pass: ~13s -> sub-second).
+    opcode_addrs = [c[0] for c in call_map]
+
     def caller_base_name_filter(functions, call_map):
         # For each function with a unique resolved name, look up the
         # short list of dependency rows whose caller alias contains
         # that name (O(1) index hit), then verify the call site offset
         # falls within the call instruction. Replaces the historical
         # O(functions x call_map x depend_data) scan with
-        # O(functions x call_map x avg_rows_per_name).
+        # O(functions x log(call_map) x avg_rows_per_name).
         matched_func_num = 0
         for key, value in functions.items():
             if not (value['detected'] and len(value['names']) == 1):
@@ -85,9 +95,9 @@ def id_func_name_for_depend(functions, call_map, depend_path, alias_list):
             if not candidates:
                 continue
             func_end = key + functions[key]['size']
-            for opcode_addr, inst_size, operand_callee_addr in call_map:
-                if not (key <= opcode_addr <= func_end):
-                    continue
+            lo = bisect_left(opcode_addrs, key)
+            hi = bisect_right(opcode_addrs, func_end)
+            for opcode_addr, inst_size, operand_callee_addr in call_map[lo:hi]:
                 callee_entry = functions.get(operand_callee_addr)
                 if callee_entry is None:
                     continue
@@ -151,11 +161,20 @@ def id_func_name_for_depend(functions, call_map, depend_path, alias_list):
             #print('-----')
             #print(hex(multi_addr), functions[multi_addr])
             matched_func_list = []
+            # The call sites inside this function's span are identical for
+            # every candidate name, so slice them once via bisect rather
+            # than rescanning the full call_map per candidate. The slice
+            # bounds already enforce multi_addr <= inst_addr < multi_end;
+            # the guard below is left as a redundant no-op.
+            multi_end = multi_addr + int(functions[multi_addr]['size'])
+            c_lo = bisect_left(opcode_addrs, multi_addr)
+            c_hi = bisect_left(opcode_addrs, multi_end)
+            multi_call_slice = call_map[c_lo:c_hi]
             # check call
             for candidate_func in functions[multi_addr]['names']:
                 compare_callee_num = 0
                 offset_recode_list = [] # ToDo bad fix style
-                for inst_addr, inst_size, callee_addr in call_map:
+                for inst_addr, inst_size, callee_addr in multi_call_slice:
                     if multi_addr <= inst_addr < (multi_addr + int(functions[multi_addr]['size'])):
                         callee_inst_offset = inst_addr - multi_addr
                         for d_caller_alias_str, callee_info in candidate_func_depend_dict.items():
