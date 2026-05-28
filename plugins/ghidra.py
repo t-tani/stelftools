@@ -65,12 +65,12 @@ def make_rules():
     tc_arch = str(askString("Arch", "4. Please type a toolchain architecture:"))
     # set running command
     run_cmd = [ \
-            "python3", "-m", "stelftools.info_create", \
+            "python3", "-m", "stelftools.generate", \
             '-name', tc_name, \
             '-tp', tc_dir_path, \
             '-cp', tc_compiler_path, \
             '-arch', tc_arch]
-    # run stelftools (stelftools.info_create); cwd anchors -m at the repo root
+    # run stelftools (stelftools.generate); cwd anchors -m at the repo root
     cmd_res = subprocess.check_output(run_cmd, cwd=STELFTOOLS_PATH).split('\n')
     res_list = [x for x in cmd_res if x != '']
     for res in res_list:

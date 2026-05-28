@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Generate golden JSON dumps of stelftools.mkrule.fetch_opecodes output.
+"""Generate golden JSON dumps of stelftools.generate.fetch_opecodes output.
 
 Reads ``tests/test_objects_spec.json``, runs
-:func:`stelftools.mkrule.fetch_opecodes` / ``fetch_opecodes_from_arfile``
+:func:`stelftools.generate.fetch_opecodes.fetch_opecodes` /
+``fetch_opecodes_from_arfile``
 on the extracted test objects under
 ``.cache/_bootlin_work/test_objects/<arch>--<libc>--<release>/``, and
 writes a gzip-compressed canonicalised ``{"tab": ..., "crt": ...}``
@@ -23,7 +24,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from stelftools import mkrule  # noqa: E402
+from stelftools.generate import fetch_opecodes as mkrule  # noqa: E402
 
 CACHE = REPO_ROOT / ".cache" / "_bootlin_work"
 OBJECTS = CACHE / "test_objects"

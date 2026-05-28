@@ -43,7 +43,7 @@ from stelftools.match.yara import (
     marge_nomatch_functions,
     yara_matching,
 )
-from stelftools.info_create import (
+from stelftools.generate import (
     create_toolchain_cfg_file,
     mkrule_and_other,
 )

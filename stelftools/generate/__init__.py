@@ -15,11 +15,11 @@ from pathlib import Path
 import arpy
 import magic
 
-from . import mkrule as libfunc_mkrule
+from . import fetch_opecodes as libfunc_mkrule
 from . import deparse as libfunc_deparse
-from . import sigstore
 from . import crt
-from .families import family_for
+from .. import sigstore
+from ..families import family_for
 
 
 # ---------------------------------------------------------------------------

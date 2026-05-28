@@ -7,7 +7,7 @@ filesystem listings stay legible at one glance. Filenames continue to
 carry the family abbreviation as a prefix, so the routing is a pure
 prefix match.
 
-Used by ``libfunc_info_create.py`` when writing fresh artifacts, by the
+Used by :mod:`stelftools.generate` when writing fresh artifacts, by the
 CI helpers in ``tools/ci/`` when looking up existing or in-progress
 files, and by anything else that needs the four-tree placement (yara
 rule, toolchain config json, dependency list, alias list) for one

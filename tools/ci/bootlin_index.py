@@ -37,7 +37,7 @@ TARBALL_RE = re.compile(
     r"\.tar\.(?P<ext>xz|bz2)$"
 )
 
-# Architectures Bootlin ships that ``stelftools.mkrule``'s per-arch
+# Architectures Bootlin ships that ``stelftools.generate.fetch_opecodes``'s per-arch
 # dispatch does not handle yet. A CI build against any of these would
 # fail at ``exit(-1)`` after downloading and extracting the toolchain,
 # so the workflow drops them at index time. Keep this set in sync with
@@ -280,7 +280,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--exclude-arch",
         default=",".join(sorted(DEFAULT_UNSUPPORTED_ARCHES)),
         help="Comma-separated arches to drop from the output. Default "
-             "excludes the arches that stelftools.mkrule cannot yet "
+             "excludes the arches that stelftools.generate.fetch_opecodes cannot yet "
              "handle. Pass an empty string to disable the filter.",
     )
     p.add_argument(

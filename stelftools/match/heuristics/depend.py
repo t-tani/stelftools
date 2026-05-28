@@ -2,7 +2,7 @@
 
 The generator records, for every library function in a static archive,
 which symbols it calls and the relative offset of each call site
-(:mod:`stelftools.deparse` writes this as the ``.dlist`` artifact).
+(:mod:`stelftools.generate.deparse` writes this as the ``.dlist`` artifact).
 When a YARA rule matches multiple aliased function names, the
 recorded caller-callee pairs at the right offsets narrow the
 candidate set: a "memcpy" candidate is unlikely if the call site at

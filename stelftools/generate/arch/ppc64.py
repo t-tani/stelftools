@@ -65,7 +65,7 @@ def build_opd_dict(e, sections, symtab, textsec):
     ``.text``. Each STT_FUNC symbol whose section index lands in
     ``.opd`` corresponds to a function whose bytes live inside
     ``.text``. The dict returned here drives a parallel insert path in
-    :mod:`stelftools.mkrule` that bypasses the main symbol loop; an
+    :mod:`stelftools.generate.fetch_opecodes` that bypasses the main symbol loop; an
     empty dict (no ``.opd`` section) means the main loop runs normally.
     """
     opd_present = any(sec.name == '.opd' for sec in sections)

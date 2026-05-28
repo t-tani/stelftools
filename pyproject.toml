@@ -51,7 +51,7 @@ dev = [
 
 [project.scripts]
 stelftools-ident = "stelftools.match.cli:main"
-stelftools-mkrule = "stelftools.info_create:main"
+stelftools-mkrule = "stelftools.generate:main"
 stelftools-bruteforce = "stelftools.bruteforce:main"
 stelftools-symbolize = "stelftools.symbolize:main"
 stelftools-fetch-signatures = "stelftools.sigfetch:main"
@@ -134,8 +134,8 @@ ignore = [
 # the import header without any analytical win, so we ignore the
 # star-import diagnostics here.
 "stelftools/elf/disasm.py" = ["F403", "F405"]
-"stelftools/mkrule.py" = ["F403", "F405"]
-"stelftools/info_create.py" = ["F403", "F405"]
+"stelftools/generate/fetch_opecodes.py" = ["F403", "F405"]
+"stelftools/generate/__init__.py" = ["F403", "F405"]
 
 # Plugins bridge to the host RE tool's runtime; star imports are the
 # documented way to surface the matcher / generator helpers into IDA's

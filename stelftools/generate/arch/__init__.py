@@ -1,4 +1,4 @@
-"""Per-architecture relocation handlers for stelftools.mkrule.fetch_opecodes.
+"""Per-architecture relocation handlers for stelftools.generate.fetch_opecodes.
 
 Each module under this package exports one function:
 

@@ -60,8 +60,9 @@ MAXIMUM_PATTERN_LENGTH = 15000 # 600  # TODO: risc-v
 
 # ---------------------------------------------------------------------------
 # fetch_opecodes pipeline -- phase helpers in execution order, then the
-# orchestrator. Per-arch hooks live in stelftools.arch; CRT-glue handling
-# lives in stelftools.crt; this module owns the cross-arch control flow.
+# orchestrator. Per-arch hooks live in stelftools.generate.arch; CRT-glue
+# handling lives in stelftools.generate.crt; this module owns the
+# cross-arch control flow.
 # ---------------------------------------------------------------------------
 
 
@@ -536,8 +537,9 @@ def output_rules(rules_list, output_path):
 
 # ---------------------------------------------------------------------------
 # CLI driver -- argparse, per-file dispatch, output. The stelftools-mkrule
-# console script targets stelftools.info_create:main; the main below is the
-# legacy ``python -m stelftools.mkrule`` entry point.
+# console script targets stelftools.generate:main; the main below is a
+# standalone "scan one toolchain dir without the merge / dlist / alist
+# steps" entry point still useful when iterating on the opecode extraction.
 # ---------------------------------------------------------------------------
 
 

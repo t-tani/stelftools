@@ -11,7 +11,7 @@ End-to-end pipeline per ``tests/test_ident_spec.json`` entry:
    ``.cache/_bootlin_work/ident_fixtures/<id>/target.elf``, then strip
    the symbol table -- the target is the same shape as a customer
    binary the matcher would see in the wild.
-4. Run :mod:`stelftools.info_create` against the toolchain to produce
+4. Run :mod:`stelftools.generate` against the toolchain to produce
    the (yara, alist, dlist, cfg) signature quadruple under the per-id
    signature root; copy the four files into the fixture dir alongside
    the target.
@@ -44,7 +44,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 # Import order matters: info_create.signature_dir reads ``STELFTOOLS_SIGNATURES_DIR``
 # at call time, so the env var can be set per entry below.
-from stelftools import info_create  # noqa: E402
+from stelftools import generate as info_create  # noqa: E402
 from stelftools import match as ident  # noqa: E402
 
 CACHE = REPO_ROOT / ".cache" / "_bootlin_work"
