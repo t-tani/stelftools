@@ -391,13 +391,12 @@ from .heuristics.linkorder import id_func_name_for_linkorder  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
-# Identification strategies (consecutive-candidate) -- the alias-list
-# helper feeds every heuristic in :mod:`stelftools.match.heuristics`
-# and the in-file consecutive-candidate pass. The matcher's loop runs
-# linkorder + depend until both report zero new identifications, then
-# the consecutive filter runs once at the end. Link-order lives at
-# :mod:`stelftools.match.heuristics.linkorder`; dependency at
-# :mod:`stelftools.match.heuristics.depend`.
+# Identification strategy shared helper -- the three heuristics
+# (linkorder / depend / consecutive) under
+# :mod:`stelftools.match.heuristics` all reach back to
+# ``get_func_name_list_alias_list`` to expand a function name into its
+# toolchain-recorded alias set before comparing against linker /
+# dependency / order signals.
 # ---------------------------------------------------------------------------
 
 
@@ -412,69 +411,11 @@ def get_func_name_list_alias_list(multi_func_name_list, alias_list):
     return sorted(set(func_name_alias_list))
 
 
-# ``depend`` reaches back here for get_func_name_list_alias_list, so the
-# import must follow that definition.
+# ``depend`` and ``consecutive`` reach back here for
+# get_func_name_list_alias_list, so the imports must follow that
+# definition.
+from .heuristics.consecutive import multiple_consecutive_candidate_filt  # noqa: E402
 from .heuristics.depend import id_func_name_for_depend  # noqa: E402
-
-
-def multiple_consecutive_candidate_filt(functions, link_order_list, alias_list):
-    #for l in link_order_list:
-    #    print(l)
-    #exit(-1)
-    libfunc_addr_list = []
-    multi_libfunc_addr_list = []
-    for addr, funcs in functions.items():
-        if funcs['detected'] == True:
-            libfunc_addr_list.append(addr)
-            if len(funcs['names']) > 1:
-                multi_libfunc_addr_list.append(addr)
-    libfunc_addr_list = sorted(libfunc_addr_list)
-    multi_libfunc_addr_list = sorted(multi_libfunc_addr_list)
-
-    consective_multi_funcname_addr_dict = {}
-    for i in range(len(libfunc_addr_list)):
-        if libfunc_addr_list[i] in multi_libfunc_addr_list:
-            #print('---')
-            s_multi_func_name_addr = libfunc_addr_list[i]
-            #print('s', hex(libfunc_addr_list[i]), functions[libfunc_addr_list[i]]['names'])
-            s_multi_func_name_alias_list = get_func_name_list_alias_list(functions[libfunc_addr_list[i]]['names'], alias_list)
-            #print(s_multi_func_name_alias_list)
-            for s_multi_func_name_alias in s_multi_func_name_alias_list:
-                s_multi_func_name_alias_index_list = _match_array_index(link_order_list, s_multi_func_name_alias)
-                for s_multi_func_name_alias_index in s_multi_func_name_alias_index_list:
-                    # check
-                    if len(set(functions[s_multi_func_name_addr]['names']) & set([link_order_list[s_multi_func_name_alias_index-1]])) \
-                            or len(set(functions[s_multi_func_name_addr]['names']) & set([link_order_list[s_multi_func_name_alias_index-2]])):
-                        continue
-                    #print('-')
-                    next_i = 0
-                    consective_addr_list = []
-                    while True:
-                        if len(libfunc_addr_list) <= i+next_i:
-                            break
-                        candidate_func_name_list = functions[libfunc_addr_list[i+next_i]]['names']
-                        candidate_func_name_alias_list = \
-                                get_func_name_list_alias_list(candidate_func_name_list, alias_list)
-                        #print(hex(libfunc_addr_list[i+next_i]), candidate_func_name_alias_list, '-', \
-                        #        link_order_list[s_multi_func_name_alias_index+next_i], s_multi_func_name_alias_index+next_i)
-                        if not link_order_list[s_multi_func_name_alias_index+next_i] in candidate_func_name_alias_list:
-                            #print('b', link_order_list[s_multi_func_name_alias_index+next_i])
-                            break
-                        next_i+=1
-                    if next_i >= 3:
-                        for count_i in range(next_i):
-                            if len(functions[libfunc_addr_list[i+count_i]]['names']) == 1:
-                                continue
-                            detect_fname = link_order_list[s_multi_func_name_alias_index+count_i]
-                            for _alias in alias_list:
-                                if detect_fname in _alias:
-                                    detect_fname = min(_alias, key=len)
-                            #print('[matched : additional func link order] (%s) %s -> %s' % ( \
-                            #        hex(libfunc_addr_list[i+count_i]), \
-                            #        functions[libfunc_addr_list[i+count_i]]['names'], \
-                            #        detect_fname))
-                            functions[libfunc_addr_list[i+count_i]]['names'] = [detect_fname]
-    return functions
 
 
 # ---------------------------------------------------------------------------
