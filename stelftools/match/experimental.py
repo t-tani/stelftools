@@ -202,6 +202,9 @@ class MipsImage:
             self.got_addr = got["sh_addr"] if got else 0
             pdr = elf.get_section_by_name(".pdr")
             raw_pdr = pdr.data() if pdr else b""
+            self.loads = [
+                (s["p_vaddr"], s.data()) for s in elf.iter_segments() if s["p_type"] == "PT_LOAD"
+            ]
             self.segments = [
                 (s["p_vaddr"], s.data())
                 for s in elf.iter_segments()
@@ -265,6 +268,12 @@ class MipsImage:
                 if value in self.ends:
                     found.append(value)
         return found
+
+    def read_word(self, address: int) -> int | None:
+        for base, data in self.loads:
+            if base <= address and address + 4 <= base + len(data):
+                return struct.unpack_from(f"{self.order}I", data, address - base)[0]
+        return None
 
     def _string_at(self, address: int) -> str | None:
         for base, data in self.segments:
@@ -404,7 +413,7 @@ def _has_named_neighbours(image: MipsImage, addr: int, named: dict) -> bool:
     return sum(a in named for a in window) >= MIN_NAMED_NEIGHBOURS
 
 
-def infer(binary, cfg_path, named, *, string_anchor=False, fuzzy=False,
+def infer(binary, cfg_path, named, *, string_anchor=False, fuzzy=False, dispatch=False,
           min_score=DEFAULT_MIN_SCORE) -> tuple[dict, list[str]]:
     """`{addr: {names, method, ...}}` for functions the byte rules left unnamed,
     and why any requested inference could not run."""
@@ -427,4 +436,12 @@ def infer(binary, cfg_path, named, *, string_anchor=False, fuzzy=False,
         known = {**named, **{a: f["names"] for a, f in found.items()}}
         rules = read_rules(str(cfg.with_suffix(".yara")), image.little_endian)
         found.update(fuzzy_matches(image, known, rules, declared, min_score))
+    if dispatch:
+        from .dispatch import dispatch_names
+
+        known = {**named, **{a: f["names"] for a, f in found.items()}}
+        rules = read_rules(str(cfg.with_suffix(".yara")), image.little_endian)
+        names, dispatch_notes = dispatch_names(image, known, rules, declared)
+        found.update(names)
+        notes += dispatch_notes
     return found, notes
