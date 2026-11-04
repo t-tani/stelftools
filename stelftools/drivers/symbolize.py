@@ -45,6 +45,7 @@ from pathlib import Path
 
 from . import identify as _identify
 from .. import match
+from ..match import experimental
 from ..elf.symtab_write import append_symtab, section_index_for_addr
 from ..match import skip_libc_func
 from ..match.coverage import first_libc_anchor, last_libc_anchor
@@ -171,6 +172,18 @@ def resolve_group(names, prefer=frozenset(), resolver=None):
             "resolution": resolution, "symbol": symbol}
 
 
+def inferred_entry(found):
+    """The sidecar record of an experimental inference: its name goes into
+    the ELF, but `resolution` and `evidence` say no byte rule proved it."""
+    cands = sorted(found["names"])
+    entry = {"canonical": cands[0] if len(cands) == 1 else None,
+             "candidates": cands,
+             "resolution": "inferred_" + found["method"],
+             "symbol": "_OR_".join(cands)}
+    entry["inference"] = {k: found[k] for k in ("score", "evidence") if k in found}
+    return entry
+
+
 def resolve_symbols(groups, prefer=frozenset(), resolver=None):
     """``{ea: [raw names]}`` → ``{ea: resolve_group(...)}`` for every group
     that has at least one name. Pure; the unit tests drive it directly."""
@@ -211,7 +224,8 @@ def _write_sidecar(path, cfg, resolved, area=None):
         "symbols": {
             hex(ea): {"canonical": r["canonical"],
                       "candidates": r["candidates"],
-                      "resolution": r["resolution"]}
+                      "resolution": r["resolution"],
+                      **({"inference": r["inference"]} if "inference" in r else {})}
             for ea, r in sorted(resolved.items())},
         "counts": counts,
     }
@@ -220,7 +234,9 @@ def _write_sidecar(path, cfg, resolved, area=None):
 
 
 def symbolize(binary_path, out_elf_path, cfg_path=None, jobs=None,
-              resolver: Resolver | None = None, prefer: Collection[str] = frozenset()):
+              resolver: Resolver | None = None, prefer: Collection[str] = frozenset(),
+              string_anchor=False, fuzzy=False,
+              fuzzy_min_score=experimental.DEFAULT_MIN_SCORE):
     """Run match + ELF symtab patch and write the symbolized copy.
 
     Returns a summary dict with the match counts and the chosen cfg.
@@ -261,6 +277,18 @@ def symbolize(binary_path, out_elf_path, cfg_path=None, jobs=None,
         {ea: functions[ea]["names"] for ea in match_info if ea in functions},
         prefer, resolver)
 
+    inferred, notes = {}, []
+    if string_anchor or fuzzy:
+        inferred, notes = experimental.infer(
+            binary_path, cfg_path,
+            {ea: functions[ea]["names"] for ea in match_info if ea in functions},
+            string_anchor=string_anchor, fuzzy=fuzzy, min_score=fuzzy_min_score)
+        for note in notes:
+            log.warning(note)
+        for ea, found in inferred.items():
+            resolved[ea] = inferred_entry(found)
+            match_info[ea] = {"names": resolved[ea]["symbol"]}
+
     data = binary_path.read_bytes()
     symbols = []
     undefined_section = 0
@@ -281,9 +309,9 @@ def symbolize(binary_path, out_elf_path, cfg_path=None, jobs=None,
     counts = _write_sidecar(sidecar, cfg_path, resolved, area)
     joined = counts.get("ambiguous", 0) + counts.get("catalog", 0)
     log.info("wrote %d symbols into %s (%d canonical, %d kept as _OR_ joins "
-             "of which %d carry a preferred name)",
-             len(symbols), out_elf_path, len(resolved) - joined, joined,
-             counts.get("catalog", 0))
+             "of which %d carry a preferred name, %d inferred)",
+             len(symbols), out_elf_path, len(resolved) - joined - len(inferred), joined,
+             counts.get("catalog", 0), len(inferred))
 
     return {
         "binary": str(binary_path),
@@ -294,7 +322,11 @@ def symbolize(binary_path, out_elf_path, cfg_path=None, jobs=None,
         "total_funcs": total_funcs,
         "symbols_added": len(symbols),
         "symbols_undefined_section": undefined_section,
-        "canonical_count": len(resolved) - joined,
+        "canonical_count": len(resolved) - joined - len(inferred),
+        "inferred_count": len(inferred),
+        "inferred_string_anchor": counts.get("inferred_string_anchor", 0),
+        "inferred_fuzzy": counts.get("inferred_fuzzy", 0),
+        "notes": notes,
         "catalog_count": counts.get("catalog", 0),
         "ambiguous_count": counts.get("ambiguous", 0),
         "libc_area_top": hex(area[0]) if area else None,
@@ -331,6 +363,21 @@ def _add_arguments(parser):
     parser.add_argument(
         "--summary", default="-", dest="summary_path",
         help="output JSON summary path or '-' for stdout",
+    )
+    parser.add_argument(
+        "--experimental-string-anchor", action="store_true",
+        help="experimental, MIPS32: also name an unmatched function by a string "
+             "only it references (needs the signature's .strs file).",
+    )
+    parser.add_argument(
+        "--experimental-fuzzy", action="store_true",
+        help="experimental, MIPS32: also name an unmatched function whose "
+             "instructions nearly contain a library function's, in order.",
+    )
+    parser.add_argument(
+        "--fuzzy-min-score", type=float, default=experimental.DEFAULT_MIN_SCORE,
+        help="share of the library function's instructions a fuzzy match must "
+             "contain (default %(default)s).",
     )
     parser.add_argument(
         "--resolver", default=None, metavar="MODULE:ATTR",
@@ -385,6 +432,9 @@ def run(args):
             jobs=args.jobs,
             resolver=resolver,
             prefer=prefer,
+            string_anchor=args.experimental_string_anchor,
+            fuzzy=args.experimental_fuzzy,
+            fuzzy_min_score=args.fuzzy_min_score,
         )
     except RuntimeError as exc:
         _write_summary(args.summary_path,

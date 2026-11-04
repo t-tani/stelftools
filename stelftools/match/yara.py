@@ -20,6 +20,7 @@ read the target ELF; :func:`get_yara_rule` is the legacy single-length
 compile path that yara-aware consumers (plugins/ida.py) still drive.
 """
 
+import hashlib
 import json
 import os
 import re
@@ -215,28 +216,27 @@ def compile_yara_file(yara_rule_path):
     # the per-L recompile that the loop in run_one used to do.
     #
     # Compiled rules are persisted under STELFTOOLS_PATH/.cache/yara/ as
-    # <basename>.yarc + <basename>.lengths.json. A warm hit deserialises
-    # ~8x faster than recompiling, which is the dominant per-cfg cost
-    # in the multi-config identify driver. Cache invalidates when the
-    # .yara file is newer than the cached pair.
-    name = os.path.basename(yara_rule_path)
+    # <basename>.<hash>.yarc + <basename>.<hash>.lengths.json. A warm hit
+    # deserialises ~8x faster than recompiling, which is the dominant
+    # per-cfg cost in the multi-config identify driver. The key is the
+    # source's content: the same basename in another signature tree, or a
+    # copy that keeps an older mtime, must never get these rules.
+    with open(yara_rule_path, 'rb') as fp:
+        raw = fp.read()
+    name = '%s.%s' % (os.path.basename(yara_rule_path),
+                      hashlib.sha256(raw).hexdigest()[:16])
     cache_yarc = os.path.join(CACHE_DIR, name + ".yarc")
     cache_lens = os.path.join(CACHE_DIR, name + ".lengths.json")
     try:
-        yara_mtime = os.path.getmtime(yara_rule_path)
-        if os.path.getmtime(cache_yarc) >= yara_mtime \
-                and os.path.getmtime(cache_lens) >= yara_mtime:
-            with open(cache_yarc, 'rb') as fp:
-                rules = yara_x.Rules.deserialize_from(fp)
-            with open(cache_lens) as fp:
-                lengths = json.load(fp)
-            return rules, lengths
+        with open(cache_yarc, 'rb') as fp:
+            rules = yara_x.Rules.deserialize_from(fp)
+        with open(cache_lens) as fp:
+            lengths = json.load(fp)
+        return rules, lengths
     except (FileNotFoundError, OSError):
         pass
 
-    with open(yara_rule_path) as fp:
-        src = fp.read()
-    rules = yara_x.compile(src)
+    rules = yara_x.compile(raw.decode())
     lengths = _parse_rule_lengths(yara_rule_path)
 
     # Write cache. tmp + atomic rename so a SIGINT mid-write does not

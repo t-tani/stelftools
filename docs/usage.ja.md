@@ -80,6 +80,17 @@ stelftools symbolize /path/to/target --out-elf /path/to/output
 1.0 以前のハイフン区切りスクリプト (`stelftools-ident` / `stelftools-mkrule` / `stelftools-bruteforce` / `stelftools-symbolize` / `stelftools-fetch-signatures`) は引き続き動作しますが、非推奨警告 (deprecation warning) を出力したうえで新しいサブコマンドへ転送されます。新規に書く場合は `stelftools <verb>` を使ってください。
 
 
+### 実験的機能: バイトルールで証明できない名前 (MIPS32)
+
+バイトルールは関数全体の一致を必要とするため、ベンダが手を加えた関数には名前が付きません。``symbolize`` は次のオプションでこうした名前を推定できます。どちらも既定では無効です。
+
+- `--experimental-string-anchor` — ある文字列を参照するライブラリ関数が 1 つだけで、名前のない対象関数のうち参照するものも 1 つだけの場合に名前を付けます。`mkrule --experimental-strings` が作る `.strs` が必要です。
+- `--experimental-fuzzy` — ライブラリ関数の命令の `--fuzzy-min-score` (既定 0.95) 以上が、名前のない関数に順番どおり含まれ、互いに明確な最良候補である場合に名前を付けます。
+
+推定した名前は `.symtab` に通常の名前として書かれます。確定名と区別できるのはサイドカーだけです (`resolution` が `inferred_string_anchor` / `inferred_fuzzy` で、`inference` にスコアか文字列が入ります)。利用前にサイドカーを確認してください。
+
+`tools/eval/mips_pdr_eval.py` は MIPS バイナリに対するシグネチャの結果を、`.pdr` または `--truth` で渡すシンボル付きビルドと照合して測ります。
+
 ## IDA plugin mode
 ##### Library Function Identification
 1. **File** → **Load file** → **Stelftools toolchain config file...**

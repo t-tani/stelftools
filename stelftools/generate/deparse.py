@@ -89,10 +89,17 @@ def uniq_symtab_list(symtab_list):
 def analy_symtab(e, fname, symtab_list, reltab_dict):
     object_rel_info_dict= {}
     symtab_func_section_info = []
+    # An old toolchain gives a weak alias size 0: it is the sized function at
+    # its address, so `strdup` and `_strdup` form one caller and one alias row.
+    twin_size = {}
+    for _, st_value, st_size, st_type, _, _, st_ndx, _ in symtab_list:
+        if st_type == 'STT_FUNC' and isinstance(st_ndx, int) and st_size:
+            twin_size[(st_ndx, st_value)] = st_size
     for st_index, st_value, st_size, st_type, st_bind, st_vis, st_ndx, st_name in symtab_list:
         if st_type == 'STT_FUNC' and isinstance(st_ndx, int):
             #print(st_index, st_value, st_size, st_type, st_bind, st_vis, st_ndx, st_name) # dbg
-            symtab_func_section_info.append([st_ndx, st_name, st_value, st_size])
+            symtab_func_section_info.append(
+                [st_ndx, st_name, st_value, st_size or twin_size.get((st_ndx, st_value), 0)])
     symtab_list = uniq_symtab_list(symtab_func_section_info)
     # Materialise the linked symbol tables eagerly so each relocation does
     # not re-parse a single entry from the ELF stream. pyelftools'
