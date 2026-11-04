@@ -214,6 +214,59 @@ def lief_libc_family(target_path):
     return None
 
 
+# Signature families that only describe one target OS, keyed by family
+# directory. Every other family is a Linux toolchain. An OS-specific family
+# is scored only against that OS's binaries, and such a binary is scored
+# only against its own OS's families: a static target has no .interp to
+# prune on, and its nearest foreign libc would otherwise write false names.
+_OS_FAMILIES = {'netbsd': 'netbsd'}
+
+
+def _note_owners(data):
+    """Owner names of the ELF notes in ``data`` (a PT_NOTE / SHT_NOTE body)."""
+    owners = []
+    off = 0
+    while off + 12 <= len(data):
+        namesz = int.from_bytes(data[off:off + 4], 'little')
+        descsz = int.from_bytes(data[off + 4:off + 8], 'little')
+        if namesz > len(data) or descsz > len(data):
+            # the words are the target's byte order; retry big-endian
+            namesz = int.from_bytes(data[off:off + 4], 'big')
+            descsz = int.from_bytes(data[off + 4:off + 8], 'big')
+        if namesz > len(data) - off - 12:
+            break
+        owners.append(data[off + 12:off + 12 + namesz].rstrip(b'\x00'))
+        off += 12 + ((namesz + 3) & ~3) + ((descsz + 3) & ~3)
+    return owners
+
+
+def lief_target_os(target_path):
+    """``'netbsd'`` for a binary carrying the NetBSD ident note, else None.
+
+    Read from the program headers, so a target with stripped section
+    headers still classifies; the section is the fallback for an ELF with
+    none of those.
+    """
+    try:
+        b = lief.parse(target_path)
+    except Exception:
+        return None
+    if b is None:
+        return None
+    bodies = [bytes(s.content) for s in b.segments
+              if str(s.type).rsplit('.', 1)[-1].upper() == 'NOTE']
+    bodies += [bytes(s.content) for s in b.sections
+               if s.name == '.note.netbsd.ident']
+    for body in bodies:
+        if b'NetBSD' in _note_owners(body):
+            return 'netbsd'
+    return None
+
+
+def _family_applies(family_name, target_os):
+    return _OS_FAMILIES.get(family_name) == target_os
+
+
 # Toolchain config name → libc family. al-/fl-/ucli-pub- are all
 # uClibc-based by design; bl-/br-/binutils- encode the libc in the name.
 def cfg_libc_family(cfg_name):
@@ -249,15 +302,19 @@ def candidate_cfgs(target_path, arch_filter, libc_filter):
     ``signatures/<family>/<arch>/`` directories whose ``<arch>``
     matches are walked, so the cost scales with the survivor set, not
     the full catalog. The libc filter is applied per-file by parsing
-    the signature basename.
+    the signature basename. A family tied to one OS (``_OS_FAMILIES``) is
+    walked only for that OS's binaries, and such a binary walks no other
+    family.
     """
     arch_set = set(arch_filter)
+    target_os = lief_target_os(target_path)
     cfgs = []
     root = sigstore.signatures_root()
     if not root.is_dir():
         return cfgs
     family_dirs = sorted(
-        (p for p in root.iterdir() if p.is_dir()),
+        (p for p in root.iterdir()
+         if p.is_dir() and _family_applies(p.name, target_os)),
         key=lambda p: _family_sort_key(p.name),
     )
     for family_dir in family_dirs:

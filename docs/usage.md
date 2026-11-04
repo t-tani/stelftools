@@ -62,7 +62,7 @@ stelftools mkrule /path/to/toolchain \
     --compiler /path/to/cross-gcc
 ```
 - ``<toolchain-path>`` (positional, optional) — toolchain root containing ``.a`` / ``.o`` archives. When omitted, the path is derived from ``--compiler`` (two directory levels up).
-- ``--name`` — signature name (must start with a known family prefix: ``fl-``, ``al-``, ``bl-stable-``, ``br-``, ``ct-ng``, ``ucli-pub-``, ``synopsys_arc_gnu``).
+- ``--name`` — signature name (must start with a known family prefix: ``fl-``, ``al-``, ``bl-stable-``, ``br-``, ``ct-ng``, ``netbsd-``, ``ucli-pub-``, ``synopsys_arc_gnu``).
 - ``--arch`` — target architecture.
 - ``--compiler`` — path to the cross-gcc binary in the toolchain.
 
