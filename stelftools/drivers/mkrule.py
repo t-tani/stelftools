@@ -24,7 +24,12 @@ import argparse
 import os
 from pathlib import Path
 
-from ..generate import create_toolchain_cfg_file, mkrule_and_other
+from ..generate import (
+    create_toolchain_cfg_file,
+    get_static_lib_file_list,
+    mkrule_and_other,
+    strings_anchor,
+)
 
 
 def _announce_output(label, path, verb='created'):
@@ -70,6 +75,11 @@ def _add_arguments(parser: argparse.ArgumentParser) -> None:
              'short call wrappers are identical once GOT slots are masked.',
     )
     parser.add_argument(
+        '--experimental-strings', action='store_true',
+        help='Also write <name>.strs, the 32-bit MIPS function-to-unique-string '
+             'table behind symbolize --experimental-string-anchor.',
+    )
+    parser.add_argument(
         '-j', '--workers', type=int, default=0,
         help='Worker processes for archive-level parallelism. '
              '0 (default) auto-picks ~half the available CPUs, capped '
@@ -102,6 +112,10 @@ def run(args: argparse.Namespace) -> int:
     _announce_output('alias list', alist_path)
     create_toolchain_cfg_file(args.name, args.arch, args.compiler_path,
                               unique_site_only=args.unique_site_only)
+    if args.experimental_strings:
+        strs_path = str(Path(yara_path).with_suffix('.strs'))
+        strings_anchor.write(get_static_lib_file_list(tc_path), strs_path)
+        _announce_output('string anchors', strs_path)
     return 0
 
 

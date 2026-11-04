@@ -173,15 +173,22 @@ def _select_symtab(e):
 def _build_alias_index(symtab):
     """Index STT_FUNC symbols so the main loop can drop alias siblings.
 
-    Returns ``(exclude_alias_list, offset_list)``. ``exclude_alias_list``
-    holds the longer of each (value, size, st_shndx)-tied symbol pair so
-    the shorter (canonical) name reaches the tab. ``offset_list`` is the
-    sorted set of distinct st_value entries; the size-zero recovery path
-    walks it to guess the next function boundary.
+    Returns ``(exclude_alias_list, offset_list, twin_size)``.
+    ``exclude_alias_list`` holds the longer of each (value, size,
+    st_shndx)-tied symbol pair so the shorter (canonical) name reaches the
+    tab. ``offset_list`` is the sorted set of distinct st_value entries; the
+    size-zero recovery path walks it to guess the next function boundary.
+    ``twin_size`` maps (value, st_shndx) to the sized symbol there: an old
+    toolchain gives a weak alias size 0 (``strdup`` beside ``_strdup``), and
+    that alias is the sized function, not a function of unknown extent.
     """
     exclude_alias_list = []
     f_info_dict = {}
     offset_list = []
+    twin_size = {}
+    for sym in symtab.iter_symbols():
+        if sym.name and sym['st_info']['type'] == "STT_FUNC" and sym['st_size']:
+            twin_size[(sym['st_value'], sym['st_shndx'])] = sym['st_size']
     for sym in symtab.iter_symbols():
         if sym.name == '':
             continue
@@ -190,25 +197,26 @@ def _build_alias_index(symtab):
         offset_list.append(sym['st_value'])
         signature = {
             'value': sym['st_value'],
-            'size': sym['st_size'],
+            'size': sym['st_size'] or twin_size.get((sym['st_value'], sym['st_shndx']), 0),
             'st_shndx': sym['st_shndx'],
         }
         for _f_key, _f_value in f_info_dict.items():
             if _f_value == signature:
                 exclude_alias_list.append(max([_f_key, sym.name], key=len))
         f_info_dict[sym.name] = signature
-    return exclude_alias_list, sorted(set(offset_list))
+    return exclude_alias_list, sorted(set(offset_list)), twin_size
 
 
 def _opcodes_for_symbol(sym, target_sec, textsec, baseaddr,
-                        offset_list, offset_state, fix_sec_flag):
+                        offset_list, offset_state, fix_sec_flag, twin_size=None):
     """Slice the function's bytes out of textsec[target_sec.name].
 
     ``offset_state`` is a ``[int]`` container the size-zero recovery
     path advances; this carries the running index into ``offset_list``
     across the main loop's iterations.
     """
-    if sym['st_size'] == 0:
+    size = sym['st_size'] or (twin_size or {}).get((sym['st_value'], sym['st_shndx']), 0)
+    if size == 0:
         offset_state[0] += 1
         try:
             _top = sym['st_value'] - baseaddr
@@ -219,10 +227,10 @@ def _opcodes_for_symbol(sym, target_sec, textsec, baseaddr,
         opcodes = textsec[target_sec.name][_top:_bot]
         return opcodes, len(opcodes)
     if fix_sec_flag:
-        opcodes = textsec[target_sec.name][baseaddr:sym['st_size'] - baseaddr]
+        opcodes = textsec[target_sec.name][baseaddr:size - baseaddr]
     else:
-        opcodes = textsec[target_sec.name][sym['st_value'] - baseaddr:sym['st_value'] + sym['st_size'] - baseaddr]
-    return opcodes, sym['st_size']
+        opcodes = textsec[target_sec.name][sym['st_value'] - baseaddr:sym['st_value'] + size - baseaddr]
+    return opcodes, size
 
 
 def _insert_tab_entry(tab, opcodes_str, name, size, fname, arfile, *, min_size=0):
@@ -243,7 +251,7 @@ def _insert_tab_entry(tab, opcodes_str, name, size, fname, arfile, *, min_size=0
 
 def _populate_tab_from_symbols(tab, exsymtab, e, symtab, textsec,
                                exclude_alias_list, offset_list,
-                               exapis, fname, arfile):
+                               exapis, fname, arfile, twin_size=None):
     """Walk ``symtab`` and insert per-function opcode patterns into
     ``tab``. ``exsymtab`` is filled with ``imports`` / ``exports`` and
     merged into every tab entry at the end so each rule carries the
@@ -288,7 +296,7 @@ def _populate_tab_from_symbols(tab, exsymtab, e, symtab, textsec,
 
         opcodes, size = _opcodes_for_symbol(
             sym, target_sec, textsec, baseaddr,
-            offset_list, offset_state, fix_sec_flag,
+            offset_list, offset_state, fix_sec_flag, twin_size,
         )
 
         # ET_EXEC: capstone-driven branch wildcarding. The pre-split
@@ -387,7 +395,7 @@ def extract_opcodes(f, arfile='', exapis=()):
     if e['e_machine'] == 'EM_PPC64':
         opd_func_dict = _arch_ppc64.build_opd_dict(e, sections, symtab, textsec)
 
-    exclude_alias_list, offset_list = _build_alias_index(symtab)
+    exclude_alias_list, offset_list, twin_size = _build_alias_index(symtab)
     tab = {}
     exsymtab = {}
 
@@ -395,7 +403,7 @@ def extract_opcodes(f, arfile='', exapis=()):
         _populate_tab_from_symbols(
             tab, exsymtab, e, symtab, textsec,
             exclude_alias_list, offset_list,
-            exapis, fname, arfile,
+            exapis, fname, arfile, twin_size,
         )
     else:
         _populate_tab_from_opd(tab, opd_func_dict, fname, arfile)

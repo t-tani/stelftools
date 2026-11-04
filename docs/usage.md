@@ -72,6 +72,18 @@ stelftools symbolize /path/to/target --out-elf /path/to/output
 ```
 Runs identify (when ``--cfg`` is omitted) and writes the matched library-function names into a fresh ``.symtab`` on a copy of the ELF. IDA / Ghidra read the appended symtab on import, so functions appear by name with no database mutation.
 
+
+### Experimental: names the byte rules cannot prove (MIPS32)
+
+A byte rule needs the whole function to match, so a vendor's patch loses the name. ``symbolize`` can infer such names on request; both are off by default:
+
+- ``--experimental-string-anchor`` — the library function is the only one to reference a string, and one unnamed target procedure is the only one to reference it. Needs the ``.strs`` file from ``mkrule --experimental-strings``.
+- ``--experimental-fuzzy`` — at least ``--fuzzy-min-score`` (default 0.95) of the library function's instructions occur in order in an unnamed procedure, and each is the other's clear best match.
+
+An inferred name goes into ``.symtab`` as a plain name. Only the sidecar tells it from a proven one (``resolution``: ``inferred_string_anchor`` / ``inferred_fuzzy``, with ``inference`` holding its score or strings), so read the sidecar before trusting one.
+
+``tools/eval/mips_pdr_eval.py`` measures a signature on a MIPS binary against its ``.pdr`` table, or against an unstripped build with ``--truth``.
+
 #### Legacy console scripts
 The pre-1.0 hyphen-separated scripts (``stelftools-ident``, ``stelftools-mkrule``, ``stelftools-bruteforce``, ``stelftools-symbolize``, ``stelftools-fetch-signatures``) still work but print a one-line deprecation warning and forward to the new verbs.
 

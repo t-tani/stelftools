@@ -15,7 +15,11 @@ releases=("$@")
 [ ${#releases[@]} -gt 0 ] || releases=(1.4 1.4.1 1.4.2 1.4.3 1.5 1.5.1 1.5.2 1.5.3 1.6 1.6.1 1.6.2)
 archive=https://archive.netbsd.org/pub/NetBSD-archive
 port=pmax
-members=(./usr/lib/crt0.o ./usr/lib/libc.a ./usr/lib/libcrypt.a ./usr/lib/libkvm.a ./usr/lib/libutil.a)
+# The libraries that name something on a measured firmware; a release without
+# one simply goes without it (libcrypto arrived after 1.4).
+# tools/eval/mips_pdr_eval.py is how a candidate earns its place.
+wanted=(crt0.o libc.a libcrypt.a libkvm.a libutil.a
+        libcrypto.a libcurses.a libedit.a libgcc.a libm.a libpcap.a libtermcap.a)
 
 for release in "${releases[@]}"; do
   dir=$workdir/$release-$port
@@ -29,7 +33,14 @@ for release in "${releases[@]}"; do
     echo "$release: comp.tgz MD5 $got does not match the release's ${want:-(none)}" >&2
     exit 1
   fi
+  listing=$(tar -tzf "$dir/comp.tgz")
+  members=()
+  for lib in "${wanted[@]}"; do
+    if grep -Fxq "./usr/lib/$lib" <<<"$listing"; then
+      members+=("./usr/lib/$lib")
+    fi
+  done
   tar -xzf "$dir/comp.tgz" -C "$dir/toolchain" "${members[@]}"
   stelftools mkrule "$dir/toolchain" --name "netbsd-$release-${port}_mipsel" --arch mipsel \
-    --compiler '' --unique-site-only
+    --compiler '' --unique-site-only --experimental-strings
 done
