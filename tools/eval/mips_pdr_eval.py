@@ -186,6 +186,7 @@ def main(argv=None) -> int:
     parser.add_argument("--truth", help="unstripped build of TARGET; adds precision and recall")
     parser.add_argument("--experimental-string-anchor", action="store_true")
     parser.add_argument("--experimental-fuzzy", action="store_true")
+    parser.add_argument("--experimental-dispatch", action="store_true")
     parser.add_argument("--fuzzy-min-score", type=float, default=DEFAULT_MIN_SCORE)
     args = parser.parse_args(argv)
     matches = run_matcher(args.target, args.cfg)
@@ -202,11 +203,12 @@ def main(argv=None) -> int:
     truth = truth_symbols(args.truth) if args.truth else None
     if truth is not None:
         result["truth"] = score_truth(matches, truth)
-    if args.experimental_string_anchor or args.experimental_fuzzy:
+    if args.experimental_string_anchor or args.experimental_fuzzy or args.experimental_dispatch:
         found, notes = infer(
             args.target, args.cfg, matches,
             string_anchor=args.experimental_string_anchor,
-            fuzzy=args.experimental_fuzzy, min_score=args.fuzzy_min_score,
+            fuzzy=args.experimental_fuzzy, dispatch=args.experimental_dispatch,
+            min_score=args.fuzzy_min_score,
         )
         result["inferred"] = {
             f"{addr:#x}": {**item, "true": sorted(truth.get(addr, ())) if truth is not None else None}

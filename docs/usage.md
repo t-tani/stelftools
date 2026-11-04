@@ -79,8 +79,9 @@ A byte rule needs the whole function to match, so a vendor's patch loses the nam
 
 - ``--experimental-string-anchor`` — the library function is the only one to reference a string, and one unnamed target procedure is the only one to reference it. Needs the ``.strs`` file from ``mkrule --experimental-strings``.
 - ``--experimental-fuzzy`` — at least ``--fuzzy-min-score`` (default 0.95) of the library function's instructions occur in order in an unnamed procedure, and each is the other's clear best match.
+- ``--experimental-dispatch`` — for a binary whose threads library wraps libc behind a function table. Each wrapper takes the name of the entry it calls, a variadic wrapper of ``vfprintf`` / ``vprintf`` becomes ``fprintf`` / ``printf``, and a candidate group is settled by what its code calls and what its callers expect (``recv|send``, ``exect|execve``). A wrapper and its body then share a name; ``inference.target`` tells them apart.
 
-An inferred name goes into ``.symtab`` as a plain name. Only the sidecar tells it from a proven one (``resolution``: ``inferred_string_anchor`` / ``inferred_fuzzy``, with ``inference`` holding its score or strings), so read the sidecar before trusting one.
+An inferred name goes into ``.symtab`` as a plain name. Only the sidecar tells it from a proven one (``resolution``: ``inferred_string_anchor`` / ``inferred_fuzzy`` / ``inferred_dispatch``, with ``inference`` holding its score or strings), so read the sidecar before trusting one.
 
 ``tools/eval/mips_pdr_eval.py`` measures a signature on a MIPS binary against its ``.pdr`` table, or against an unstripped build with ``--truth``.
 
