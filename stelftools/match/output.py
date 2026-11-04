@@ -25,7 +25,11 @@ from .coverage import get_bot_addr, get_top_addr, libc_func_in_crt_area
 
 
 def output(target_info, target_path, output_mode):
-    libc_area_top = get_top_addr(target_info['functions'], skip_libc_func)
+    # The anchor assumes a GNU libc link order. A signature whose matches are
+    # already unique to one site needs no lower bound, and on another libc
+    # the anchor name can sit mid-library and cut real names off.
+    libc_area_top = 0 if target_info.get('no_libc_area') \
+        else get_top_addr(target_info['functions'], skip_libc_func)
     libc_area_bot = get_bot_addr(target_info['functions'])
     skip_func_addr = libc_func_in_crt_area(target_info['functions'], libc_area_top, skip_libc_func)
 

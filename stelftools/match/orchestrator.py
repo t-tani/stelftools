@@ -26,6 +26,7 @@ import yara_x
 from .heuristics.consecutive import multiple_consecutive_candidate_filt
 from .heuristics.depend import id_func_name_for_depend
 from .heuristics.linkorder import id_func_name_for_linkorder
+from .heuristics.unique_site import drop_multi_site_groups
 from .state import (
     compute_target_state,
     del_alias,
@@ -157,7 +158,13 @@ def run_one_with_state(target_state, cfg_info, cfg_path=None):
     if linkorder_flag and alias_flag:
         functions = multiple_consecutive_candidate_filt(functions, link_order_list, alias_list)
 
+    # After the heuristics: a dependency can narrow a group to one site.
+    unique_site_only = bool(cfg_info.get('unique_site_only'))
+    if unique_site_only:
+        functions = drop_multi_site_groups(functions)
+
     return {
+        'no_libc_area': unique_site_only,
         'name': target_path,
         'functions': functions,
         'size': target_state['target_size'],

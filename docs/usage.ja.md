@@ -66,7 +66,7 @@ stelftools mkrule /path/to/toolchain \
     --compiler /path/to/cross-gcc
 ```
 - `<toolchain-path>` (位置引数、省略可) — `.a` / `.o` アーカイブを含むツールチェインのルートディレクトリ。省略した場合は `--compiler` から 2 階層上のディレクトリが自動で使われます。
-- `--name` — シグネチャ名。先頭は既知の family prefix (`fl-`, `al-`, `bl-stable-`, `br-`, `ct-ng`, `ucli-pub-`, `synopsys_arc_gnu`) のいずれかである必要があります。
+- `--name` — シグネチャ名。先頭は既知の family prefix (`fl-`, `al-`, `bl-stable-`, `br-`, `ct-ng`, `netbsd-`, `ucli-pub-`, `synopsys_arc_gnu`) のいずれかである必要があります。
 - `--arch` — ターゲットのアーキテクチャ。
 - `--compiler` — ツールチェイン内の cross-gcc バイナリのパス。
 

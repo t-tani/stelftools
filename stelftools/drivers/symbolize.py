@@ -277,7 +277,7 @@ def symbolize(binary_path, out_elf_path, cfg_path=None, jobs=None,
     out_elf_path.parent.mkdir(parents=True, exist_ok=True)
     out_elf_path.write_bytes(out_data)
     sidecar = out_elf_path.with_name(out_elf_path.name + ".symbols.json")
-    area = libc_area(functions)
+    area = None if target_info.get("no_libc_area") else libc_area(functions)
     counts = _write_sidecar(sidecar, cfg_path, resolved, area)
     joined = counts.get("ambiguous", 0) + counts.get("catalog", 0)
     log.info("wrote %d symbols into %s (%d canonical, %d kept as _OR_ joins "

@@ -31,6 +31,7 @@ cache/
 /signatures/buildroot/
 /signatures/crosstool-ng/
 /signatures/firmware-linux/
+/signatures/netbsd/
 /signatures/synopsys-arc-gnu/
 /signatures/uclibc-pub/
 

@@ -14,7 +14,7 @@ the four artifacts under ``signatures/<family>/<arch>/``:
 
 Family routing happens automatically: ``<name>`` carries the family
 prefix (``fl-``, ``al-``, ``bl-stable-``, ``br-``, ``ct-ng``,
-``ucli-pub-``, ``synopsys_arc_gnu``) and :mod:`stelftools.families`
+``netbsd-``, ``ucli-pub-``, ``synopsys_arc_gnu``) and :mod:`stelftools.families`
 resolves the destination directory.
 """
 
@@ -45,7 +45,7 @@ def _add_arguments(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         '--name', required=True,
         help='Signature name. Must start with a family prefix '
-             '(fl-, al-, bl-stable-, br-, ct-ng, ucli-pub-, '
+             '(fl-, al-, bl-stable-, br-, ct-ng, netbsd-, ucli-pub-, '
              'synopsys_arc_gnu) so the output lands in the right '
              'signatures/<family>/<arch>/ directory.',
     )
@@ -59,7 +59,15 @@ def _add_arguments(parser: argparse.ArgumentParser) -> None:
         '--compiler', required=True, dest='compiler_path',
         help='Path to the cross-gcc binary in the toolchain. Used at '
              'identify-time by the link-order heuristic to compile a '
-             'dummy binary and observe linker ordering.',
+             'dummy binary and observe linker ordering. Pass an empty '
+             'string for a release with no runnable compiler: that '
+             'heuristic is then off.',
+    )
+    parser.add_argument(
+        '--unique-site-only', action='store_true',
+        help='Have the matcher drop a candidate group that fires at more '
+             'than one address. For position-independent libraries, whose '
+             'short call wrappers are identical once GOT slots are masked.',
     )
     parser.add_argument(
         '-j', '--workers', type=int, default=0,
@@ -92,7 +100,8 @@ def run(args: argparse.Namespace) -> int:
     _announce_output('toolchain compiler path', args.compiler_path, verb='checked')
     _announce_output('dependency list', dlist_path)
     _announce_output('alias list', alist_path)
-    create_toolchain_cfg_file(args.name, args.arch, args.compiler_path)
+    create_toolchain_cfg_file(args.name, args.arch, args.compiler_path,
+                              unique_site_only=args.unique_site_only)
     return 0
 
 

@@ -25,6 +25,7 @@ _FAMILY_PREFIXES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ('buildroot',         ('br-',)),
     ('crosstool-ng',      ('ct-ng',)),
     ('firmware-linux',    ('fl-',)),
+    ('netbsd',            ('netbsd-',)),
     ('synopsys-arc-gnu',  ('synopsys_arc_gnu',)),
     ('uclibc-pub',        ('ucli-pub-',)),
 )

@@ -33,12 +33,14 @@ def signature_dir(tc_name: str, arch: str) -> Path:
     return sigstore.signatures_root() / family_for(tc_name) / arch
 
 
-def create_toolchain_cfg_file(tc_name, arch, tc_compiler_path):
+def create_toolchain_cfg_file(tc_name, arch, tc_compiler_path, unique_site_only=False):
     """Write the cfg JSON next to its yara / dlist / alist siblings.
 
     Paths used by ident.py are derived from the cfg file's location at
     load time, so the JSON no longer stores yara_path / alias_list_path /
-    dependency_list_path. Only name, arch, and compiler_path remain.
+    dependency_list_path. Only name, arch, and compiler_path remain, plus
+    ``unique_site_only`` when set (the matcher drops a candidate group that
+    fires at several addresses; see match.heuristics.unique_site).
     """
     out_dir = signature_dir(tc_name, arch)
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -47,6 +49,8 @@ def create_toolchain_cfg_file(tc_name, arch, tc_compiler_path):
         "arch": arch,
         "compiler_path": tc_compiler_path,
     }
+    if unique_site_only:
+        cfg["unique_site_only"] = True
     with open(out_dir / (tc_name + ".json"), "w") as f:
         json.dump(cfg, f, indent=2)
         f.write("\n")
