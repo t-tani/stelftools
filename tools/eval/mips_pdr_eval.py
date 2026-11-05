@@ -28,7 +28,7 @@ from pathlib import Path
 
 from elftools.elf.elffile import ELFFile
 
-from stelftools.match.experimental import DEFAULT_MIN_SCORE, callee_verdict, infer
+from stelftools.match.experimental import DEFAULT_MIN_SCORE, callee_verdict, infer, read_dlist
 
 PDR_ENTRY = 32
 LUI_GP = 0x3C1C
@@ -81,18 +81,6 @@ class Target:
                 if value in self.ends:
                     found.append(value)
         return found
-
-
-def read_dlist(path: str) -> dict[str, set[str]]:
-    """`caller[,alias...] callee offset` lines as name -> declared callees."""
-    declared: dict[str, set[str]] = defaultdict(set)
-    with open(path) as f:
-        for line in f:
-            fields = line.split()
-            if len(fields) >= 2:
-                for name in fields[0].split(","):
-                    declared[name].add(fields[1])
-    return declared
 
 
 def score(target: Target, matches: dict[int, list[str]], declared, lib_boundary: int = 0) -> dict:

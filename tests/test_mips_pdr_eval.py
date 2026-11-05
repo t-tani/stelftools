@@ -14,13 +14,38 @@ def test_callee_verdict_needs_a_named_callee():
     assert ev.callee_verdict(["f"], [[], []], {"f": {"g"}}) == "no_evidence"
 
 
-def test_callee_verdict_accepts_a_declared_callee_under_either_spelling():
-    assert ev.callee_verdict(["f"], [["_g"]], {"f": {"g"}}) == "consistent"
-    assert ev.callee_verdict(["_f", "f"], [["g"]], {"f": {"__g"}}) == "consistent"
+def test_callee_verdict_takes_only_the_names_it_was_given():
+    assert ev.callee_verdict(["f"], [["g"]], {"f": {"g", "_g"}}) == "consistent"
+    assert ev.callee_verdict(["f"], [["_g"]], {"f": {"g", "_g"}}) == "consistent"
+    # `_exit` and `exit` are two functions unless `.alist` joins them
+    assert ev.callee_verdict(["f"], [["_exit"]], {"f": {"exit"}}) == "inconsistent"
 
 
-def test_callee_verdict_finds_the_sized_twin_of_a_weak_alias():
-    assert ev.callee_verdict(["strdup"], [["strlen"]], {"_strdup": {"strlen"}}) == "consistent"
+def test_read_dlist_expands_callers_and_callees_through_the_alist(tmp_path):
+    (tmp_path / "x.dlist").write_text("_strdup,strdup _strlen 44\nabort raise 8\n")
+    (tmp_path / "x.alist").write_text("_strdup,strdup\n_strlen,strlen\n")
+    declared = ev.read_dlist(str(tmp_path / "x.dlist"))
+    assert {"_strlen", "strlen"} <= declared["strdup"]
+    assert declared["strdup"] == declared["_strdup"]
+    assert "raise" in declared["abort"]
+
+
+def _rule(aliases):
+    return f'rule r {{\n\tmeta:\n\t\taliases = "{aliases}"\n}}\n'
+
+
+def test_read_dlist_joins_an_untyped_alias_the_alist_never_saw(tmp_path):
+    # the stub's rule is `close`; its `_close` alias is only a declared callee
+    (tmp_path / "x.dlist").write_text("fclose _close 8\n")
+    (tmp_path / "x.yara").write_text(_rule("close"))
+    assert "close" in ev.read_dlist(str(tmp_path / "x.dlist"))["fclose"]
+
+
+def test_read_dlist_keeps_two_functions_that_each_have_a_rule_apart(tmp_path):
+    (tmp_path / "x.dlist").write_text("abort _exit 8\n")
+    (tmp_path / "x.yara").write_text(_rule("_exit") + _rule("exit"))
+    declared = ev.read_dlist(str(tmp_path / "x.dlist"))["abort"]
+    assert "_exit" in declared and "exit" not in declared
 
 
 def test_callee_verdict_treats_the_byte_swap_names_as_one_body():

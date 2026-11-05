@@ -86,7 +86,7 @@ stelftools symbolize /path/to/target --out-elf /path/to/output
 
 - `--experimental-string-anchor` — ある文字列を参照するライブラリ関数が 1 つだけで、名前のない対象関数のうち参照するものも 1 つだけの場合に名前を付けます。`mkrule --experimental-strings` が作る `.strs` が必要です。
 - `--experimental-fuzzy` — ライブラリ関数の命令の `--fuzzy-min-score` (既定 0.95) 以上が、名前のない関数に順番どおり含まれ、互いに明確な最良候補である場合に名前を付けます。
-- `--experimental-dispatch` — スレッドライブラリが libc を関数表の裏に隠しているバイナリ向けです。各ラッパーに呼び先の表エントリの名前を付け、`vfprintf` / `vprintf` の可変長引数ラッパーは `fprintf` / `printf` とします。候補グループ (`recv|send`, `exect|execve`) は、呼び先と呼び出し元が期待する名前から絞り込みます。ラッパーと本体は同じ名前になり、`inference.target` で区別できます。
+- `--experimental-dispatch` — スレッドライブラリが libc を関数表の裏に隠しているバイナリ向けです。各ラッパーに呼び先の表エントリの名前を付け、`vfprintf` / `vprintf` の可変長引数ラッパーは `fprintf` / `printf` とします。候補グループ (`recv|send`, `exect|execve`) は、呼び先と呼び出し元が期待する名前から絞り込みます。名前は一意に保ちます。呼び出しが最も多い入口が公開名を持ち、本体は `__libc_x` (`resolution`: `renamed`)、それ以外のラッパーは `x__stub_<addr>` になります。元の名前は `inference.renamed_from` に残ります。
 
 推定した名前は `.symtab` に通常の名前として書かれます。確定名と区別できるのはサイドカーだけです (`resolution` が `inferred_string_anchor` / `inferred_fuzzy` / `inferred_dispatch` で、`inference` にスコアか文字列が入ります)。利用前にサイドカーを確認してください。
 

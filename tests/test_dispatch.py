@@ -79,8 +79,8 @@ def test_a_procedure_calling_two_entries_is_not_a_wrapper():
 
 def test_a_wrapper_takes_the_name_of_its_table_entry():
     found, _ = dp.dispatch_names(_image(), {READ: ["read"]}, [], {})
-    assert found[0x1000]["names"] == ["read"]
     assert found[0x1000]["target"] == f"{READ:#x}"
+    assert found[0x1000]["evidence"]
 
 
 def test_a_wrapper_of_an_unnamed_entry_stays_unnamed():
@@ -158,3 +158,55 @@ def test_an_unnamed_site_of_a_dropped_rule_needs_callee_evidence_and_one_site():
     # no named callee: nothing
     image = _image({0x9000: [NOP], 0x9100: [NOP]}, tokens=tokens)
     assert 0x9000 not in dp.dispatch_names(image, named, [rule], declared)[0]
+
+
+def _symbols(named, found):
+    return [tuple(found[a]["names"] if a in found else named[a]) for a in {*named, *found}]
+
+
+def test_a_wrapper_keeps_the_public_name_over_a_body_nobody_calls():
+    image = _image(count=16, callees={0x8000: [0x1000]})
+    image.bodies[0x8000] = [NOP]
+    image.starts = sorted(image.bodies)
+    image.ends[0x8000] = 0x8004
+    named = {READ: ["read"]}
+    found, notes = dp.dispatch_names(image, named, [], {})
+    assert found[0x1000]["names"] == ["read"] and found[0x1000]["role"] == "entry"
+    assert found[READ]["names"] == ["__libc_read"]
+    assert found[READ]["method"] == "renamed" and found[READ]["renamed_from"] == ["read"]
+    others = [found[0x1000 + i * 0x100]["names"][0] for i in range(1, 16)]
+    assert others[0] == "read__stub_1100"
+    assert len(set(_symbols(named, found))) == len(_symbols(named, found))
+    assert "renamed" in notes[0]
+
+
+def test_a_body_with_more_calls_than_its_wrappers_keeps_the_public_name():
+    bodies = {0x8000 + i: [NOP] for i in range(3)}
+    callees = {0x8000 + i: [READ] for i in range(3)}
+    image = _image(bodies, callees)
+    found, _ = dp.dispatch_names(image, {READ: ["read"]}, [], {})
+    assert READ not in found or found[READ].get("role") == "entry"
+    assert found[0x1000]["names"] == ["read__stub_1000"]
+
+
+def test_a_name_only_one_address_holds_is_not_renamed():
+    image = _image()
+    named = {READ: ["read"], WRITE: ["write"]}
+    found, _ = dp.dispatch_names(image, named, [], {})
+    assert WRITE not in found
+
+
+def test_a_joined_group_is_renamed_member_by_member():
+    named = {READ: ["fgetc", "getc"]}
+    found, _ = dp.dispatch_names(_image(count=16), named, [], {})
+    assert found[READ]["names"] == ["__libc_fgetc", "__libc_getc"]
+    assert found[0x1100]["names"] == ["fgetc__stub_1100", "getc__stub_1100"]
+
+
+def test_exit_and_underscore_exit_are_two_functions_when_settling():
+    tokens = {0x9000: [1, 2]}
+    rule = Rule(("exit",), (1, 2))
+    image = _image({0x9000: [NOP]}, {0x9000: [0x100]}, tokens=tokens)
+    named = {0x100: ["cleanup"], 0x200: ["_exit"]}
+    found, _ = dp.dispatch_names(image, named, [rule], {"exit": {"cleanup"}})
+    assert found[0x9000]["names"] == ["exit"]

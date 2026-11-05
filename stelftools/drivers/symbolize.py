@@ -178,9 +178,12 @@ def inferred_entry(found):
     cands = sorted(found["names"])
     entry = {"canonical": cands[0] if len(cands) == 1 else None,
              "candidates": cands,
-             "resolution": "inferred_" + found["method"],
+             # a rename moves a name the bytes proved; it adds no doubt of its own
+             "resolution": ("renamed" if found["method"] == "renamed"
+                            else "inferred_" + found["method"]),
              "symbol": "_OR_".join(cands)}
-    entry["inference"] = {k: found[k] for k in ("score", "evidence", "target") if k in found}
+    entry["inference"] = {k: found[k] for k in
+                          ("score", "evidence", "target", "role", "renamed_from") if k in found}
     return entry
 
 
@@ -310,8 +313,9 @@ def symbolize(binary_path, out_elf_path, cfg_path=None, jobs=None,
     counts = _write_sidecar(sidecar, cfg_path, resolved, area)
     joined = counts.get("ambiguous", 0) + counts.get("catalog", 0)
     log.info("wrote %d symbols into %s (%d canonical, %d kept as _OR_ joins "
-             "of which %d carry a preferred name, %d inferred)",
-             len(symbols), out_elf_path, counts.get("single", 0) + counts.get("alias", 0), joined,
+             "of which %d carry a preferred name, %d inferred or renamed)",
+             len(symbols), out_elf_path,
+             counts.get("single", 0) + counts.get("alias", 0) + counts.get("renamed", 0), joined,
              counts.get("catalog", 0), len(inferred))
 
     return {
@@ -323,8 +327,10 @@ def symbolize(binary_path, out_elf_path, cfg_path=None, jobs=None,
         "total_funcs": total_funcs,
         "symbols_added": len(symbols),
         "symbols_undefined_section": undefined_section,
-        "canonical_count": counts.get("single", 0) + counts.get("alias", 0),
-        "inferred_count": len(inferred),
+        "canonical_count": (counts.get("single", 0) + counts.get("alias", 0)
+                            + counts.get("renamed", 0)),
+        "renamed_count": counts.get("renamed", 0),
+        "inferred_count": len(inferred) - counts.get("renamed", 0),
         "inferred_string_anchor": counts.get("inferred_string_anchor", 0),
         "inferred_fuzzy": counts.get("inferred_fuzzy", 0),
         "inferred_dispatch": counts.get("inferred_dispatch", 0),
