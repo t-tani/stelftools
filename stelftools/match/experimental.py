@@ -132,15 +132,60 @@ def read_rules(yara_path: str, little_endian: bool = True) -> list[Rule]:
     return rules
 
 
+def read_alist(path) -> dict[str, frozenset[str]]:
+    """Name -> the names of its one body, from `.alist`."""
+    classes: dict[str, frozenset[str]] = {}
+    if Path(path).is_file():
+        with open(path) as f:
+            for line in f:
+                group = frozenset(n for n in line.strip().split(",") if n)
+                for name in group:
+                    classes[name] = group
+    return classes
+
+
+_ALIASES = re.compile(r'aliases = "([^"]*)"')
+
+
+def read_rule_index(path) -> dict[str, int]:
+    """Name -> the rule carrying it, from the `.yara` beside a `.dlist`."""
+    index: dict[str, int] = {}
+    if Path(path).is_file():
+        for number, match in enumerate(_ALIASES.finditer(Path(path).read_text())):
+            for name in match[1].split(","):
+                if name.strip():
+                    index[name.strip()] = number
+    return index
+
+
+def _twins(name: str, classes, rules) -> set[str]:
+    """`name` and what else it is called. `.alist` is one source, but an assembly
+    stub's weak alias is untyped and never reaches it, so a `_` or `__` spelling
+    also counts, unless each spelling has a rule of its own: `_exit` and `exit`
+    are two functions, and the signature shows it."""
+    names = set(classes.get(name, {name}))
+    bare = name.lstrip("_")
+    for spelling in (bare, f"_{bare}", f"__{bare}"):
+        own, other = rules.get(name), rules.get(spelling)
+        if own is None or other is None or own == other:
+            names.add(spelling)
+    return names
+
+
 def read_dlist(path) -> dict[str, set[str]]:
+    """Name -> declared callees, each under every name its body goes by."""
+    classes = read_alist(Path(path).with_suffix(".alist"))
+    rules = read_rule_index(Path(path).with_suffix(".yara"))
     declared: dict[str, set[str]] = defaultdict(set)
     if Path(path).is_file():
         with open(path) as f:
             for line in f:
                 fields = line.split()
                 if len(fields) >= 2:
-                    for name in fields[0].split(","):
-                        declared[name].add(fields[1])
+                    callees = _twins(fields[1], classes, rules)
+                    for caller in fields[0].split(","):
+                        for name in _twins(caller, classes, rules):
+                            declared[name] |= callees
     return declared
 
 
@@ -152,14 +197,13 @@ _SAME_BODY = (
 
 
 def spellings(name: str) -> set[str]:
-    """A NetBSD `_x` is the namespace twin of `x`, so either spelling counts,
-    as do the other names of a byte-swap body."""
+    """The names of a byte-swap body; any other name is only itself here, since
+    `read_dlist` has already expanded the names a declared callee goes by."""
     bare = name.lstrip("_")
-    names = {bare}
     for group in _SAME_BODY:
         if bare in group:
-            names = set(group)
-    return {f"{prefix}{n}" for n in names for prefix in ("", "_", "__")}
+            return {f"{prefix}{n}" for n in group for prefix in ("", "_", "__")}
+    return {name}
 
 
 def callee_verdict(names, callee_names, declared) -> str:

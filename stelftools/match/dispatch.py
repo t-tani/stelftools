@@ -13,8 +13,9 @@ when many procedures read it that way. This module:
 3. reads a variadic wrapper of a `v*` function as the function it fronts: one
    that saves a1-a3 and calls `vfprintf` is `fprintf`, not a wrapper of `vfprintf`.
 
-A wrapper and its body end up with the same name. Only the sidecar tells them
-apart (`inference.target`).
+Names stay unique, since a consumer looking a name up gets one address: the
+entry holding the most calls keeps the public name, the body becomes `__libc_x`
+and any further wrapper `x__stub_<addr>`. The sidecar records what was renamed.
 """
 
 from __future__ import annotations
@@ -171,10 +172,10 @@ def settle_groups(image, named, wrappers, rules, declared, callers) -> dict[int,
             list(rule.names), _callee_names(image, addr, named, wrappers), declared
         )
         if settled:
-            proposed[next(iter(_bare(settled)))].append((addr, settled, rule.names))
-    taken = {b for names in named.values() if len(_bare(names)) == 1 for b in _bare(names)}
-    for bare, sites in proposed.items():
-        if len(sites) == 1 and bare not in taken:
+            proposed[",".join(sorted(settled))].append((addr, settled, rule.names))
+    taken = {n for names in named.values() for n in names}
+    for _, sites in proposed.items():
+        if len(sites) == 1 and not taken & set(sites[0][1]):
             addr, settled, origin = sites[0]
             found[addr] = {"names": settled, "method": "dispatch",
                            "evidence": [f"settled from {','.join(origin)} by callee"]}
@@ -204,6 +205,39 @@ def _variadic_fronts(image, wrappers, known) -> dict[int, str]:
         if fronted and addr not in known and is_variadic(image.body(addr)):
             sites[fronted].append(addr)
     return {found[0]: name for name, found in sites.items() if len(found) == 1}
+
+
+def unique_names(image, named, found, wrappers) -> int:
+    """Give every symbol one address; returns how many addresses were renamed.
+
+    Rewrites `found` in place. An address the byte rules named gets a `renamed`
+    entry, so its proof is not reported as an inference.
+    """
+    calls = Counter(c for a in image.starts for c in image.callees(a))
+    sites: dict[tuple, list[int]] = defaultdict(list)
+    for addr in {*named, *found}:
+        names = found[addr]["names"] if addr in found else named[addr]
+        sites[tuple(sorted(names))].append(addr)
+    renamed = 0
+    for names, addrs in sites.items():
+        if len(addrs) < 2:
+            continue
+        # most calls first; among equals a wrapper, since the program enters there
+        addrs.sort(key=lambda a: (-calls[a], a not in wrappers, a))
+        body_named = False
+        for addr in addrs[1:]:
+            if addr not in wrappers and not body_named:
+                role, new = "body", [f"__libc_{n}" for n in names]
+                body_named = True
+            else:
+                role, new = "stub", [f"{n}__stub_{addr:x}" for n in names]
+            base = found.get(addr) or {"method": "renamed"}
+            found[addr] = {**base, "names": new, "role": role, "renamed_from": list(names)}
+            renamed += 1
+        first = addrs[0]
+        if first in found:
+            found[first] = {**found[first], "role": "entry"}
+    return renamed
 
 
 def dispatch_names(image, named, rules, declared) -> tuple[dict[int, dict], list[str]]:
@@ -241,9 +275,12 @@ def dispatch_names(image, named, rules, declared) -> tuple[dict[int, dict], list
             continue
         found[addr] = {"names": list(names), "method": "dispatch", "target": target,
                        "evidence": evidence}
+    renamed = unique_names(image, known, found, wrappers)
     notes = [f"dispatch: {len(wrappers)} wrappers, {len(refused)} refused on caller evidence"
-             + (f" ({', '.join(refused)})" if refused else "")]
+             + (f" ({', '.join(refused)})" if refused else "")
+             + f", {renamed} renamed to keep names unique"]
     return found, notes
 
 
-__all__ = ["VARIADIC_FRONT", "Wrapper", "dispatch_names", "find_wrappers", "is_variadic"]
+__all__ = ["VARIADIC_FRONT", "Wrapper", "dispatch_names", "find_wrappers", "is_variadic",
+           "unique_names"]
